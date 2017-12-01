@@ -9,20 +9,22 @@
 #define USB_CurrentMode USB_MODE_Device
 #define USB_Device_ControlEndpointSize FIXED_CONTROL_ENDPOINT_SIZE
 
-static const uint8_t CONTROL_REQTYPE_DIRECTION = 0x80;
-static const uint8_t CONTROL_REQTYPE_TYPE = 0x60;
-static const uint8_t CONTROL_REQTYPE_RECIPIENT = 0x1f;
-static const uint8_t REQDIR_HOSTTODEVICE = 0 << 7;
-static const uint8_t REQDIR_DEVICETOHOST = 1 << 7;
-static const uint8_t REQTYPE_STANDARD = 0 << 5;
-static const uint8_t REQTYPE_CLASS = 1 << 5;
-static const uint8_t REQTYPE_VENDOR = 2 << 5;
-static const uint8_t REQREC_DEVICE = 0 << 0;
-static const uint8_t REQREC_INTERFACE = 1 << 0;
-static const uint8_t REQREC_ENDPOINT = 2 << 0;
-static const uint8_t REQREC_OTHER = 3 << 0;
-static const uint8_t FEATURE_SELFPOWERED_ENABLED = 1 << 0;
-static const uint8_t FEATURE_REMOTE_WAKEUP_ENABLED = 1 << 1;
+USB *USB::instance;
+
+static const uint8_t CONTROL_REQTYPE_DIRECTION = 0x80,
+    CONTROL_REQTYPE_TYPE = 0x60,
+    CONTROL_REQTYPE_RECIPIENT = 0x1f,
+    REQDIR_HOSTTODEVICE = 0 << 7,
+    REQDIR_DEVICETOHOST = 1 << 7,
+    REQTYPE_STANDARD = 0 << 5,
+    REQTYPE_CLASS = 1 << 5,
+    REQTYPE_VENDOR = 2 << 5,
+    REQREC_DEVICE = 0 << 0,
+    REQREC_INTERFACE = 1 << 0,
+    REQREC_ENDPOINT = 2 << 0,
+    REQREC_OTHER = 3 << 0,
+    FEATURE_SELFPOWERED_ENABLED = 1 << 0,
+    FEATURE_REMOTE_WAKEUP_ENABLED = 1 << 1;
 
 typedef struct
 {
@@ -72,53 +74,33 @@ typedef struct
     uint8_t bSlaveInterface0;
 } ATTR_PACKED USB_CDC_StdDescriptor_FunctionalUnion_t;
 
-
-bool
-CDC_Device_ConfigureEndpoints(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
-                ATTR_NON_NULL_PTR_ARG(1);
-
 extern "C" {
-void
-CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
-ATTR_NON_NULL_PTR_ARG(1);
-
 void
 EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 ATTR_NON_NULL_PTR_ARG(1);
 
 
-void
-EVENT_CDC_Device_ControLineStateChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
+void EVENT_CDC_Device_ControLineStateChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 ATTR_NON_NULL_PTR_ARG(1);
 
 }
 
 
-uint8_t
-CDC_Device_SendData(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
+uint8_t CDC_Device_SendData(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
                      const void* const Buffer,
                const uint16_t Length) ATTR_NON_NULL_PTR_ARG(1) ATTR_NON_NULL_PTR_ARG(2);
 
-uint8_t
-CDC_Device_SendString(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
-               const char* const String) ATTR_NON_NULL_PTR_ARG(1) ATTR_NON_NULL_PTR_ARG(2);
-
-uint8_t
-CDC_Device_SendByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
-                         const uint8_t Data) ATTR_NON_NULL_PTR_ARG(1);
-
 uint16_t CDC_Device_BytesReceived(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
-int16_t CDC_Device_ReceiveByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
 
 void
 CDC_Device_SendControlLineStateChange(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 ATTR_NON_NULL_PTR_ARG(1);
 
-static const uint8_t CDC_NOTIFICATION_EPADDR = ENDPOINT_DIR_IN | 2;
-static const uint8_t CDC_TX_EPADDR = ENDPOINT_DIR_IN | 3;
-static const uint8_t CDC_RX_EPADDR = ENDPOINT_DIR_OUT | 4;
-static const uint8_t CDC_NOTIFICATION_EPSIZE = 8;
-static const uint8_t CDC_TXRX_EPSIZE = 16;
+static const uint8_t CDC_NOTIFICATION_EPADDR = ENDPOINT_DIR_IN | 2,
+    CDC_TX_EPADDR = ENDPOINT_DIR_IN | 3,
+    CDC_RX_EPADDR = ENDPOINT_DIR_OUT | 4,
+    CDC_NOTIFICATION_EPSIZE = 8,
+    CDC_TXRX_EPSIZE = 16;
 
 
 uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue, const uint8_t wIndex,
@@ -142,7 +124,6 @@ struct USB_Descriptor_Configuration_t
 
 extern "C"
 {
-
     void CDC_Device_Event_Stub(void) ATTR_CONST;
 
     void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
@@ -151,9 +132,6 @@ extern "C"
     void EVENT_CDC_Device_ControLineStateChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
                      ATTR_WEAK ATTR_NON_NULL_PTR_ARG(1) ATTR_ALIAS(CDC_Device_Event_Stub);
 }
-
-static int CDC_Device_putchar(char c, FILE* Stream) ATTR_NON_NULL_PTR_ARG(2);
-static int CDC_Device_getchar(FILE* Stream) ATTR_NON_NULL_PTR_ARG(1);
 
 void USB::init()
 {
@@ -173,8 +151,8 @@ void USB::init()
 
 void USB::resetInterface()
 {
-    USB::disableAllInterrupts();
-    USB::clearAllInterrupts();
+    disableAllInterrupts();
+    clearAllInterrupts();
     USB_Controller_Reset();
     USB_CLK_Unfreeze();
 
@@ -183,13 +161,13 @@ void USB::resetInterface()
         if (!(USB_Options & USB_OPT_MANUAL_PLL))
             USB_PLL_Off();
 
-        USB_Init_Device();
+        initDevice();
     }
 
     USB_OTGPAD_On();
 }
 
-void USB::USB_Init_Device()
+void USB::initDevice()
 {
     USB_DeviceState = DEVICE_STATE_Unattached;
     USB_Device_ConfigurationNumber  = 0;
@@ -212,7 +190,7 @@ void USB::USB_Init_Device()
     USB_Attach();
 }
 
-void CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
+void USB::CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 {
     if (!(USB::Endpoint_IsSETUPReceived()))
         return;
@@ -226,21 +204,21 @@ void CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInter
             if (USB_ControlRequest.bmRequestType ==
                 (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
             {
-                USB::Endpoint_ClearSETUP();
+                Endpoint_ClearSETUP();
                 while (!(USB::Endpoint_IsINReady()));
-                USB::Endpoint_Write_32_LE(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
-                USB::Endpoint_Write_8(CDCInterfaceInfo->State.LineEncoding.CharFormat);
-                USB::Endpoint_Write_8(CDCInterfaceInfo->State.LineEncoding.ParityType);
-                USB::Endpoint_Write_8(CDCInterfaceInfo->State.LineEncoding.DataBits);
-                USB::Endpoint_ClearIN();
-                USB::Endpoint_ClearStatusStage();
+                Endpoint_Write_32_LE(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
+                Endpoint_Write_8(CDCInterfaceInfo->State.LineEncoding.CharFormat);
+                Endpoint_Write_8(CDCInterfaceInfo->State.LineEncoding.ParityType);
+                Endpoint_Write_8(CDCInterfaceInfo->State.LineEncoding.DataBits);
+                Endpoint_ClearIN();
+                Endpoint_ClearStatusStage();
             }
             break;
         case CDC_REQ_SetLineEncoding:
             if (USB_ControlRequest.bmRequestType ==
                     (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
             {
-                USB::Endpoint_ClearSETUP();
+                Endpoint_ClearSETUP();
 
                 while (!(USB::Endpoint_IsOUTReceived()))
                 {
@@ -252,8 +230,8 @@ void CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInter
                 CDCInterfaceInfo->State.LineEncoding.CharFormat  = USB::Endpoint_Read_8();
                 CDCInterfaceInfo->State.LineEncoding.ParityType  = USB::Endpoint_Read_8();
                 CDCInterfaceInfo->State.LineEncoding.DataBits    = USB::Endpoint_Read_8();
-                USB::Endpoint_ClearOUT();
-                USB::Endpoint_ClearStatusStage();
+                Endpoint_ClearOUT();
+                Endpoint_ClearStatusStage();
                 EVENT_CDC_Device_LineEncodingChanged(CDCInterfaceInfo);
             }
 
@@ -280,20 +258,20 @@ void CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInter
     }
 }
 
-bool CDC_Device_ConfigureEndpoints(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
+bool USB::CDC_Device_ConfigureEndpoints(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 {
     memset(&CDCInterfaceInfo->State, 0x00, sizeof(CDCInterfaceInfo->State));
     CDCInterfaceInfo->Config.DataINEndpoint.Type = EP_TYPE_BULK;
     CDCInterfaceInfo->Config.DataOUTEndpoint.Type = EP_TYPE_BULK;
     CDCInterfaceInfo->Config.NotificationEndpoint.Type = EP_TYPE_INTERRUPT;
 
-    if (!(Endpoint_ConfigureEndpointTable(&CDCInterfaceInfo->Config.DataINEndpoint, 1)))
+    if (!(USB::Endpoint_ConfigureEndpointTable(&CDCInterfaceInfo->Config.DataINEndpoint, 1)))
         return false;
 
-    if (!(Endpoint_ConfigureEndpointTable(&CDCInterfaceInfo->Config.DataOUTEndpoint, 1)))
+    if (!(USB::Endpoint_ConfigureEndpointTable(&CDCInterfaceInfo->Config.DataOUTEndpoint, 1)))
         return false;
 
-    if (!(Endpoint_ConfigureEndpointTable(&CDCInterfaceInfo->Config.NotificationEndpoint, 1)))
+    if (!(USB::Endpoint_ConfigureEndpointTable(&CDCInterfaceInfo->Config.NotificationEndpoint, 1)))
         return false;
 
     return true;
@@ -313,34 +291,7 @@ void USB::CDC_Device_USBTask(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
         USB::CDC_Device_Flush(CDCInterfaceInfo);
 }
 
-uint8_t CDC_Device_SendString(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
-                              const char* const String)
-{
-    if ((USB_DeviceState != DEVICE_STATE_Configured) ||
-        !(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS))
-    {
-        return ENDPOINT_RWSTREAM_DeviceDisconnected;
-    }
-
-    USB::Endpoint_SelectEndpoint(CDCInterfaceInfo->Config.DataINEndpoint.Address);
-    return USB::Endpoint_Write_Stream_LE(String, strlen(String), NULL);
-}
-
-uint8_t CDC_Device_SendData(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
-                            const void* const Buffer,
-                            const uint16_t Length)
-{
-    if ((USB_DeviceState != DEVICE_STATE_Configured) ||
-            !(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS))
-    {
-        return ENDPOINT_RWSTREAM_DeviceDisconnected;
-    }
-
-    USB::Endpoint_SelectEndpoint(CDCInterfaceInfo->Config.DataINEndpoint.Address);
-    return USB::Endpoint_Write_Stream_LE(Buffer, Length, NULL);
-}
-
-uint8_t CDC_Device_SendByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
+uint8_t USB::CDC_Device_SendByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
                             const uint8_t Data)
 {
     if ((USB_DeviceState != DEVICE_STATE_Configured) ||
@@ -391,35 +342,7 @@ uint8_t USB::CDC_Device_Flush(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo
     return ENDPOINT_READYWAIT_NoError;
 }
 
-uint16_t CDC_Device_BytesReceived(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
-{
-    if ((USB_DeviceState != DEVICE_STATE_Configured) ||
-        !(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS))
-    {
-        return 0;
-    }
-
-    USB::Endpoint_SelectEndpoint(CDCInterfaceInfo->Config.DataOUTEndpoint.Address);
-
-    if (USB::Endpoint_IsOUTReceived())
-    {
-        if (!(Endpoint_BytesInEndpoint()))
-        {
-            USB::Endpoint_ClearOUT();
-            return 0;
-        }
-        else
-        {
-            return Endpoint_BytesInEndpoint();
-        }
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-int16_t CDC_Device_ReceiveByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
+int16_t USB::CDC_Device_ReceiveByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 {
     if ((USB_DeviceState != DEVICE_STATE_Configured) ||
             !(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS))
@@ -442,29 +365,6 @@ int16_t CDC_Device_ReceiveByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInf
     return ReceivedByte;
 }
 
-void CDC_Device_SendControlLineStateChange(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
-{
-    if ((USB_DeviceState != DEVICE_STATE_Configured) || !(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS))
-      return;
-
-    USB::Endpoint_SelectEndpoint(CDCInterfaceInfo->Config.NotificationEndpoint.Address);
-
-    USB_Request_Header_t Notification = (USB_Request_Header_t)
-        {
-            .bmRequestType = (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE),
-            .bRequest      = CDC_NOTIF_SerialState,
-            .wValue        = CPU_TO_LE16(0),
-            .wIndex        = CPU_TO_LE16(0),
-            .wLength = CPU_TO_LE16(sizeof(CDCInterfaceInfo->State.ControlLineStates.DeviceToHost)),
-        };
-
-    USB::Endpoint_Write_Stream_LE(&Notification, sizeof(USB_Request_Header_t), NULL);
-    USB::Endpoint_Write_Stream_LE(&CDCInterfaceInfo->State.ControlLineStates.DeviceToHost,
-                             sizeof(CDCInterfaceInfo->State.ControlLineStates.DeviceToHost),
-                             NULL);
-    USB::Endpoint_ClearIN();
-}
-
 void USB::createStream(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo, FILE* const Stream)
 {
     //*Stream = (FILE)FDEV_SETUP_STREAM(CDC_Device_putchar, CDC_Device_getchar, _FDEV_SETUP_RW);
@@ -475,17 +375,17 @@ void USB::createStream(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo, FILE*
     fdev_set_udata(Stream, CDCInterfaceInfo);
 }
 
-static int CDC_Device_putchar(char c, FILE* Stream)
+int USB::CDC_Device_putchar(char c, FILE* Stream)
 {
     return CDC_Device_SendByte((USB_ClassInfo_CDC_Device_t*)fdev_get_udata(Stream), c) ? _FDEV_ERR : 0;
 }
 
-static int CDC_Device_getchar(FILE* Stream)
+int USB::CDC_Device_getchar(FILE* Stream)
 {
     int16_t ReceivedByte = CDC_Device_ReceiveByte((USB_ClassInfo_CDC_Device_t*)fdev_get_udata(Stream));
 
     if (ReceivedByte < 0)
-      return _FDEV_EOF;
+        return _FDEV_EOF;
 
     return ReceivedByte;
 }
@@ -496,14 +396,15 @@ void CDC_Device_Event_Stub(void)
 
 USB::USB()
 {
-    MCUSR &= ~(1 << WDRF);
+    instance = this;
+    MCUSR &= ~(1<<WDRF);
     wdt_disable();
     clock_prescale_set(clock_div_2);
     init();
     createStream();
     GlobalInterruptEnable();
     cdcTask();
-    USB_USBTask();
+    task();
 }
 
 void USB::myPutc(char c)
@@ -526,15 +427,15 @@ USB_ClassInfo_CDC_Device_t USB::cdcDevice =
     },
 };
 
-void EVENT_USB_Device_ConfigurationChanged()
+void USB::EVENT_USB_Device_ConfigurationChanged()
 {
     bool ConfigSuccess = true;
-    ConfigSuccess &= CDC_Device_ConfigureEndpoints(&USB::cdcDevice);
+    ConfigSuccess &= CDC_Device_ConfigureEndpoints(&cdcDevice);
 }
 
-void EVENT_USB_Device_ControlRequest()
+void USB::EVENT_USB_Device_ControlRequest()
 {
-    CDC_Device_ProcessControlRequest(&USB::cdcDevice);
+    CDC_Device_ProcessControlRequest(&cdcDevice);
 }
 
 const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
@@ -660,12 +561,24 @@ const USB_Descriptor_String_t PROGMEM ProductString =
     //.UnicodeString          = L"LUFA USB-RS232 Adapter"
 };
 
-uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
-                                    const uint8_t wIndex,
-                                    const void** const DescriptorAddress)
+bool USB::Endpoint_ConfigureEndpoint(const uint8_t Address,
+                         const uint8_t Type, const uint16_t Size, const uint8_t Banks)
 {
-    const uint8_t  DescriptorType   = (wValue >> 8);
-    const uint8_t  DescriptorNumber = (wValue & 0xFF);
+    uint8_t Number = (Address & ENDPOINT_EPNUM_MASK);
+
+    if (Number >= ENDPOINT_TOTAL_ENDPOINTS)
+        return false;
+
+    return Endpoint_ConfigureEndpoint_Prv(Number,
+                       ((Type << EPTYPE0) | ((Address & ENDPOINT_DIR_IN) ? (1 << EPDIR) : 0)),
+           ((1 << ALLOC) | ((Banks > 1) ? (1 << EPBK0) : 0) | Endpoint_BytesToEPSizeMask(Size)));
+}
+
+uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
+                     const uint8_t wIndex, const void** const DescriptorAddress)
+{
+    const uint8_t DescriptorType   = (wValue >> 8);
+    const uint8_t DescriptorNumber = (wValue & 0xFF);
 
     const void* Address = NULL;
     uint16_t    Size    = NO_DESCRIPTOR;
@@ -703,89 +616,39 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
     return Size;
 }
 
-static void USB_DeviceTask();
+//static void USB_DeviceTask();
 volatile bool USB_IsInitialized;
 USB_Request_Header_t USB_ControlRequest;
 
-void USB_USBTask(void)
-{
-    USB_DeviceTask();
-}
-
-static void USB_DeviceTask(void)
+void USB::USB_DeviceTask()
 {
     if (USB_DeviceState == DEVICE_STATE_Unattached)
         return;
 
-    uint8_t PrevEndpoint = USB::Endpoint_GetCurrentEndpoint();
-    USB::Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
+    uint8_t PrevEndpoint = Endpoint_GetCurrentEndpoint();
+    Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
 
-    if (USB::Endpoint_IsSETUPReceived())
-        USB_Device_ProcessControlRequest();
+    if (Endpoint_IsSETUPReceived())
+        Device_ProcessControlRequest();
 
     USB::Endpoint_SelectEndpoint(PrevEndpoint);
 }
 
-void USB_Device_SendRemoteWakeup(void)
+uint8_t USB::Endpoint_Write_Stream_LE(const void * const Buffer,
+                            uint16_t Length, uint16_t* const BytesProcessed)
 {
-    if (!(USB::USB_Options & USB_OPT_MANUAL_PLL))
-    {
-        USB::USB_PLL_On();
-        while (!(USB::USB_PLL_IsReady()));
-    }
-
-    USB::USB_CLK_Unfreeze();
-    UDCON |= (1 << RMWKUP);
-    while (UDCON & (1 << RMWKUP));
-}
-
-uint8_t Endpoint_Discard_Stream(uint16_t Length, uint16_t* const BytesProcessed)
-{
-    uint8_t  ErrorCode;
+    uint8_t *DataStream = (uint8_t*)Buffer;
     uint16_t BytesInTransfer = 0;
+    uint8_t  ErrorCode;
 
     if ((ErrorCode = Endpoint_WaitUntilReady()))
         return ErrorCode;
 
     if (BytesProcessed != NULL)
-        Length -= *BytesProcessed;
-
-    while (Length)
     {
-        if (!(USB::Endpoint_IsReadWriteAllowed()))
-        {
-            USB::Endpoint_ClearOUT();
-
-            if (BytesProcessed != NULL)
-            {
-                *BytesProcessed += BytesInTransfer;
-                return ENDPOINT_RWSTREAM_IncompleteTransfer;
-            }
-
-            if ((ErrorCode = Endpoint_WaitUntilReady()))
-                return ErrorCode;
-        }
-        else
-        {
-            USB::Endpoint_Discard_8();
-            Length--;
-            BytesInTransfer++;
-        }
+        Length -= *BytesProcessed;
+        DataStream += *BytesProcessed;
     }
-
-    return ENDPOINT_RWSTREAM_NoError;
-}
-
-uint8_t Endpoint_Null_Stream(uint16_t Length, uint16_t* const BytesProcessed)
-{
-    uint8_t  ErrorCode;
-    uint16_t BytesInTransfer = 0;
-
-    if ((ErrorCode = Endpoint_WaitUntilReady()))
-      return ErrorCode;
-
-    if (BytesProcessed != NULL)
-      Length -= *BytesProcessed;
 
     while (Length)
     {
@@ -804,7 +667,8 @@ uint8_t Endpoint_Null_Stream(uint16_t Length, uint16_t* const BytesProcessed)
         }
         else
         {
-            USB::Endpoint_Write_8(0);
+            USB::Endpoint_Write_8(*DataStream);
+            DataStream += 1;
             Length--;
             BytesInTransfer++;
         }
@@ -813,119 +677,7 @@ uint8_t Endpoint_Null_Stream(uint16_t Length, uint16_t* const BytesProcessed)
     return ENDPOINT_RWSTREAM_NoError;
 }
 
-#define  TEMPLATE_BUFFER_TYPE                      const void*
-#define  TEMPLATE_CLEAR_ENDPOINT()                 USB::Endpoint_ClearIN()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            0
-#define  TEMPLATE_BUFFER_MOVE(BufferPtr, Amount)   BufferPtr += Amount
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         USB::Endpoint_Write_8(*BufferPtr)
-
-uint8_t USB::Endpoint_Write_Stream_LE (TEMPLATE_BUFFER_TYPE const Buffer,
-                            uint16_t Length,
-                            uint16_t* const BytesProcessed)
-{
-    uint8_t* DataStream      = ((uint8_t*)Buffer + TEMPLATE_BUFFER_OFFSET(Length));
-    uint16_t BytesInTransfer = 0;
-    uint8_t  ErrorCode;
-
-    if ((ErrorCode = Endpoint_WaitUntilReady()))
-      return ErrorCode;
-
-    if (BytesProcessed != NULL)
-    {
-        Length -= *BytesProcessed;
-        TEMPLATE_BUFFER_MOVE(DataStream, *BytesProcessed);
-    }
-
-    while (Length)
-    {
-        if (!(USB::Endpoint_IsReadWriteAllowed()))
-        {
-            TEMPLATE_CLEAR_ENDPOINT();
-
-            if (BytesProcessed != NULL)
-            {
-                *BytesProcessed += BytesInTransfer;
-                return ENDPOINT_RWSTREAM_IncompleteTransfer;
-            }
-
-            if ((ErrorCode = Endpoint_WaitUntilReady()))
-              return ErrorCode;
-        }
-        else
-        {
-            TEMPLATE_TRANSFER_BYTE(DataStream);
-            TEMPLATE_BUFFER_MOVE(DataStream, 1);
-            Length--;
-            BytesInTransfer++;
-        }
-    }
-
-    return ENDPOINT_RWSTREAM_NoError;
-}
-
-#undef TEMPLATE_BUFFER_TYPE
-#undef TEMPLATE_TRANSFER_BYTE
-#undef TEMPLATE_CLEAR_ENDPOINT
-#undef TEMPLATE_BUFFER_OFFSET
-#undef TEMPLATE_BUFFER_MOVE
-
-#define  TEMPLATE_BUFFER_TYPE                      void*
-#define  TEMPLATE_CLEAR_ENDPOINT()                 USB::Endpoint_ClearOUT()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            0
-#define  TEMPLATE_BUFFER_MOVE(BufferPtr, Amount)   BufferPtr += Amount
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         *BufferPtr = USB::Endpoint_Read_8()
-
-uint8_t Endpoint_Read_Stream_LE(TEMPLATE_BUFFER_TYPE const Buffer,
-                            uint16_t Length,
-                            uint16_t* const BytesProcessed)
-{
-    uint8_t* DataStream      = ((uint8_t*)Buffer + TEMPLATE_BUFFER_OFFSET(Length));
-    uint16_t BytesInTransfer = 0;
-    uint8_t  ErrorCode;
-
-    if ((ErrorCode = Endpoint_WaitUntilReady()))
-      return ErrorCode;
-
-    if (BytesProcessed != NULL)
-    {
-        Length -= *BytesProcessed;
-        TEMPLATE_BUFFER_MOVE(DataStream, *BytesProcessed);
-    }
-
-    while (Length)
-    {
-        if (!(USB::Endpoint_IsReadWriteAllowed()))
-        {
-            TEMPLATE_CLEAR_ENDPOINT();
-
-            if (BytesProcessed != NULL)
-            {
-                *BytesProcessed += BytesInTransfer;
-                return ENDPOINT_RWSTREAM_IncompleteTransfer;
-            }
-
-            if ((ErrorCode = Endpoint_WaitUntilReady()))
-              return ErrorCode;
-        }
-        else
-        {
-            TEMPLATE_TRANSFER_BYTE(DataStream);
-            TEMPLATE_BUFFER_MOVE(DataStream, 1);
-            Length--;
-            BytesInTransfer++;
-        }
-    }
-
-    return ENDPOINT_RWSTREAM_NoError;
-}
-
-#undef TEMPLATE_BUFFER_TYPE
-#undef TEMPLATE_TRANSFER_BYTE
-#undef TEMPLATE_CLEAR_ENDPOINT
-#undef TEMPLATE_BUFFER_OFFSET
-#undef TEMPLATE_BUFFER_MOVE
-
-uint8_t Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Length)
+uint8_t USB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Length)
 {
     uint8_t* DataStream = (uint8_t*)Buffer;
     bool LastPacketFull = false;
@@ -978,51 +730,7 @@ uint8_t Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Leng
     return ENDPOINT_RWCSTREAM_NoError;
 }
 
-uint8_t Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Length)
-{
-    uint8_t* DataStream = (uint8_t*)Buffer;
-
-    if (!(Length))
-        USB::Endpoint_ClearOUT();
-
-    while (Length)
-    {
-        uint8_t USB_DeviceState_LCL = USB_DeviceState;
-
-        if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-            return ENDPOINT_RWCSTREAM_DeviceDisconnected;
-        else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-            return ENDPOINT_RWCSTREAM_BusSuspended;
-        else if (USB::Endpoint_IsSETUPReceived())
-            return ENDPOINT_RWCSTREAM_HostAborted;
-
-        if (USB::Endpoint_IsOUTReceived())
-        {
-            while (Length && Endpoint_BytesInEndpoint())
-            {
-                *DataStream = USB::Endpoint_Read_8();
-                DataStream++;
-                Length--;
-            }
-
-            USB::Endpoint_ClearOUT();
-        }
-    }
-
-    while (!(USB::Endpoint_IsINReady()))
-    {
-        uint8_t USB_DeviceState_LCL = USB_DeviceState;
-
-        if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-          return ENDPOINT_RWCSTREAM_DeviceDisconnected;
-        else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-          return ENDPOINT_RWCSTREAM_BusSuspended;
-    }
-
-    return ENDPOINT_RWCSTREAM_NoError;
-}
-
-uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length)
+uint8_t USB::Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length)
 {
     uint8_t* DataStream = (uint8_t*)Buffer;
     bool LastPacketFull = false;
@@ -1030,7 +738,7 @@ uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Len
     if (Length > USB_ControlRequest.wLength)
         Length = USB_ControlRequest.wLength;
     else if (!(Length))
-        USB::Endpoint_ClearIN();
+        Endpoint_ClearIN();
 
     while (Length || LastPacketFull)
     {
@@ -1058,7 +766,7 @@ uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Len
             }
 
             LastPacketFull = (BytesInEndpoint == USB_Device_ControlEndpointSize);
-            USB::Endpoint_ClearIN();
+            Endpoint_ClearIN();
         }
     }
 
@@ -1075,25 +783,30 @@ uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Len
     return ENDPOINT_RWCSTREAM_NoError;
 }
 
-
-ISR(USB_GEN_vect, ISR_BLOCK)
+ISR(USB_GEN_vect)
 {
-    if (USB::USB_INT_HasOccurred(USB_INT_SOFI) && USB::USB_INT_IsEnabled(USB_INT_SOFI))
+    USB *instance = USB::instance;
+    instance->gen();
+}
+
+void USB::gen()
+{
+    if (USB_INT_HasOccurred(USB_INT_SOFI) && USB_INT_IsEnabled(USB_INT_SOFI))
     {
-        USB::USB_INT_Clear(USB_INT_SOFI);
+        USB_INT_Clear(USB_INT_SOFI);
         //EVENT_USB_Device_StartOfFrame();
     }
 
-    if (USB::USB_INT_HasOccurred(USB_INT_VBUSTI) && USB::USB_INT_IsEnabled(USB_INT_VBUSTI))
+    if (USB_INT_HasOccurred(USB_INT_VBUSTI) && USB_INT_IsEnabled(USB_INT_VBUSTI))
     {
-        USB::USB_INT_Clear(USB_INT_VBUSTI);
+        USB_INT_Clear(USB_INT_VBUSTI);
 
-        if (USB::USB_VBUS_GetStatus())
+        if (USB_VBUS_GetStatus())
         {
-            if (!(USB::USB_Options & USB_OPT_MANUAL_PLL))
+            if (!(USB_Options & USB_OPT_MANUAL_PLL))
             {
-                USB::USB_PLL_On();
-                while (!(USB::USB_PLL_IsReady()));
+                USB_PLL_On();
+                while (!(USB_PLL_IsReady()));
             }
 
             USB_DeviceState = DEVICE_STATE_Powered;
@@ -1101,39 +814,39 @@ ISR(USB_GEN_vect, ISR_BLOCK)
         }
         else
         {
-            if (!(USB::USB_Options & USB_OPT_MANUAL_PLL))
-                USB::USB_PLL_Off();
+            if (!(USB_Options & USB_OPT_MANUAL_PLL))
+                USB_PLL_Off();
 
             USB_DeviceState = DEVICE_STATE_Unattached;
             //EVENT_USB_Device_Disconnect();
         }
     }
 
-    if (USB::USB_INT_HasOccurred(USB_INT_SUSPI) && USB::USB_INT_IsEnabled(USB_INT_SUSPI))
+    if (USB_INT_HasOccurred(USB_INT_SUSPI) && USB_INT_IsEnabled(USB_INT_SUSPI))
     {
-        USB::USB_INT_Disable(USB_INT_SUSPI);
-        USB::USB_INT_Enable(USB_INT_WAKEUPI);
-        USB::USB_CLK_Freeze();
+        USB_INT_Disable(USB_INT_SUSPI);
+        USB_INT_Enable(USB_INT_WAKEUPI);
+        USB_CLK_Freeze();
 
-        if (!(USB::USB_Options & USB_OPT_MANUAL_PLL))
-            USB::USB_PLL_Off();
+        if (!(USB_Options & USB_OPT_MANUAL_PLL))
+            USB_PLL_Off();
 
         USB_DeviceState = DEVICE_STATE_Suspended;
         //EVENT_USB_Device_Suspend();
     }
 
-    if (USB::USB_INT_HasOccurred(USB_INT_WAKEUPI) && USB::USB_INT_IsEnabled(USB_INT_WAKEUPI))
+    if (USB_INT_HasOccurred(USB_INT_WAKEUPI) && USB_INT_IsEnabled(USB_INT_WAKEUPI))
     {
-        if (!(USB::USB_Options & USB_OPT_MANUAL_PLL))
+        if (!(USB_Options & USB_OPT_MANUAL_PLL))
         {
-            USB::USB_PLL_On();
-            while (!(USB::USB_PLL_IsReady()));
+            USB_PLL_On();
+            while (!(USB_PLL_IsReady()));
         }
 
-        USB::USB_CLK_Unfreeze();
-        USB::USB_INT_Clear(USB_INT_WAKEUPI);
-        USB::USB_INT_Disable(USB_INT_WAKEUPI);
-        USB::USB_INT_Enable(USB_INT_SUSPI);
+        USB_CLK_Unfreeze();
+        USB_INT_Clear(USB_INT_WAKEUPI);
+        USB_INT_Disable(USB_INT_WAKEUPI);
+        USB_INT_Enable(USB_INT_SUSPI);
 
         if (USB_Device_ConfigurationNumber)
             USB_DeviceState = DEVICE_STATE_Configured;
@@ -1148,31 +861,37 @@ ISR(USB_GEN_vect, ISR_BLOCK)
         USB::USB_INT_Clear(USB_INT_EORSTI);
         USB_DeviceState = DEVICE_STATE_Default;
         USB_Device_ConfigurationNumber = 0;
-        USB::USB_INT_Clear(USB_INT_SUSPI);
-        USB::USB_INT_Disable(USB_INT_SUSPI);
-        USB::USB_INT_Enable(USB_INT_WAKEUPI);
+        USB_INT_Clear(USB_INT_SUSPI);
+        USB_INT_Disable(USB_INT_SUSPI);
+        USB_INT_Enable(USB_INT_WAKEUPI);
 
         Endpoint_ConfigureEndpoint(ENDPOINT_CONTROLEP, EP_TYPE_CONTROL,
                             USB_Device_ControlEndpointSize, 1);
 
-        USB::USB_INT_Enable(USB_INT_RXSTPI);
+        USB_INT_Enable(USB_INT_RXSTPI);
         //EVENT_USB_Device_Reset();
     }
 }
 
-ISR(USB_COM_vect, ISR_BLOCK)
+ISR(USB_COM_vect)
 {
-    uint8_t PrevSelectedEndpoint = USB::Endpoint_GetCurrentEndpoint();
-    USB::Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
-    USB::USB_INT_Disable(USB_INT_RXSTPI);
-    GlobalInterruptEnable();
-    USB_Device_ProcessControlRequest();
-    USB::Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
-    USB::USB_INT_Enable(USB_INT_RXSTPI);
-    USB::Endpoint_SelectEndpoint(PrevSelectedEndpoint);
+    USB *instance = USB::instance;
+    instance->com();
 }
 
-bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
+void USB::com()
+{
+    uint8_t PrevSelectedEndpoint = Endpoint_GetCurrentEndpoint();
+    Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
+    USB_INT_Disable(USB_INT_RXSTPI);
+    GlobalInterruptEnable();
+    Device_ProcessControlRequest();
+    Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
+    USB_INT_Enable(USB_INT_RXSTPI);
+    Endpoint_SelectEndpoint(PrevSelectedEndpoint);
+}
+
+bool USB::Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
                                      const uint8_t Entries)
 {
     for (uint8_t i = 0; i < Entries; i++)
@@ -1190,7 +909,7 @@ bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
     return true;
 }
 
-bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number, const uint8_t UECFG0XData,
+bool USB::Endpoint_ConfigureEndpoint_Prv(const uint8_t Number, const uint8_t UECFG0XData,
                                     const uint8_t UECFG1XData)
 {
     for (uint8_t EPNum = Number; EPNum < ENDPOINT_TOTAL_ENDPOINTS; EPNum++)
@@ -1199,7 +918,7 @@ bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number, const uint8_t UECFG0XD
         uint8_t UECFG1XTemp;
         uint8_t UEIENXTemp;
 
-        USB::Endpoint_SelectEndpoint(EPNum);
+        Endpoint_SelectEndpoint(EPNum);
 
         if (EPNum == Number)
         {
@@ -1217,9 +936,9 @@ bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number, const uint8_t UECFG0XD
         if (!(UECFG1XTemp & (1 << ALLOC)))
           continue;
 
-        USB::Endpoint_DisableEndpoint();
+        Endpoint_DisableEndpoint();
         UECFG1X &= ~(1 << ALLOC);
-        USB::Endpoint_EnableEndpoint();
+        Endpoint_EnableEndpoint();
         UECFG0X = UECFG0XTemp;
         UECFG1X = UECFG1XTemp;
         UEIENX  = UEIENXTemp;
@@ -1228,22 +947,8 @@ bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number, const uint8_t UECFG0XD
           return false;
     }
 
-    USB::Endpoint_SelectEndpoint(Number);
+    Endpoint_SelectEndpoint(Number);
     return true;
-}
-
-void Endpoint_ClearEndpoints(void)
-{
-    UEINT = 0;
-
-    for (uint8_t EPNum = 0; EPNum < ENDPOINT_TOTAL_ENDPOINTS; EPNum++)
-    {
-        USB::Endpoint_SelectEndpoint(EPNum);
-        UEIENX  = 0;
-        UEINTX  = 0;
-        UECFG1X = 0;
-        USB::Endpoint_DisableEndpoint();
-    }
 }
 
 void USB::Endpoint_ClearStatusStage()
@@ -1256,7 +961,7 @@ void USB::Endpoint_ClearStatusStage()
               return;
         }
 
-        USB::Endpoint_ClearOUT();
+        Endpoint_ClearOUT();
     }
     else
     {
@@ -1266,16 +971,16 @@ void USB::Endpoint_ClearStatusStage()
               return;
         }
 
-        USB::Endpoint_ClearIN();
+        Endpoint_ClearIN();
     }
 }
 
-uint8_t Endpoint_WaitUntilReady(void)
+uint8_t USB::Endpoint_WaitUntilReady(void)
 {
     uint16_t TimeoutMSRem = USB_STREAM_TIMEOUT_MS;
-    uint16_t PreviousFrameNumber = USB::USB_Device_GetFrameNumber();
+    uint16_t PreviousFrameNumber = USB_Device_GetFrameNumber();
 
-    for (;;)
+    while (true)
     {
         if (USB::Endpoint_GetEndpointDirection() == ENDPOINT_DIR_IN)
         {
@@ -1294,7 +999,7 @@ uint8_t Endpoint_WaitUntilReady(void)
             return ENDPOINT_READYWAIT_DeviceDisconnected;
         else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
             return ENDPOINT_READYWAIT_BusSuspended;
-        else if (USB::Endpoint_IsStalled())
+        else if (Endpoint_IsStalled())
             return ENDPOINT_READYWAIT_EndpointStalled;
 
         uint16_t CurrentFrameNumber = USB::USB_Device_GetFrameNumber();
@@ -1309,18 +1014,11 @@ uint8_t Endpoint_WaitUntilReady(void)
     }
 }
 
-static void USB_Device_SetAddress();
-static void USB_Device_SetConfiguration();
-static void USB_Device_GetConfiguration();
-static void USB_Device_GetDescriptor();
-static void USB_Device_GetStatus();
-static void USB_Device_ClearSetFeature();
-static void USB_Device_GetInternalSerialDescriptor();
 uint8_t USB_Device_ConfigurationNumber;
 bool USB_Device_CurrentlySelfPowered;
 bool USB_Device_RemoteWakeupEnabled;
 
-void USB_Device_ProcessControlRequest()
+void USB::Device_ProcessControlRequest()
 {
     uint8_t* RequestHeader = (uint8_t*)&USB_ControlRequest;
 
@@ -1342,7 +1040,7 @@ void USB_Device_ProcessControlRequest()
             if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
                 (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT)))
             {
-                USB_Device_GetStatus();
+                Device_GetStatus();
             }
 
             break;
@@ -1351,64 +1049,62 @@ void USB_Device_ProcessControlRequest()
             if ((bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE)) ||
                 (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_ENDPOINT)))
             {
-                USB_Device_ClearSetFeature();
+                Device_ClearSetFeature();
             }
 
             break;
         case REQ_SetAddress:
-				if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
-				  USB_Device_SetAddress();
-
+            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
+                Device_SetAddress();
             break;
         case REQ_GetDescriptor:
             if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
                 (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_INTERFACE)))
             {
-                USB_Device_GetDescriptor();
+                Device_GetDescriptor();
             }
 
             break;
         case REQ_GetConfiguration:
 				if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
-				  USB_Device_GetConfiguration();
+				  Device_GetConfiguration();
 
             break;
         case REQ_SetConfiguration:
             if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
-                USB_Device_SetConfiguration();
-
+                Device_SetConfiguration();
             break;
         default:
             break;
         }
     }
 
-    if (USB::Endpoint_IsSETUPReceived())
+    if (Endpoint_IsSETUPReceived())
     {
-        USB::Endpoint_ClearSETUP();
-        USB::Endpoint_StallTransaction();
+        Endpoint_ClearSETUP();
+        Endpoint_StallTransaction();
     }
 }
 
-static void USB_Device_SetAddress()
+void USB::Device_SetAddress()
 {
     uint8_t DeviceAddress = (USB_ControlRequest.wValue & 0x7F);
-    USB::USB_Device_SetDeviceAddress(DeviceAddress);
-    USB::Endpoint_ClearSETUP();
-    USB::Endpoint_ClearStatusStage();
-    while (!(USB::Endpoint_IsINReady()));
-    USB::USB_Device_EnableDeviceAddress(DeviceAddress);
+    USB_Device_SetDeviceAddress(DeviceAddress);
+    Endpoint_ClearSETUP();
+    Endpoint_ClearStatusStage();
+    while (!(Endpoint_IsINReady()));
+    USB_Device_EnableDeviceAddress(DeviceAddress);
     USB_DeviceState = (DeviceAddress) ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
 }
 
-static void USB_Device_SetConfiguration()
+void USB::Device_SetConfiguration()
 {
     if ((uint8_t)USB_ControlRequest.wValue > FIXED_NUM_CONFIGURATIONS)
         return;
 
-    USB::Endpoint_ClearSETUP();
+    Endpoint_ClearSETUP();
     USB_Device_ConfigurationNumber = (uint8_t)USB_ControlRequest.wValue;
-    USB::Endpoint_ClearStatusStage();
+    Endpoint_ClearStatusStage();
 
     if (USB_Device_ConfigurationNumber)
         USB_DeviceState = DEVICE_STATE_Configured;
@@ -1418,15 +1114,15 @@ static void USB_Device_SetConfiguration()
     EVENT_USB_Device_ConfigurationChanged();
 }
 
-static void USB_Device_GetConfiguration()
+void USB::Device_GetConfiguration()
 {
-	USB::Endpoint_ClearSETUP();
-	USB::Endpoint_Write_8(USB_Device_ConfigurationNumber);
-	USB::Endpoint_ClearIN();
-	USB::Endpoint_ClearStatusStage();
+	Endpoint_ClearSETUP();
+	Endpoint_Write_8(USB_Device_ConfigurationNumber);
+	Endpoint_ClearIN();
+	Endpoint_ClearStatusStage();
 }
 
-static void USB_Device_GetInternalSerialDescriptor()
+void USB::Device_GetInternalSerialDescriptor()
 {
     struct
     {
@@ -1438,19 +1134,19 @@ static void USB_Device_GetInternalSerialDescriptor()
 	SignatureDescriptor.Header.Type = DTYPE_String;
 	SignatureDescriptor.Header.Size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
 	USB_Device_GetSerialString(SignatureDescriptor.UnicodeString);
-	USB::Endpoint_ClearSETUP();
+	Endpoint_ClearSETUP();
 	Endpoint_Write_Control_Stream_LE(&SignatureDescriptor, sizeof(SignatureDescriptor));
-	USB::Endpoint_ClearOUT();
+	Endpoint_ClearOUT();
 }
 
-static void USB_Device_GetDescriptor(void)
+void USB::Device_GetDescriptor()
 {
 	const void* DescriptorPointer;
 	uint16_t DescriptorSize;
 
 	if (USB_ControlRequest.wValue == ((DTYPE_String << 8) | USE_INTERNAL_SERIAL))
 	{
-		USB_Device_GetInternalSerialDescriptor();
+		Device_GetInternalSerialDescriptor();
 		return;
 	}
 
@@ -1460,12 +1156,12 @@ static void USB_Device_GetDescriptor(void)
 		return;
 	}
 
-	USB::Endpoint_ClearSETUP();
+	Endpoint_ClearSETUP();
     Endpoint_Write_Control_PStream_LE(DescriptorPointer, DescriptorSize);
-    USB::Endpoint_ClearOUT();
+    Endpoint_ClearOUT();
 }
 
-static void USB_Device_GetStatus(void)
+void USB::Device_GetStatus()
 {
     uint8_t CurrentStatus = 0;
 
@@ -1480,18 +1176,18 @@ static void USB_Device_GetStatus(void)
 
             break;
         case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
-            USB::Endpoint_SelectEndpoint((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
+            Endpoint_SelectEndpoint((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
             CurrentStatus = USB::Endpoint_IsStalled();
-            USB::Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
+            Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
 			break;
         default:
             return;
 	}
 
-	USB::Endpoint_ClearSETUP();
-	USB::Endpoint_Write_16_LE(CurrentStatus);
-	USB::Endpoint_ClearIN();
-	USB::Endpoint_ClearStatusStage();
+	Endpoint_ClearSETUP();
+	Endpoint_Write_16_LE(CurrentStatus);
+	Endpoint_ClearIN();
+	Endpoint_ClearStatusStage();
 }
 
 uint32_t USB::Endpoint_Read_32_LE()
@@ -1510,7 +1206,7 @@ uint32_t USB::Endpoint_Read_32_LE()
 
 }
 
-static void USB_Device_ClearSetFeature(void)
+void USB::Device_ClearSetFeature()
 {
 	switch (USB_ControlRequest.bmRequestType & CONTROL_REQTYPE_RECIPIENT)
 	{
@@ -1529,9 +1225,9 @@ static void USB_Device_ClearSetFeature(void)
             if (EndpointIndex == ENDPOINT_CONTROLEP)
                 return;
 
-            USB::Endpoint_SelectEndpoint(EndpointIndex);
+            Endpoint_SelectEndpoint(EndpointIndex);
 
-            if (USB::Endpoint_IsEnabled())
+            if (Endpoint_IsEnabled())
             {
                 if (USB_ControlRequest.bRequest == REQ_SetFeature)
                 {
@@ -1551,9 +1247,9 @@ static void USB_Device_ClearSetFeature(void)
         return;
 	}
 
-    USB::Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
-    USB::Endpoint_ClearSETUP();
-    USB::Endpoint_ClearStatusStage();
+    Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
+    Endpoint_ClearSETUP();
+    Endpoint_ClearStatusStage();
 }
 
 bool USB::Endpoint_HasEndpointInterrupted(const uint8_t Address)
@@ -1564,26 +1260,21 @@ bool USB::Endpoint_HasEndpointInterrupted(const uint8_t Address)
 
 void USB::Endpoint_SetEndpointDirection(const uint8_t DirectionMask)
 {
-    UECFG0X = ((UECFG0X & ~(1 << EPDIR)) | (DirectionMask ? (1 << EPDIR) : 0));
+    UECFG0X = ((UECFG0X & ~(1<<EPDIR)) | (DirectionMask ? (1<<EPDIR) : 0));
 }
 
 void Endpoint_Write_32_BE(const uint32_t Data)
 {
-    UEDATX = (Data >> 24);
-    UEDATX = (Data >> 16);
-    UEDATX = (Data >> 8);
-    UEDATX = (Data &  0xFF);
+    UEDATX = Data >> 24;
+    UEDATX = Data >> 16;
+    UEDATX = Data >> 8;
+    UEDATX = Data &  0xFF;
 }
 
 void USB::Endpoint_Write_16_LE(const uint16_t Data)
 {
     UEDATX = (Data & 0xFF);
     UEDATX = (Data >> 8);
-}
-
-bool USB::Endpoint_IsOUTReceived()
-{
-    return ((UEINTX & (1 << RXOUTI)) ? true : false);
 }
 
 void USB::Endpoint_Discard_32()
@@ -1601,22 +1292,22 @@ void USB::USB_INT_Clear(const uint8_t Interrupt)
     switch (Interrupt)
     {
     case USB_INT_VBUSTI:
-        USBINT &= ~(1 << VBUSTI);
+        USBINT &= ~(1<<VBUSTI);
         break;
     case USB_INT_WAKEUPI:
-        UDINT  &= ~(1 << WAKEUPI);
+        UDINT &= ~(1<<WAKEUPI);
         break;
     case USB_INT_SUSPI:
-        UDINT  &= ~(1 << SUSPI);
+        UDINT &= ~(1<<SUSPI);
         break;
     case USB_INT_EORSTI:
-        UDINT  &= ~(1 << EORSTI);
+        UDINT &= ~(1<<EORSTI);
         break;
     case USB_INT_SOFI:
-        UDINT  &= ~(1 << SOFI);
+        UDINT &= ~(1<<SOFI);
         break;
     case USB_INT_RXSTPI:
-        UEINTX &= ~(1 << RXSTPI);
+        UEINTX &= ~(1<<RXSTPI);
         break;
     default:
         break;
@@ -1628,48 +1319,34 @@ bool USB::USB_INT_IsEnabled(const uint8_t Interrupt)
     switch (Interrupt)
     {
      case USB_INT_VBUSTI:
-         return (USBCON & (1 << VBUSTE));
+         return USBCON & 1<<VBUSTE;
      case USB_INT_WAKEUPI:
-         return (UDIEN  & (1 << WAKEUPE));
+         return UDIEN & 1<<WAKEUPE;
      case USB_INT_SUSPI:
-         return (UDIEN  & (1 << SUSPE));
+         return UDIEN & 1<<SUSPE;
      case USB_INT_EORSTI:
-         return (UDIEN  & (1 << EORSTE));
+         return UDIEN & 1<<EORSTE;
      case USB_INT_SOFI:
-         return (UDIEN  & (1 << SOFE));
+         return UDIEN & 1<<SOFE;
      case USB_INT_RXSTPI:
-         return (UEIENX & (1 << RXSTPE));
+         return UEIENX & 1<<RXSTPE;
     default:
         return false;
     }
 }
 
-bool USB::Endpoint_IsSETUPReceived()
-{
-    return ((UEINTX & (1 << RXSTPI)) ? true : false);
-}
-
-bool USB::Endpoint_IsReadWriteAllowed()
-{
-    return ((UEINTX & (1 << RWAL)) ? true : false);
-}
-
-bool USB::Endpoint_IsConfigured() {
-    return ((UESTA0X & (1 << CFGOK)) ? true : false);
-}
-
 void USB::Endpoint_Write_32_LE(const uint32_t Data)
 {
-    UEDATX = (Data &  0xFF);
-    UEDATX = (Data >> 8);
-    UEDATX = (Data >> 16);
-    UEDATX = (Data >> 24);
+    UEDATX = Data &  0xFF;
+    UEDATX = Data >> 8;
+    UEDATX = Data >> 16;
+    UEDATX = Data >> 24;
 }
 
 void USB::Endpoint_Write_16_BE(const uint16_t Data)
 {
-    UEDATX = (Data >> 8);
-    UEDATX = (Data & 0xFF);
+    UEDATX = Data>>8;
+    UEDATX = Data & 0xFF;
 }
 
 void USB::Endpoint_Discard_16()
@@ -1735,22 +1412,22 @@ void USB::USB_INT_Enable(const uint8_t Interrupt)
     switch (Interrupt)
     {
     case USB_INT_VBUSTI:
-        USBCON |= (1 << VBUSTE);
+        USBCON |= 1<<VBUSTE;
         break;
     case USB_INT_WAKEUPI:
-        UDIEN  |= (1 << WAKEUPE);
+        UDIEN  |= 1<<WAKEUPE;
         break;
     case USB_INT_SUSPI:
-        UDIEN  |= (1 << SUSPE);
+        UDIEN  |= 1<<SUSPE;
         break;
     case USB_INT_EORSTI:
-        UDIEN  |= (1 << EORSTE);
+        UDIEN  |= 1<<EORSTE;
         break;
     case USB_INT_SOFI:
-        UDIEN  |= (1 << SOFE);
+        UDIEN  |= 1<<SOFE;
         break;
     case USB_INT_RXSTPI:
-        UEIENX |= (1 << RXSTPE);
+        UEIENX |= 1<<RXSTPE;
         break;
     default:
         break;
@@ -1762,22 +1439,22 @@ void USB::USB_INT_Disable(const uint8_t Interrupt)
     switch (Interrupt)
     {
     case USB_INT_VBUSTI:
-        USBCON &= ~(1 << VBUSTE);
+        USBCON &= ~(1<<VBUSTE);
         break;
     case USB_INT_WAKEUPI:
-        UDIEN  &= ~(1 << WAKEUPE);
+        UDIEN  &= ~(1<<WAKEUPE);
         break;
     case USB_INT_SUSPI:
-        UDIEN  &= ~(1 << SUSPE);
+        UDIEN  &= ~(1<<SUSPE);
         break;
     case USB_INT_EORSTI:
-        UDIEN  &= ~(1 << EORSTE);
+        UDIEN  &= ~(1<<EORSTE);
         break;
     case USB_INT_SOFI:
-        UDIEN  &= ~(1 << SOFE);
+        UDIEN  &= ~(1<<SOFE);
         break;
     case USB_INT_RXSTPI:
-        UEIENX &= ~(1 << RXSTPE);
+        UEIENX &= ~(1<<RXSTPE);
         break;
     default:
         break;
@@ -1789,17 +1466,17 @@ bool USB::USB_INT_HasOccurred(const uint8_t Interrupt)
     switch (Interrupt)
     {
     case USB_INT_VBUSTI:
-        return (USBINT & (1 << VBUSTI));
+        return USBINT & 1<<VBUSTI;
     case USB_INT_WAKEUPI:
-        return (UDINT  & (1 << WAKEUPI));
+        return UDINT & 1<<WAKEUPI;
     case USB_INT_SUSPI:
         return (UDINT  & (1 << SUSPI));
     case USB_INT_EORSTI:
         return (UDINT  & (1 << EORSTI));
     case USB_INT_SOFI:
-        return (UDINT  & (1 << SOFI));
+        return UDINT  & (1 << SOFI);
     case USB_INT_RXSTPI:
-        return (UEINTX & (1 << RXSTPI));
+        return UEINTX & 1<<RXSTPI;
     default:
         return false;
     }

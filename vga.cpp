@@ -8,6 +8,7 @@
 #include <avr/interrupt.h>
 #include "screenFont.h"
 #include <stdio.h>
+#include "leonardo.h"
 
 ISR(TIMER1_OVF_vect)
 {
@@ -81,12 +82,12 @@ void VGA::init()
   
     // Timer 1 - vertical sync pulses
     DDRB = 0xff;
-    TCCR1A = 1<<WGM10 | 1<<WGM11 | 1<<COM1B1;
-    TCCR1B = 1<<WGM12 | 1<<WGM13 | 1<<CS12 | 1<<CS10;
+    *ptccr1a = 1<<wgm10 | 1<<wgm11 | 1<<com1b1;
+    *ptccr1b = 1<<WGM12 | 1<<WGM13 | 1<<CS12 | 1<<CS10;
     OCR1A = 259;  // 16666 / 64 uS = 260 (less one)
     OCR1B = 0;    // 64 / 64 uS = 1 (less one)
     TIFR1 = 1<<TOV1;   // clear overflow flag
-    TIMSK1 = 1<<TOIE1;  // interrupt on overflow on timer 1
+    TIMSK1 = 1<<toie1;  // interrupt on overflow on timer 1
 
     // Timer 2 - horizontal sync pulses
     DDRD = 0xff;
@@ -95,7 +96,7 @@ void VGA::init()
     OCR0A = 63;   // 32 / 0.5 uS = 64 (less one)
     OCR0B = 7;    // 4 / 0.5 uS = 8 (less one)
     TIFR0 = 1<<TOV0;   // clear overflow flag
-    TIMSK0 = 1<<TOIE0;  // interrupt on overflow on timer 2
+    TIMSK0 = 1<<toie0;  // interrupt on overflow on timer 2
  
     UBRR1 = 0;  // USART Baud Rate Register
     DDRD |= 1<<4;

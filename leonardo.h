@@ -1,0 +1,56 @@
+#ifndef _LEONARDO_H_
+#define _LEONARDO_H_
+static constexpr uint8_t
+    portb_base = 0x23,
+        pinb = portb_base,
+        pinb0 = 0, pinb1 = 1, pinb2 = 2, pinb3 = 3, pinb4 = 4, pinb5 = 5, pinb6 = 6, pinb7 = 7,
+        ddrb = portb_base + 1,
+        ddrb0 = 0, ddrb1 = 1, ddrb2 = 2, ddrb3 = 3, ddrb4 = 4, ddrb5 = 5, ddrb6 = 6, ddrb7 = 7,
+        portb = portb_base + 2,
+        portb0 = 0, pb1 = 1, portb2 = 2, portb3 = 3, portb4 = 4, pb5 = 5, portb6 = 6, portb7 = 7,
+    portc_base = 0x26,
+        pinc = portc_base,
+        pinc6 = 6, pinc7 = 7,
+        portc = portc_base + 2,
+        pc6 = 6, pc7 = 7,
+    portd_base = 0x29,
+        pind = portd_base,
+        ddrd = portd_base + 1,
+        portd = portd_base + 2,
+    porte_base = 0x2c,
+        pine = porte_base,
+        ddre = porte_base + 1,
+        porte = porte_base + 2,
+    portf_base = 0x2f,
+        pinf = portf_base,
+        ddrf = portf_base + 1,
+        portf = portf_base + 2,
+    timsk0 = 0x6e,
+    toie0 = 0, ocie0a = 1, ocie0b = 2,
+    timsk1 = 0x6f,
+    toie1 = 0, ocie1a = 1, ocie1b = 2, ocie1c = 3, icie1 = 5,
+    timsk3 = 0x71,
+    toie3 = 0, ocie3a = 1, ocie3b = 2, ocie3c = 3, icie3 = 5,
+    timsk4 = 0x72,
+    toie4 = 2,
+    ocie4b = 5,
+    ocie4a = 6,
+    ocie4d = 7,
+    tccr1a = 0x80,
+    wgm10 = 0, wgm11 = 1, com1c0 = 2, com1c1 = 3, com1b0 = 4, com1b1 = 5, com1a0 = 6, com1a1 = 7,
+    tccr1b = 0x81,
+    cs10 = 0, cs11 = 1, cs12 = 2, wgm12 = 3, wgm13 = 4, ines1 = 6, icnc1 = 7,
+    tccr1c = 0x82,
+    foc1c = 5, foc1b = 6, foc1a = 7,
+    tcnt1 = 0x84, tcnt1l = 0x84;
+
+static volatile uint8_t *ppinb = (volatile uint8_t * const)pinb,
+    *pddrb = (volatile uint8_t * const)ddrb,
+    *pportb = (volatile uint8_t * const)portb,
+    *ptccr1a = (volatile uint8_t * const)tccr1a,
+    *ptccr1b = (volatile uint8_t * const)tccr1b,
+    *ptccr1c = (volatile uint8_t * const)tccr1c;
+#endif
+
+
+
