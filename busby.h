@@ -15,7 +15,6 @@
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 #include <avr/boot.h>
-#include <math.h>
 #include <util/delay.h>
 #include <stdio.h>
 #include "misc.h"
@@ -46,13 +45,6 @@ enum USB_Interrupts_t
     USB_INT_EORSTI = 4,
     USB_INT_SOFI = 5,
     USB_INT_RXSTPI = 6,
-};
-
-enum USB_DescriptorMemorySpaces_t
-{
-    MEMSPACE_FLASH = 0,
-    MEMSPACE_EEPROM = 1,
-    MEMSPACE_RAM = 2,
 };
 
 extern uint8_t USB_Device_ConfigurationNumber;
@@ -187,105 +179,6 @@ static constexpr uint32_t LE32_TO_CPU(uint32_t x) { return x; }
 static constexpr uint16_t CPU_TO_LE16(uint16_t x) { return x; }
 static constexpr uint32_t CPU_TO_LE32(uint32_t x) { return x; }
 
-static inline uint16_t SwapEndian_16(const uint16_t Word)
-{
-    uint8_t Temp;
-
-    union
-    {
-        uint16_t Word;
-        uint8_t  Bytes[2];
-    } Data;
-
-    Data.Word = Word;
-    Temp = Data.Bytes[0];
-    Data.Bytes[0] = Data.Bytes[1];
-    Data.Bytes[1] = Temp;
-    return Data.Word;
-}
-
-static inline uint32_t SwapEndian_32(const uint32_t DWord)
-{
-    uint8_t Temp;
-
-    union
-    {
-        uint32_t DWord;
-        uint8_t  Bytes[4];
-    } Data;
-
-    Data.DWord = DWord;
-    Temp = Data.Bytes[0];
-    Data.Bytes[0] = Data.Bytes[3];
-    Data.Bytes[3] = Temp;
-    Temp = Data.Bytes[1];
-    Data.Bytes[1] = Data.Bytes[2];
-    Data.Bytes[2] = Temp;
-    return Data.DWord;
-}
-
-static inline void SwapEndian_n(void* const Data, uint8_t Length)
-{
-    uint8_t* CurrDataPos = (uint8_t*)Data;
-
-    while (Length > 1)
-    {
-        uint8_t Temp = *CurrDataPos;
-        *CurrDataPos = *(CurrDataPos + Length - 1);
-        *(CurrDataPos + Length - 1) = Temp;
-        CurrDataPos++;
-        Length -= 2;
-    }
-}
-
-static inline uint8_t BitReverse(uint8_t Byte)
-{
-    Byte = (((Byte & 0xF0) >> 4) | ((Byte & 0x0F) << 4));
-    Byte = (((Byte & 0xCC) >> 2) | ((Byte & 0x33) << 2));
-    Byte = (((Byte & 0xAA) >> 1) | ((Byte & 0x55) << 1));
-    return Byte;
-}
-
-static inline void Delay_MS(uint16_t Milliseconds)
-{
-    if (GCC_IS_COMPILE_CONST(Milliseconds))
-    {
-        _delay_ms(Milliseconds);
-    }
-    else
-    {
-        while (Milliseconds--)
-            _delay_ms(1);
-    }
-}
-
-static inline uint_reg_t GetGlobalInterruptMask(void)
-{
-    GCC_MEMORY_BARRIER();
-    return SREG;
-}
-
-static inline void SetGlobalInterruptMask(const uint_reg_t GlobalIntState)
-{
-    GCC_MEMORY_BARRIER();
-    SREG = GlobalIntState;
-    GCC_MEMORY_BARRIER();
-}
-
-static inline void GlobalInterruptEnable(void)
-{
-    GCC_MEMORY_BARRIER();
-    sei();
-    GCC_MEMORY_BARRIER();
-}
-
-static inline void GlobalInterruptDisable(void)
-{
-    GCC_MEMORY_BARRIER();
-    cli();
-    GCC_MEMORY_BARRIER();
-}
-
 static const uint8_t NO_DESCRIPTOR = 0;
 #define USB_CONFIG_POWER_MA(mA)           ((mA) >> 1)
 #define USB_STRING_LEN(UnicodeChars) (sizeof(USB_Descriptor_Header_t) + ((UnicodeChars) << 1))
@@ -293,17 +186,7 @@ static const uint8_t NO_DESCRIPTOR = 0;
 #define VERSION_BCD(x)   CPU_TO_LE16((VERSION_TENS(x) << 12)  | (VERSION_ONES(x) << 8) | \
                               (VERSION_TENTHS(x) << 4) | (VERSION_HUNDREDTHS(x) << 0) )
 
-static const uint16_t LANGUAGE_ID_ENG = 0x0409;
-static const uint8_t USB_CONFIG_ATTR_RESERVED = 0x80;
-static const uint8_t USB_CONFIG_ATTR_SELFPOWERED = 0x40;
-static const uint8_t USB_CONFIG_ATTR_REMOTEWAKEUP = 0x20;
-static const uint8_t ENDPOINT_ATTR_NO_SYNC = 0 << 2;
-static const uint8_t ENDPOINT_ATTR_ASYNC = 1 << 2;
-static const uint8_t ENDPOINT_ATTR_ADAPTIVE = 2 << 2;
-static const uint8_t ENDPOINT_ATTR_SYNC = 3 << 2;
-static const uint8_t ENDPOINT_USAGE_DATA = 0 << 4;
-static const uint8_t ENDPOINT_USAGE_FEEDBACK = 1 << 4;
-static const uint8_t ENDPOINT_USAGE_IMPLICIT_FEEDBACK = 2 << 4;
+
 
 enum USB_DescriptorTypes_t
 {
@@ -394,15 +277,15 @@ struct USB_Descriptor_DeviceQualifier_t
 
 typedef struct
 {
-uint8_t bLength;
-uint8_t bDescriptorType;
-uint16_t bcdUSB;
-uint8_t bDeviceClass;
-uint8_t bDeviceSubClass;
-uint8_t bDeviceProtocol;
-uint8_t bMaxPacketSize0;
-uint8_t bNumConfigurations;
-uint8_t bReserved;
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint16_t bcdUSB;
+    uint8_t bDeviceClass;
+    uint8_t bDeviceSubClass;
+    uint8_t bDeviceProtocol;
+    uint8_t bMaxPacketSize0;
+    uint8_t bNumConfigurations;
+    uint8_t bReserved;
 } ATTR_PACKED USB_StdDescriptor_DeviceQualifier_t;
 
 typedef struct
@@ -430,14 +313,14 @@ uint8_t bMaxPower;
 
 typedef struct
 {
-USB_Descriptor_Header_t Header;
-uint8_t InterfaceNumber;
-uint8_t AlternateSetting;
-uint8_t TotalEndpoints;
-uint8_t Class;
-uint8_t SubClass;
-uint8_t Protocol;
-uint8_t InterfaceStrIndex;
+    USB_Descriptor_Header_t Header;
+    uint8_t InterfaceNumber;
+    uint8_t AlternateSetting;
+    uint8_t TotalEndpoints;
+    uint8_t Class;
+    uint8_t SubClass;
+    uint8_t Protocol;
+    uint8_t InterfaceStrIndex;
 } ATTR_PACKED USB_Descriptor_Interface_t;
 
 typedef struct
@@ -533,7 +416,6 @@ enum USB_Modes_t
     USB_MODE_UID    = 3,
 };
 
-static const uint8_t USB_DEVICE_OPT_LOWSPEED = 1<<0;
 static const uint8_t USB_DEVICE_OPT_FULLSPEED = 0<<0;
 static const uint8_t USE_INTERNAL_SERIAL = 0xDC;
 static const uint8_t INTERNAL_SERIAL_LENGTH_BITS = 80;
@@ -542,33 +424,9 @@ static const uint8_t INTERNAL_SERIAL_START_ADDRESS = 0x0e;
 uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue, const uint8_t wIndex,
        const void** const DescriptorAddress) ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
-static inline bool USB_Device_IsAddressSet() { return UDADDR & 1<<ADDEN; }
 
-static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
-{
-    uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
-    GlobalInterruptDisable();
-    uint8_t SigReadAddress = INTERNAL_SERIAL_START_ADDRESS;
 
-    for (uint8_t SerialCharNum = 0;
-        SerialCharNum < (INTERNAL_SERIAL_LENGTH_BITS / 4); SerialCharNum++)
-    {
-        uint8_t SerialByte = boot_signature_byte_get(SigReadAddress);
 
-        if (SerialCharNum & 0x01)
-        {
-            SerialByte >>= 4;
-            SigReadAddress++;
-        }
-
-        SerialByte &= 0x0F;
-
-        UnicodeString[SerialCharNum] = cpu_to_le16((SerialByte >= 10) ?
-                                   (('A' - 10) + SerialByte) : ('0' + SerialByte));
-    }
-
-    SetGlobalInterruptMask(CurrentGlobalInt);
-}
 
 enum Endpoint_Stream_RW_ErrorCodes_t
 {
@@ -595,8 +453,6 @@ extern USB_Request_Header_t USB_ControlRequest;
 #define _GET_DEVICE_GPIOR_NAME(x) _GET_DEVICE_GPIOR_NAME2(x)
 #define USB_DeviceState _GET_DEVICE_GPIOR_NAME(DEVICE_STATE_AS_GPIOR)
 
-void USB_USBTask();
-
 typedef struct
 {
     uint8_t  Address;
@@ -607,25 +463,6 @@ typedef struct
 
 static const uint8_t ENDPOINT_EPNUM_MASK = 0x0f;
 static const uint8_t ENDPOINT_CONTROLEP = 0;
-
-static inline uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes)
-{
-    uint8_t  MaskVal    = 0;
-    uint16_t CheckBytes = 8;
-
-    while (CheckBytes < Bytes)
-    {
-        MaskVal++;
-        CheckBytes <<= 1;
-    }
-
-    return MaskVal<<EPSIZE0;
-}
-
-void Endpoint_ClearEndpoints();
-
-
-
 static const uint8_t ENDPOINT_TOTAL_ENDPOINTS = 7;
 
 enum Endpoint_WaitUntilReady_ErrorCodes_t
@@ -636,18 +473,6 @@ enum Endpoint_WaitUntilReady_ErrorCodes_t
     ENDPOINT_READYWAIT_BusSuspended = 3,
     ENDPOINT_READYWAIT_Timeout = 4,
 };
-
-static inline uint16_t Endpoint_BytesInEndpoint()
-{
-    return ((uint16_t)UEBCHX<<8) | UEBCLX;
-}
-
-
-static inline void Endpoint_ResetEndpoint(const uint8_t Address)
-{
-    UERST = (1 << (Address & ENDPOINT_EPNUM_MASK));
-    UERST = 0;
-}
 
 struct CDC_LineEncoding_t
 {
@@ -683,19 +508,26 @@ typedef struct
 
 class USB : public Terminal
 {
+private:
     void createStream(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo, FILE* const Stream);
     void inline createStream() { createStream(&cdcDevice, &cdcStream); }
     FILE cdcStream;
     inline uint16_t Endpoint_Read_16_LE();
     inline uint16_t Endpoint_Read_16_BE();
-public:
-    void initDevice();
+    inline bool USB_Device_IsAddressSet() { return UDADDR & 1<<ADDEN; }
     void Endpoint_ClearStatusStage();
     inline void Endpoint_EnableEndpoint() { UECONX |= 1<<EPEN; }
     inline void Endpoint_DisableEndpoint() { UECONX &= ~(1<<EPEN); }
     inline bool Endpoint_IsEnabled() { return UECONX & 1<<EPEN ? true : false; }
     inline uint8_t Endpoint_GetBusyBanks() { return UESTA0X & 3<<NBUSYBK0; }
     inline void Endpoint_AbortPendingIN();
+    uint8_t Endpoint_Write_Control_Stream_BE(const void* const buffer, uint16_t length);
+    uint8_t Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Length);
+    uint8_t Endpoint_Read_Control_Stream_BE(void* const Buffer, uint16_t Length);
+    uint8_t Endpoint_Write_Control_EStream_LE(const void* const Buffer, uint16_t len);
+    uint8_t Endpoint_Write_Control_EStream_BE(const void* const Buffer, uint16_t len);
+    uint8_t Endpoint_Read_Control_EStream_LE(void* const Buffer, uint16_t len);
+    uint8_t Endpoint_Read_Control_EStream_BE(void* const Buffer, uint16_t len);
     static inline void Endpoint_ClearIN() { UEINTX &= ~(1<<TXINI | 1<<FIFOCON); }
     static inline void Endpoint_ClearOUT() { UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON); }
     inline void Endpoint_StallTransaction() { UECONX |= 1<<STALLRQ; }
@@ -733,12 +565,6 @@ public:
     inline void clearAllInterrupts() { USBINT = 0; }
     static USB_ClassInfo_CDC_Device_t cdcDevice;
     uint8_t CDC_Device_Flush(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
-    void myPutc(char c);
-    uint8_t readByte();
-    void resetInterface();
-    USB();
-    void inline flush() { CDC_Device_Flush(&cdcDevice); }
-    void init();
     void inline cdcTask() { CDC_Device_USBTask(&cdcDevice); }
     inline void USB_INT_Clear(const uint8_t Interrupt);
     inline bool USB_INT_IsEnabled(const uint8_t Interrupt);
@@ -760,21 +586,18 @@ public:
     void USB_INT_Enable(uint8_t Interrupt);
     void USB_INT_Disable(uint8_t Interrupt);
     bool USB_INT_HasOccurred(uint8_t Interrupt);
-    static uint8_t Endpoint_Write_Control_Stream_LE(const void* const buffer, uint16_t length);
-    uint8_t Endpoint_Write_Control_Stream_BE(const void* const buffer, uint16_t length);
-    uint8_t Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Length);
-    uint8_t Endpoint_Read_Control_Stream_BE(void* const Buffer, uint16_t Length);
-    uint8_t Endpoint_Write_Control_EStream_LE(const void* const Buffer, uint16_t len);
-    uint8_t Endpoint_Write_Control_EStream_BE(const void* const Buffer, uint16_t len);
-    uint8_t Endpoint_Read_Control_EStream_LE(void* const Buffer, uint16_t len);
-    uint8_t Endpoint_Read_Control_EStream_BE(void* const Buffer, uint16_t len);
-    void Device_ProcessControlRequest();
-    void task() { USB_DeviceTask(); }
-    void USB_DeviceTask();
-    void Device_GetDescriptor();
-    void Device_SetAddress();
-    void gen();
-    void com();
+    static inline uint16_t Endpoint_BytesInEndpoint() { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
+    inline void Device_GetSerialString(uint16_t* const UnicodeString);
+    void Endpoint_ResetEndpoint(const uint8_t addr);
+    static uint8_t Endpoint_GetEndpointDirection();
+    bool Endpoint_ConfigureEndpoint_Prv(uint8_t Number, uint8_t UECFG0XData, uint8_t UECFG1XData);
+    void USB_Device_SetDeviceAddress(const uint8_t Address);
+    static void Endpoint_SelectEndpoint(uint8_t addr) { UENUM = addr & ENDPOINT_EPNUM_MASK; }
+    uint8_t Endpoint_GetCurrentEndpoint();
+    static void SetGlobalInterruptMask(const uint_reg_t GlobalIntState);
+    static void GlobalInterruptEnable();
+    static void GlobalInterruptDisable();
+    static inline uint_reg_t GetGlobalInterruptMask() { GCC_MEMORY_BARRIER(); return SREG; }
     void EVENT_USB_Device_ConfigurationChanged();
     bool CDC_Device_ConfigureEndpoints(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
     static int CDC_Device_putchar(char c, FILE* Stream);
@@ -782,44 +605,39 @@ public:
     void Device_SetConfiguration();
     void Device_GetConfiguration();
     void Device_GetStatus();
-    static USB *instance;
     uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length);
-    static void Device_GetInternalSerialDescriptor();
+    void Device_GetInternalSerialDescriptor();
     static uint8_t Endpoint_WaitUntilReady();
     static int16_t CDC_Device_ReceiveByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
     void EVENT_USB_Device_ControlRequest();
     void CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
     void Device_ClearSetFeature();
-
+    static uint8_t Endpoint_Write_Control_Stream_LE(const void* const buffer, uint16_t length);
+public:
+    void initDevice();
+    void myPutc(char c);
+    uint8_t readByte();
+    void resetInterface();
+    USB();
+    void inline flush() { CDC_Device_Flush(&cdcDevice); }
+    void init();
+    void Device_ProcessControlRequest();
+    void task() { USB_DeviceTask(); }
+    void USB_DeviceTask();
+    void Device_GetDescriptor();
+    void Device_SetAddress();
+    void gen();
+    void com();
+    static USB *instance;
+private:
     static uint8_t CDC_Device_SendByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
                             const uint8_t Data);
 
     static constexpr uint8_t USB_Options = USB_DEVICE_OPT_FULLSPEED | USB_OPT_REG_ENABLED |
             USB_OPT_AUTO_PLL;
 
-    bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number,
-                                    const uint8_t UECFG0XData, const uint8_t UECFG1XData);
-
     inline void USB_Device_EnableDeviceAddress(const uint8_t Address)
     { (void)Address; UDADDR |= 1<<ADDEN; }
-
-    inline void USB_Device_SetDeviceAddress(const uint8_t Address)
-    { UDADDR = UDADDR & 1<<ADDEN | Address & 0x7F; }
-
-    static inline uint8_t Endpoint_GetEndpointDirection()
-    {
-        return UECFG0X & 1<<EPDIR ? ENDPOINT_DIR_IN : ENDPOINT_DIR_OUT;
-    }
-
-    inline uint8_t Endpoint_GetCurrentEndpoint()
-    {
-        return UENUM & ENDPOINT_EPNUM_MASK | Endpoint_GetEndpointDirection();
-    }
-
-    static inline void Endpoint_SelectEndpoint(uint8_t address)
-    {
-        UENUM = address & ENDPOINT_EPNUM_MASK;
-    }
 
     uint8_t Endpoint_Write_Stream_LE(const void* const Buffer, uint16_t Length,
                        uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
@@ -835,6 +653,20 @@ public:
 
     bool Endpoint_ConfigureEndpoint(const uint8_t Address, const uint8_t type,
         const uint16_t size, const uint8_t banks);
+
+    static inline uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes)
+    {
+        uint8_t  MaskVal    = 0;
+        uint16_t CheckBytes = 8;
+
+        while (CheckBytes < Bytes)
+        {
+            MaskVal++;
+            CheckBytes <<= 1;
+        }
+
+        return MaskVal<<EPSIZE0;
+    }
 
     bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
                                          const uint8_t Entries);
