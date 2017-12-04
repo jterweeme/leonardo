@@ -9,18 +9,21 @@ APP = app_vgacalc1.elf
 	$(CC) -o $@ $^
 
 all: app_hellousb1.elf \
+    app_usbloop2.elf \
     app_tone1.elf \
     app_usbloop1.elf \
 	app_vga1.elf \
     app_vgacalc1.elf
 
 app_hellousb1.elf: app_hellousb1.o misc.o busby.o
+app_usbloop2.elf: app_usbloop2.o
 app_tone1.elf: app_tone1.o
 app_usbloop1.elf: app_usbloop1.o busby.o misc.o
 app_vga1.elf: app_vga1.o vga.o
 app_vgacalc1.elf: app_vgacalc1.o vga.o keyboard.o misc.o calc.o busby.o
 
 app_hellousb1.o: app_hellousb1.cpp busby.h
+app_usbloop2.o: app_usbloop2.cpp busby.h
 app_tone1.o: app_tone1.cpp
 app_usbloop1.o: app_usbloop1.cpp
 app_vga1.o: app_vga1.cpp vga.h screenFont.h

@@ -482,7 +482,7 @@ struct CDC_LineEncoding_t
     uint8_t DataBits;
 } __attribute__ ((packed));
 
-typedef struct
+struct USB_ClassInfo_CDC_Device_t
 {
     struct
     {
@@ -504,13 +504,12 @@ typedef struct
 
     } State;
 
-} USB_ClassInfo_CDC_Device_t;
+};
 
 class USB : public Terminal
 {
 private:
-    void createStream(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo, FILE* const Stream);
-    void inline createStream() { createStream(&cdcDevice, &cdcStream); }
+    static USB_ClassInfo_CDC_Device_t cdcDevice;
     FILE cdcStream;
     inline uint16_t Endpoint_Read_16_LE();
     inline uint16_t Endpoint_Read_16_BE();
@@ -521,8 +520,8 @@ private:
     inline bool Endpoint_IsEnabled() { return UECONX & 1<<EPEN ? true : false; }
     inline uint8_t Endpoint_GetBusyBanks() { return UESTA0X & 3<<NBUSYBK0; }
     inline void Endpoint_AbortPendingIN();
-    uint8_t Endpoint_Write_Control_Stream_BE(const void* const buffer, uint16_t length);
-    uint8_t Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Length);
+    uint8_t Endpoint_Write_Control_Stream_BE(const void *buffer, uint16_t length);
+    uint8_t Endpoint_Read_Control_Stream_LE(void *Buffer, uint16_t Length);
     uint8_t Endpoint_Read_Control_Stream_BE(void* const Buffer, uint16_t Length);
     uint8_t Endpoint_Write_Control_EStream_LE(const void* const Buffer, uint16_t len);
     uint8_t Endpoint_Write_Control_EStream_BE(const void* const Buffer, uint16_t len);
@@ -557,15 +556,11 @@ private:
     inline uint32_t Endpoint_Read_32_LE();
     inline uint32_t Endpoint_Read_32_BE();
     inline void Endpoint_Write_32_LE(const uint32_t Data);
-    uint8_t Endpoint_Null_Stream(uint16_t Length, uint16_t* const BytesProcessed);
+    uint8_t Endpoint_Null_Stream(uint16_t len, uint16_t *BytesProcessed);
     inline void Endpoint_Write_32_BE(const uint32_t Data);
     inline void Endpoint_Discard_32();
-    void CDC_Device_USBTask(USB_ClassInfo_CDC_Device_t * const CDCInterfaceInfo);
-    inline void disableAllInterrupts() { USBCON &= ~(1<<VBUSTE); UDIEN = 0; }
-    inline void clearAllInterrupts() { USBINT = 0; }
-    static USB_ClassInfo_CDC_Device_t cdcDevice;
-    uint8_t CDC_Device_Flush(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
-    void inline cdcTask() { CDC_Device_USBTask(&cdcDevice); }
+    void CDC_Device_USBTask(USB_ClassInfo_CDC_Device_t *CDCInterfaceInfo);
+    uint8_t CDC_Device_Flush(USB_ClassInfo_CDC_Device_t *CDCInterfaceInfo);
     inline void USB_INT_Clear(const uint8_t Interrupt);
     inline bool USB_INT_IsEnabled(const uint8_t Interrupt);
     inline void USB_OTGPAD_Off() const { USBCON &= ~(1<<OTGPADE); }
@@ -575,8 +570,6 @@ private:
     inline void USB_Controller_Disable() { USBCON &= ~(1<<USBE); }
     inline void USB_Controller_Reset() { USBCON &= ~(1<<USBE); USBCON |= 1<<USBE; }
     inline bool USB_VBUS_GetStatus() { return USBSTA & 1<<VBUS ? true : false; }
-    inline void USB_Detach() { UDCON |=  1<<DETACH; }
-    inline void USB_Attach() { UDCON  &= ~(1<<DETACH); }
     inline void USB_PLL_On() { PLLCSR = USB_PLL_PSC; PLLCSR = USB_PLL_PSC | 1<<PLLE; }
     inline void USB_PLL_Off() { PLLCSR = 0; }
     inline bool USB_PLL_IsReady() { return PLLCSR & 1<<PLOCK ? true : false; }
@@ -591,53 +584,45 @@ private:
     void Endpoint_ResetEndpoint(const uint8_t addr);
     static uint8_t Endpoint_GetEndpointDirection();
     bool Endpoint_ConfigureEndpoint_Prv(uint8_t Number, uint8_t UECFG0XData, uint8_t UECFG1XData);
-    void USB_Device_SetDeviceAddress(const uint8_t Address);
     static void Endpoint_SelectEndpoint(uint8_t addr) { UENUM = addr & ENDPOINT_EPNUM_MASK; }
     uint8_t Endpoint_GetCurrentEndpoint();
     static void SetGlobalInterruptMask(const uint_reg_t GlobalIntState);
-    static void GlobalInterruptEnable();
-    static void GlobalInterruptDisable();
     static inline uint_reg_t GetGlobalInterruptMask() { GCC_MEMORY_BARRIER(); return SREG; }
     void EVENT_USB_Device_ConfigurationChanged();
-    bool CDC_Device_ConfigureEndpoints(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
-    static int CDC_Device_putchar(char c, FILE* Stream);
-    static int CDC_Device_getchar(FILE* Stream);
+    bool CDC_Device_ConfigureEndpoints(USB_ClassInfo_CDC_Device_t *CDCInterfaceInfo);
+    static int CDC_Device_getchar(FILE *Stream);
     void Device_SetConfiguration();
     void Device_GetConfiguration();
     void Device_GetStatus();
-    uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length);
+    uint8_t Endpoint_Write_Control_PStream_LE(const void *Buffer, uint16_t len);
     void Device_GetInternalSerialDescriptor();
     static uint8_t Endpoint_WaitUntilReady();
-    static int16_t CDC_Device_ReceiveByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
+    static int16_t CDC_Device_ReceiveByte(USB_ClassInfo_CDC_Device_t *CDCInterfaceInfo);
     void EVENT_USB_Device_ControlRequest();
-    void CDC_Device_ProcessControlRequest(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
+    void CDC_Device_ProcessControlRequest();
     void Device_ClearSetFeature();
-    static uint8_t Endpoint_Write_Control_Stream_LE(const void* const buffer, uint16_t length);
+    static uint8_t Endpoint_Write_Control_Stream_LE(const void *buffer, uint16_t length);
+    void Device_ProcessControlRequest();
+    void USB_DeviceTask();
+    void Device_GetDescriptor();
+    void Device_SetAddress();
+    uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes);
+    static uint8_t CDC_Device_SendByte(const uint8_t Data);
+    void USB_Device_EnableDeviceAddress(uint8_t Address) { (void)Address; UDADDR |= 1<<ADDEN; }
 public:
     void initDevice();
-    void myPutc(char c);
+    void myPutc(char c) { CDC_Device_SendByte(c); }
     uint8_t readByte();
     void resetInterface();
     USB();
     void inline flush() { CDC_Device_Flush(&cdcDevice); }
     void init();
-    void Device_ProcessControlRequest();
-    void task() { USB_DeviceTask(); }
-    void USB_DeviceTask();
-    void Device_GetDescriptor();
-    void Device_SetAddress();
     void gen();
     void com();
     static USB *instance;
 private:
-    static uint8_t CDC_Device_SendByte(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo,
-                            const uint8_t Data);
-
     static constexpr uint8_t USB_Options = USB_DEVICE_OPT_FULLSPEED | USB_OPT_REG_ENABLED |
             USB_OPT_AUTO_PLL;
-
-    inline void USB_Device_EnableDeviceAddress(const uint8_t Address)
-    { (void)Address; UDADDR |= 1<<ADDEN; }
 
     uint8_t Endpoint_Write_Stream_LE(const void* const Buffer, uint16_t Length,
                        uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
@@ -653,20 +638,6 @@ private:
 
     bool Endpoint_ConfigureEndpoint(const uint8_t Address, const uint8_t type,
         const uint16_t size, const uint8_t banks);
-
-    static inline uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes)
-    {
-        uint8_t  MaskVal    = 0;
-        uint16_t CheckBytes = 8;
-
-        while (CheckBytes < Bytes)
-        {
-            MaskVal++;
-            CheckBytes <<= 1;
-        }
-
-        return MaskVal<<EPSIZE0;
-    }
 
     bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
                                          const uint8_t Entries);
