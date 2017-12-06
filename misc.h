@@ -1,6 +1,7 @@
 #ifndef _MISC_H_
 #define _MISC_H_
 #include <stdlib.h>
+#include "leonardo.h"
 
 typedef unsigned char uint8_t;
 typedef unsigned int uint16_t;
@@ -71,6 +72,7 @@ public:
     void append(const string &s);
 };
 
+#if 0
 enum Bits { BIT0, BIT1, BIT2, BIT3, BIT4, BIT5, BIT6, BIT7 };
 
 class Port
@@ -89,10 +91,6 @@ public:
     void write(uint8_t data) { *out = data; }
 };
 
-struct PortB : public Port { PortB() : Port((uint8_t *)0x23) { } };
-struct PortC : public Port { PortC() : Port((uint8_t *)0x26) { } };
-struct PortD : public Port { PortD() : Port((uint8_t *)0x29) { } };
-
 enum Direction { INPUT, OUTPUT };
 
 struct Pin
@@ -107,6 +105,7 @@ struct Pin
     void direction(Direction dir);
     bool read() { return port.read() & (1<<bit); }
 };
+#endif
 
 class Terminal
 {

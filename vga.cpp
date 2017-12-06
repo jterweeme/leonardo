@@ -82,8 +82,8 @@ void VGA::init()
   
     // Timer 1 - vertical sync pulses
     DDRB = 0xff;
-    *ptccr1a = 1<<wgm10 | 1<<wgm11 | 1<<com1b1;
-    *ptccr1b = 1<<WGM12 | 1<<WGM13 | 1<<CS12 | 1<<CS10;
+    *p_tccr1a = 1<<wgm10 | 1<<wgm11 | 1<<com1b1;
+    *p_tccr1b = 1<<WGM12 | 1<<WGM13 | 1<<CS12 | 1<<CS10;
     OCR1A = 259;  // 16666 / 64 uS = 260 (less one)
     OCR1B = 0;    // 64 / 64 uS = 1 (less one)
     TIFR1 = 1<<TOV1;   // clear overflow flag

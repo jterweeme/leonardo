@@ -4,7 +4,7 @@ prints to USB in opposite case
 */
 
 #include "board.h"
-#include "busby.h"
+#include "cdc.h"
 
 inline bool isUpper(char c) { return c >= 'A' && c <= 'Z'; }
 inline bool isLower(char c) { return c >= 'a' && c <= 'z'; }
@@ -18,15 +18,15 @@ inline char convert(char c)
 
 int main()
 {
-    USB usb;
+    CDC usb;
 
     while (true)
     {
-        uint8_t byte = usb.readByte();
+        uint8_t byte = usb.receive();
 
         if (byte != 255)
         {
-            usb.myPutc(convert(byte));
+            usb.sendByte(convert(byte));
             usb.flush();
         }
     }

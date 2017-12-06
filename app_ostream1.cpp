@@ -1,4 +1,4 @@
-#include "cdc.h"
+#include "stream.h"
 
 inline char nibble(uint8_t n)
 {
@@ -7,22 +7,19 @@ inline char nibble(uint8_t n)
 
 int main()
 {
-    CDC usb;
-
+    USBStream usb;
+    
     while (true)
     {
         for (uint32_t i = 0; i < 0xffffffff; i++)
         {
             for (int8_t j = 7; j >= 0; j--)
-                usb.sendByte(nibble(i >> (j << 2) & 0xf));
+                usb.write(nibble(i >> (j << 2) & 0xf));
 
-            usb.sendByte('\r');
-            usb.sendByte('\n');
-            usb.flush();           
+            usb.writeString("\r\n");
+            usb.flush();
         }
     }
-
-    return 0;
 }
 
 

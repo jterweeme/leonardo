@@ -1,11 +1,14 @@
+/*
+TODO: pinout
+*/
+
 #include "vga.h"
 #include "calc.h"
 #include "misc.h"
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/pgmspace.h>
-#include "keyboard.h"
-#include "busby.h"
+#include "uskb.h"
 
 static VGA vga;
 static Calculator *g_calc;
