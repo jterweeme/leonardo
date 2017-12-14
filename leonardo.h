@@ -54,6 +54,16 @@ static constexpr uint8_t
     tccr1c = 0x82,
     foc1c = 5, foc1b = 6, foc1a = 7,
     tcnt1 = 0x84, tcnt1l = 0x84,
+    ucsr1a = 0xc8,
+        mpcm1 = 0, u2x1 = 1, upe1 = 2, dor1 = 3, fe1 = 4, udre1 = 5, txc1 = 6, rxc1 = 7,
+    ucsr1b = 0xc9,
+        txb81 = 0, rxb81 = 1, ucsz12 = 2, txen1 = 3,
+        rxen1 = 4, udrie1 = 5, txcie1 = 6, rxcie1 = 7,
+    ucsr1c = 0xca,
+    ubrr1 = 0xcc,
+    ubrr1l = 0xcc,
+    ubrr1h = 0xcd,
+    udr1 = 0xce,
     ss_port_base = portb_base,
     ss_ddr = ss_port_base + 1,
     ss_port = ss_port_base + 2,
@@ -92,7 +102,13 @@ static volatile uint8_t
     *p_port_miso = (volatile uint8_t * const)miso_port,
     *p_tccr1a = (volatile uint8_t * const)tccr1a,
     *p_tccr1b = (volatile uint8_t * const)tccr1b,
-    *p_tccr1c = (volatile uint8_t * const)tccr1c;
+    *p_tccr1c = (volatile uint8_t * const)tccr1c,
+    *p_ucsr1a = (volatile uint8_t * const)ucsr1a,
+    *p_ucsr1b = (volatile uint8_t * const)ucsr1b,
+    *p_udr1 = (volatile uint8_t * const)udr1;
+
+static volatile uint16_t
+    *p_ubrr1 = (volatile uint16_t * const)ubrr1;
 
 enum Bits { BIT0, BIT1, BIT2, BIT3, BIT4, BIT5, BIT6, BIT7 };
 

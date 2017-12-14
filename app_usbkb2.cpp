@@ -1,4 +1,4 @@
-#include "usbkb.h"
+#include "usbkb2.h"
 #include "misc.h"
 
 int main()
@@ -8,7 +8,7 @@ int main()
     USBKB kb;
     
     while (true)
-        kb.usbTask();
+        ;
 
     return 0;
 }

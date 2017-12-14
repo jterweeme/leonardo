@@ -5,6 +5,7 @@ prints to USB in opposite case
 
 #include "board.h"
 #include "cdc.h"
+#include "misc.h"
 
 inline bool isUpper(char c) { return c >= 'A' && c <= 'Z'; }
 inline bool isLower(char c) { return c >= 'a' && c <= 'z'; }
@@ -18,6 +19,8 @@ inline char convert(char c)
 
 int main()
 {
+    Serial serial;
+    serial.init();
     CDC usb;
 
     while (true)

@@ -1,5 +1,5 @@
-#ifndef _CDC_H_
-#define _CDC_H_
+#ifndef _USBKB2_H_
+#define _USBKB2_H_
 
 #define F_CPU 16000000UL
 
@@ -61,7 +61,7 @@ struct CDC_LineEncoding_t
     uint8_t DataBits;
 };
 
-class CDC : public USB
+class USBKB : public USB
 {
 private:
     Endpoint _inpoint;
@@ -71,15 +71,88 @@ private:
     bool configureEndpoints();
     void EVENT_USB_Device_ControlRequest();
     void Device_ProcessControlRequest();
+    bool Endpoint_ConfigureEndpointTable(Endpoint *table, uint8_t entries);
     uint16_t getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddress);
 public:
     int16_t receive();
     uint8_t sendByte(uint8_t data);
-    CDC();
+    USBKB();
     uint8_t flush();
     void gen();
     void com();
 };
+
+struct USB_CDC_Descriptor_FunctionalHeader_t
+{
+    DescHeader Header;
+    uint8_t Subtype;
+    uint16_t CDCSpecification;
+}
+__attribute__ ((packed));
+
+struct USB_CDC_StdDescriptor_FunctionalHeader_t
+{
+    uint8_t bFunctionLength;
+    uint8_t bDescriptorType;
+    uint8_t bDescriptorSubType;
+    uint16_t bcdCDC;
+}
+__attribute__ ((packed));
+
+struct USB_CDC_Descriptor_FunctionalACM_t
+{
+    DescHeader Header;
+    uint8_t Subtype;
+    uint8_t Capabilities;
+}
+__attribute__ ((packed));
+
+struct USB_CDC_StdDescriptor_FunctionalACM_t
+{
+    uint8_t bFunctionLength;
+    uint8_t bDescriptorType;
+    uint8_t bDescriptorSubType;
+    uint8_t bmCapabilities;
+}
+__attribute__ ((packed));
+
+struct USB_CDC_Descriptor_FunctionalUnion_t
+{
+    DescHeader Header;
+    uint8_t Subtype;
+    uint8_t MasterInterfaceNumber;
+    uint8_t SlaveInterfaceNumber;
+}
+__attribute__ ((packed));
+
+struct USB_CDC_StdDescriptor_FunctionalUnion_t
+{
+    uint8_t bFunctionLength;
+    uint8_t bDescriptorType;
+    uint8_t bDescriptorSubType;
+    uint8_t bMasterInterface;
+    uint8_t bSlaveInterface0;
+}
+__attribute__ ((packed));
+
+struct USB_HID_Descriptor_HID_t
+{
+    uint16_t HIDSpec;
+    uint8_t CountryCode;
+    uint8_t TotalReportDescriptors;
+    uint8_t HIDReportType;
+    uint16_t HIDReportLength;
+}
+__attribute__ ((packed));
+
+struct USB_Descriptor_Configuration_t
+{
+    DescConf Config;
+    DescIface HID_Interface;
+    USB_HID_Descriptor_HID_t HID_KeyboardHID;
+    DescEndpoint HID_ReportINEndpoint;
+}
+__attribute__ ((packed));
 
 
 #endif

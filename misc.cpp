@@ -137,15 +137,6 @@ char *Utility::itoa(int num, char *str, int base)
     return str;
 }
 
-UartBase::UartBase(uint16_t *brr, uint8_t *udr, uint8_t *ucsra, uint8_t *ucsrb)
-  :
-    brr(brr),
-    udr(udr),
-    ucsra(ucsra),
-    ucsrb(ucsrb)
-{
-}
-
 void CircBuf::push(uint8_t v)
 {
     uint8_t i = head + 1;
@@ -179,54 +170,31 @@ uint8_t CircBuf::get()
     return get(i);
 }
 
+Serial *Serial::instance;
 
-void Terminal::printf(const char *format, ...)
+void Serial::init() const
 {
-    va_list argp;
-    va_start(argp, format);
-
-    for (const char *p = format; *p != '\0'; p++)
-    {
-        if (*p != '%')
-        {
-            myPutc(*p);
-            continue;
-        }
-
-        switch (*++p)
-        {
-        case 'u':
-            {
-                unsigned u = va_arg(argp, unsigned);
-                char s[40] = {0};
-                puts(Utility::itoa(u, s, 10));
-            }
-            
-            break;
-        case 's':
-            {
-                char *s = va_arg(argp, char *);
-                puts(s);
-            }
-
-            break;
-        case 'x':
-            {
-                unsigned u = va_arg(argp, unsigned);
-                const uint8_t foo = u & 0x0f;
-                const uint8_t bar = u >> 4;
-                char high = bar < 10 ? (char)(bar + 48) : (char)(bar + 55);
-                char low = foo < 10 ? (char)(foo + 48) : (char)(foo + 55);
-                myPutc(high);
-                myPutc(low);
-            }
-            break;
-        }
-    }
-    
-    va_end(argp);
+    *p_ubrr1 = 51;    // 9600baud @16MHz
+    *p_ucsr1b = 1<<txen1;
 }
 
+void Serial::write(char c) const
+{
+    while (!(*p_ucsr1a & 1<<udre1))
+        ;
+
+    *p_udr1 = c;
+}
+
+uint8_t Serial::readByte() const
+{
+    while (!(*p_ucsr1a & 1<<rxc1))
+        ;
+
+    return *p_udr1;
+}
+
+#if 0
 void Pin::direction(Direction dir)
 {
     switch (dir)
@@ -239,6 +207,7 @@ void Pin::direction(Direction dir)
         break;
     }
 }
+#endif
 
 void Utility::reverse(char str[], int length)
 {
@@ -269,239 +238,6 @@ size_t Utility::strlen(const char *s)
     return (t - s);
 }
 
-string::string(const char *s)
-{
-    _capacity = Utility::strlen(s) + 1;
-    this->s = new char[_capacity];
-    Utility::strcpy(this->s, s);
-}
-
-void string::append(const char *s)
-{
-    append(string(s));
-}
-
-void string::append(const string &s)
-{
-    Utility::strcpy(this->s + size(), s.c_str());
-}
-
-AnalogBase::AnalogBase(uint8_t *base)
-  :
-    base(base),
-    adcl(base),
-    adch(base + 1),
-    adcsra(base + 2),
-    adcsrb(base + 3),
-    admux(base + 4)
-{
-}
-
-Analog::Analog() : AnalogBase((uint8_t *)0x78)
-{
-    *admux = 0x00 | (1<<BREFS0);
-    *adcsra = (1<<BADPS1) | (1<<BADPS0) | (1<<BADEN) | (1<<BADATE);
-    *adcsrb &= (1<<BADTS2) | (1<<BADTS1) | (1<<BADTS0);
-    *adcsra |= (1<<BADSC);
-}
-
-uint8_t SPIBase::transfer(uint8_t data)
-{
-    *spdr = data;
-    while (!(*spsr & spsr_bits::spif)) { }
-    return *spdr;
-}
-
-DS1302::DS1302(Pin *clk, Pin *dat, Pin *rst) : clk(clk), dat(dat), rst(rst)
-{
-    clk->direction(OUTPUT);
-    dat->direction(OUTPUT);
-    rst->direction(OUTPUT);
-    write(ENABLE, 0);
-    write(TRICKLE, 0);
-}
-
-void DS1302::write(int address, uint8_t data)
-{
-    address &= ~(1<<0);
-    start();
-    toggleWrite(address, false);
-    toggleWrite(data, false);
-    stop();
-}
-
-void LCD::home()
-{
-    lcd_write_instruction_4d(CURSOR_HOME);
-    _delay_ms(2);
-}
-
-bitset<8> DS1302::toggleReadBitset()
-{
-    bitset<8> dataBitset;
-    
-    for (uint8_t i = 0; i <= 7; i++)
-    {
-        clk->set();
-        _delay_us(1);
-        clk->clear();
-        _delay_us(1);
-        dataBitset.set(i, dat->read());
-        
-    }
-    return dataBitset;
-
-}
-
-void DS1302::toggleWrite(uint8_t data, uint8_t release)
-{
-    for (int i = 0; i <= 7; i++)
-    {
-        bitset<8> dataBitset(data);
-        dat->set(dataBitset.test(i));
-        _delay_us(1);
-        clk->set();
-        _delay_us(1);
-
-        if (release && i == 7)
-        {
-            dat->direction(INPUT);
-        }
-            else
-        {
-            clk->clear();
-            _delay_us(1);
-        }
-    }
-}
-
-void DS1302::update()
-{
-    clockBurstRead((uint8_t *)&regs);
-}
-
-void DS1302::clockBurstRead(uint8_t *p)
-{
-    start();
-    toggleWrite(CLOCK_BURST_READ, true);
-    
-    for (int i = 0; i < 8; i++)
-        *p++ = toggleRead();
-
-    stop();
-}
-
-void DS1302::clockBurstWrite(uint8_t *p)
-{
-    start();
-    toggleWrite(CLOCK_BURST_WRITE, false);
-
-    for (int i = 0; i < 8; i++)
-        toggleWrite(*p++, false);
-
-    stop();
-}
-
-void DS1302::start()
-{
-    rst->clear();
-    rst->direction(OUTPUT);
-    clk->direction(OUTPUT);
-    dat->direction(OUTPUT);
-    rst->set();
-    _delay_us(4);
-}
-
-void DS1302::stop()
-{
-    rst->clear();
-    _delay_us(4);
-}
-
-LCD::LCD(Pin *rs, Pin *e, Pin *d4, Pin *d5, Pin *d6, Pin *d7)
-  :
-    rs(rs), e(e), d4(d4), d5(d5), d6(d6), d7(d7)
-{
-    rs->direction(OUTPUT);
-    e->direction(OUTPUT);
-    d4->direction(OUTPUT);
-    d5->direction(OUTPUT);
-    d6->direction(OUTPUT);
-    d7->direction(OUTPUT);
-    _delay_ms(100);
-    rs->clear();
-    e->clear();
-    lcd_write_4(RESET);
-    _delay_ms(10);
-    lcd_write_4(RESET);
-    _delay_us(200);
-    lcd_write_4(RESET);
-    _delay_us(200);
-    lcd_write_4(FOURBIT);
-    _delay_us(80);
-    lcd_write_instruction_4d(FOURBIT);
-    _delay_us(80);
-    lcd_write_instruction_4d(OFF);
-    _delay_us(80);
-    lcd_write_instruction_4d(CLEAR);
-    _delay_ms(4);
-    lcd_write_instruction_4d(ENTRYMODE);
-    _delay_us(80);
-    lcd_write_instruction_4d(ON);
-    _delay_us(80);
-}
-
-void LCD::lcd_write_4(uint8_t theByte)
-{
-    d7->set(theByte & 1<<7);
-    d6->set(theByte & 1<<6);
-    d5->set(theByte & 1<<5);
-    d4->set(theByte & 1<<4);
-    e->set();
-    _delay_us(1);
-    e->clear();
-    _delay_us(1);
-}
-
-void LCD::myPutc(char c)
-{
-    if (c == '\r')
-        return home();
-
-    rs->set();
-    e->clear();
-    lcd_write_4(c);
-    lcd_write_4(c << 4);
-}
-
-void LCD::puts(const char *s)
-{
-    while (*s)
-    {
-        myPutc(*s++);
-        _delay_us(80);
-    }
-}
-
-void LCD::lcd_write_instruction_4d(uint8_t theInstruction)
-{
-    rs->clear();
-    e->clear();
-    lcd_write_4(theInstruction);
-    lcd_write_4(theInstruction << 4);
-
-}
-
-uint8_t DFKeyPad::poll()
-{
-    unsigned x = adc.read();
-    if (x < 100) return RIGHT;
-    if (x < 250) return UP;
-    if (x < 400) return DOWN;
-    if (x < 550) return LEFT;
-    if (x < 800) return SELECT;
-    return 0;
-}
 
 
 
