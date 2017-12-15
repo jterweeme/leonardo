@@ -1,5 +1,4 @@
 #define ARCH ARCH_AVR8
-#define BOARD BOARD_LEONARDO
 #define F_CPU 16000000UL
 #define F_USB 16000000UL
 
@@ -21,16 +20,10 @@
 #define __INCLUDE_FROM_COMMON_H
 
 #include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
 #include <stddef.h>
 
 #ifndef __LUFA_ARCHITECTURES_H__
 #define __LUFA_ARCHITECTURES_H__
-
-#if !defined(__INCLUDE_FROM_COMMON_H)
-#error Do not include this file directly. Include LUFA/Common/Common.h instead to gain this functionality.
-#endif
 
 #define ARCH_AVR8           0
 #define ARCH_UC3            1
@@ -46,154 +39,6 @@
 
 #endif
 
-#define BOARD_USER                 0
-#define BOARD_NONE                 1
-#define BOARD_USBKEY               2
-#define BOARD_STK525               3
-#define BOARD_STK526               4
-#define BOARD_RZUSBSTICK           5
-#define BOARD_ATAVRUSBRF01         6
-#define BOARD_BUMBLEB              7
-#define BOARD_XPLAIN               8
-#define BOARD_XPLAIN_REV1          9
-#define BOARD_EVK527               10
-#define BOARD_TEENSY               11
-#define BOARD_USBTINYMKII          12
-#define BOARD_BENITO               13
-#define BOARD_JMDBU2               14
-#define BOARD_OLIMEX162            15
-#define BOARD_UDIP                 16
-#define BOARD_BUI                  17
-#define BOARD_UNO                  18
-#define BOARD_CULV3                19
-#define BOARD_BLACKCAT             20
-#define BOARD_MAXIMUS              21
-#define BOARD_MINIMUS              22
-#define BOARD_ADAFRUITU4           23
-#define BOARD_MICROSIN162          24
-#define BOARD_USBFOO               25
-#define BOARD_SPARKFUN8U2          26
-#define BOARD_EVK1101              27
-#define BOARD_TUL                  28
-#define BOARD_EVK1100              29
-#define BOARD_EVK1104              30
-#define BOARD_A3BU_XPLAINED        31
-#define BOARD_TEENSY2              32
-#define BOARD_USB2AX               33
-#define BOARD_USB2AX_V3            34
-#define BOARD_MICROPENDOUS_32U2    35
-#define BOARD_MICROPENDOUS_A       36
-#define BOARD_MICROPENDOUS_1       37
-#define BOARD_MICROPENDOUS_2       38
-#define BOARD_MICROPENDOUS_3       39
-#define BOARD_MICROPENDOUS_4       40
-#define BOARD_MICROPENDOUS_DIP     41
-#define BOARD_MICROPENDOUS_REV1    42
-#define BOARD_MICROPENDOUS_REV2    43
-#define BOARD_B1_XPLAINED          44
-#define BOARD_MULTIO               45
-#define BOARD_BIGMULTIO            46
-#define BOARD_DUCE                 47
-#define BOARD_OLIMEX32U4           48
-#define BOARD_OLIMEXT32U4          49
-#define BOARD_OLIMEXISPMK2         50
-#define BOARD_LEONARDO             51
-#define BOARD_UC3A3_XPLAINED       52
-#define BOARD_USB2AX_V31           53
-#define BOARD_STANGE_ISP           54
-#define BOARD_C3_XPLAINED          55
-#define BOARD_U2S                  56
-#define BOARD_YUN                  57
-#define BOARD_MICRO                58
-#define BOARD_POLOLUMICRO          59
-#define BOARD_XPLAINED_MINI        60
-
-#if !defined(__DOXYGEN__)
-#define BOARD_                 BOARD_NONE
-
-#if !defined(BOARD)
-#define BOARD              BOARD_NONE
-#endif
-#endif
-
-#ifndef __LUFA_ARCHSPEC_H__
-#define __LUFA_ARCHSPEC_H__
-
-#if !defined(__INCLUDE_FROM_COMMON_H)
-#error Do not include this file directly.
-#endif
-
-#if (ARCH == ARCH_AVR8) || (ARCH == ARCH_XMEGA) || defined(__DOXYGEN__)
-#if (ARCH == ARCH_AVR8) || defined(__DOXYGEN__)
-#define JTAG_ENABLE()               do {                                     \
-                                    __asm__ __volatile__ (               \
-                                       "in __tmp_reg__,__SREG__" "\n\t"     \
-                                      "cli" "\n\t"                         \
-                                     "out %1, %0" "\n\t"                  \
-                                       "out __SREG__, __tmp_reg__" "\n\t"   \
-                                      "out %1, %0" "\n\t"                  \
-                                       :                                    \
-                                       : "r" (MCUCR & ~(1 << JTD)),         \
-                                         "M" (_SFR_IO_ADDR(MCUCR))          \
-                                       : "r0");                             \
-                                    } while (0)
-
-
-#define JTAG_DISABLE() do { \
-	              __asm__ __volatile__ (               \
-	                                        "in __tmp_reg__,__SREG__" "\n\t"     \
-	                                        "cli" "\n\t"                         \
-	                                        "out %1, %0" "\n\t"                  \
-	                                        "out __SREG__, __tmp_reg__" "\n\t"   \
-	                                        "out %1, %0" "\n\t"                  \
-	                                        :                                    \
-	                                        : "r" (MCUCR | (1 << JTD)),          \
-	                                          "M" (_SFR_IO_ADDR(MCUCR))          \
-	                                        : "r0");                             \
-	                                    } while (0)
-#endif
-
-#define JTAG_DEBUG_POINT()              __asm__ __volatile__ ("nop" ::)
-#define JTAG_DEBUG_BREAK()              __asm__ __volatile__ ("break" ::)
-
-#define JTAG_ASSERT(Condition)          do {                       \
-                                      if (!(Condition))      \
-                                          JTAG_DEBUG_BREAK();  \
-                                     } while (0)
-
-#define STDOUT_ASSERT(Condition)        do {                 \
-                         if (!(Condition))          \
-                              printf_P(PSTR("%s: Function \"%s\", Line %d: "           \
-                                           "Assertion \"%s\" failed.\r\n"),           \
-                              __FILE__, __func__, __LINE__, #Condition); \
-				                                        } while (0)
-
-#if !defined(pgm_read_ptr) || defined(__DOXYGEN__)
-#define pgm_read_ptr(Address)       (void*)pgm_read_word(Address)
-#endif
-#elif (ARCH == ARCH_UC3)
-#define JTAG_DEBUG_POINT()              __asm__ __volatile__ ("nop" ::)
-#define JTAG_DEBUG_BREAK()              __asm__ __volatile__ ("breakpoint" ::)
-#define JTAG_ASSERT(Condition)      do {      \
-				            if (!(Condition))                                   \
-	                  JTAG_DEBUG_BREAK();                               \
-	                        } while (0)
-			#define STDOUT_ASSERT(Condition)        do {                 \
-                            if (!(Condition))                                   \
-                                   printf("%s: Function \"%s\", Line %d: "           \
-                                          "Assertion \"%s\" failed.\r\n",            \
-                                        __FILE__, __func__, __LINE__, #Condition); \
-                                       } while (0)
-#endif
-
-
-#endif
-
-
-
-#if !defined(__INCLUDE_FROM_COMMON_H)
-#error Do not include this file directly. ommon.h instead to gain this functionality.
-#endif
 
 #if defined(__GNUC__) || defined(__DOXYGEN__)
 #define GCC_FORCE_POINTER_ACCESS(StructPtr)   __asm__ __volatile__("" : "=b" (StructPtr) : "0" (StructPtr))
@@ -206,31 +51,16 @@
 #define GCC_IS_COMPILE_CONST(x)               0
 #endif
 
-
-#if !defined(__INCLUDE_FROM_COMMON_H)
-#error Do not include this file directly.
-#endif
-
 #if (__GNUC__ >= 3) || defined(__DOXYGEN__)
 #define ATTR_NO_RETURN               __attribute__ ((noreturn))
 #define ATTR_WARN_UNUSED_RESULT      __attribute__ ((warn_unused_result))
 #define ATTR_NON_NULL_PTR_ARG(...)   __attribute__ ((nonnull (__VA_ARGS__)))
-#define ATTR_NAKED                   __attribute__ ((naked))
-#define ATTR_NO_INLINE               __attribute__ ((noinline))
 #define ATTR_ALWAYS_INLINE           __attribute__ ((always_inline))
-#define ATTR_PURE                    __attribute__ ((pure))
 #define ATTR_CONST                   __attribute__ ((const))
-#define ATTR_DEPRECATED              __attribute__ ((deprecated))
-#define ATTR_WEAK                    __attribute__ ((weak))
 #endif
 
-#define ATTR_NO_INIT                     __attribute__ ((section (".noinit")))
 
-#define ATTR_INIT_SECTION(SectionIndex)  __attribute__ ((used, naked, section (".init" #SectionIndex )))
-
-#define ATTR_ALIAS(Func)                 __attribute__ ((alias( #Func )))
 #define ATTR_PACKED                      __attribute__ ((packed))
-#define ATTR_ALIGNED(Bytes)              __attribute__ ((aligned(Bytes)))
 
 #if defined(__DOXYGEN__)
 typedef MACHINE_REG_t uint_reg_t;
@@ -253,15 +83,6 @@ typedef uint8_t uint_reg_t;
 #ifndef __LUFA_ENDIANNESS_H__
 #define __LUFA_ENDIANNESS_H__
 
-
-#if !defined(__INCLUDE_FROM_COMMON_H)
-#error Do not include this file directly.
-#endif
-
-#if !(defined(ARCH_BIG_ENDIAN) || defined(ARCH_LITTLE_ENDIAN))
-#error ARCH_BIG_ENDIAN or ARCH_LITTLE_ENDIAN not set for the specified architecture.
-#endif
-
 #define SWAPENDIAN_16(x) (uint16_t)((((x) & 0xFF00) >> 8) | (((x) & 0x00FF) << 8))
 
 #define SWAPENDIAN_32(x)  (uint32_t)((((x) & 0xFF000000UL) >> 24UL) | (((x) & 0x00FF0000UL) >> 8UL) | \
@@ -269,7 +90,6 @@ typedef uint8_t uint_reg_t;
 
 #if defined(ARCH_BIG_ENDIAN) && !defined(le16_to_cpu)
 #define le16_to_cpu(x)           SwapEndian_16(x)
-#define le32_to_cpu(x)           SwapEndian_32(x)
 #define be16_to_cpu(x)           (x)
 #define be32_to_cpu(x)           (x)
 #define cpu_to_le16(x)           SwapEndian_16(x)
@@ -286,7 +106,6 @@ typedef uint8_t uint_reg_t;
 #define CPU_TO_BE32(x)           (x)
 #elif !defined(le16_to_cpu)
 #define le16_to_cpu(x)           (x)
-#define le32_to_cpu(x)           (x)
 #define be16_to_cpu(x)           SwapEndian_16(x)
 #define be32_to_cpu(x)           SwapEndian_32(x)
 #define cpu_to_le16(x)           (x)
@@ -330,10 +149,10 @@ static inline uint32_t SwapEndian_32(const uint32_t DWord)
     ATTR_WARN_UNUSED_RESULT ATTR_CONST ATTR_ALWAYS_INLINE;
 static inline uint32_t SwapEndian_32(const uint32_t DWord)
 {
-				if (GCC_IS_COMPILE_CONST(DWord))
-				  return SWAPENDIAN_32(DWord);
+    if (GCC_IS_COMPILE_CONST(DWord))
+        return SWAPENDIAN_32(DWord);
 
-				uint8_t Temp;
+    uint8_t Temp;
 
 				union
 				{
@@ -384,31 +203,26 @@ static inline void SwapEndian_n(void* const Data, uint8_t Length)
 #endif
 
 			
-			#if !defined(MAX) || defined(__DOXYGEN__)
-				#define MAX(x, y)               (((x) > (y)) ? (x) : (y))
-			#endif
+#if !defined(MAX) || defined(__DOXYGEN__)
+#define MAX(x, y)               (((x) > (y)) ? (x) : (y))
+#endif
 
-		
-			#if !defined(MIN) || defined(__DOXYGEN__)
-				#define MIN(x, y)               (((x) < (y)) ? (x) : (y))
-			#endif
-
-			#if !defined(STRINGIFY) || defined(__DOXYGEN__)
-				#define STRINGIFY(x)            #x
-
-
-				#define STRINGIFY_EXPANDED(x)   STRINGIFY(x)
-			#endif
-
-			#if !defined(CONCAT) || defined(__DOXYGEN__)
-				#define CONCAT(x, y)            x ## y
-				#define CONCAT_EXPANDED(x, y)   CONCAT(x, y)
-			#endif
-
-			#if !defined(ISR) || defined(__DOXYGEN__)
 	
-				#define ISR(Name, ...)          void Name (void) __attribute__((__interrupt__)) __VA_ARGS__; void Name (void)
-			#endif
+#if !defined(MIN) || defined(__DOXYGEN__)
+#define MIN(x, y)               (((x) < (y)) ? (x) : (y))
+#endif
+
+#if !defined(STRINGIFY) || defined(__DOXYGEN__)
+#define STRINGIFY(x)            #x
+#define STRINGIFY_EXPANDED(x)   STRINGIFY(x)
+#endif
+
+#if !defined(CONCAT) || defined(__DOXYGEN__)
+#define CONCAT(x, y)            x ## y
+#define CONCAT_EXPANDED(x, y)   CONCAT(x, y)
+#endif
+
+	
 
 		
 			static inline uint8_t BitReverse(uint8_t Byte) ATTR_WARN_UNUSED_RESULT ATTR_CONST;
@@ -425,7 +239,6 @@ static inline void SwapEndian_n(void* const Data, uint8_t Length)
 			static inline void Delay_MS(uint16_t Milliseconds) ATTR_ALWAYS_INLINE;
 			static inline void Delay_MS(uint16_t Milliseconds)
 			{
-				#if (ARCH == ARCH_AVR8)
 				if (GCC_IS_COMPILE_CONST(Milliseconds))
 				{
 					_delay_ms(Milliseconds);
@@ -435,38 +248,14 @@ static inline void SwapEndian_n(void* const Data, uint8_t Length)
 					while (Milliseconds--)
 					  _delay_ms(1);
 				}
-				#elif (ARCH == ARCH_UC3)
-				while (Milliseconds--)
-				{
-					__builtin_mtsr(AVR32_COUNT, 0);
-					while ((uint32_t)__builtin_mfsr(AVR32_COUNT) < (F_CPU / 1000));
-				}
-				#elif (ARCH == ARCH_XMEGA)
-				if (GCC_IS_COMPILE_CONST(Milliseconds))
-				{
-					_delay_ms(Milliseconds);
-				}
-				else
-				{
-					while (Milliseconds--)
-					  _delay_ms(1);
-				}
-				#endif
 			}
 
 
 static inline uint_reg_t GetGlobalInterruptMask(void) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
 static inline uint_reg_t GetGlobalInterruptMask(void)
 {
-				GCC_MEMORY_BARRIER();
-
-				#if (ARCH == ARCH_AVR8)
-				return SREG;
-				#elif (ARCH == ARCH_UC3)
-				return __builtin_mfsr(AVR32_SR);
-				#elif (ARCH == ARCH_XMEGA)
-				return SREG;
-				#endif
+    GCC_MEMORY_BARRIER();
+    return SREG;
 }
 
 	
@@ -474,46 +263,10 @@ static inline void SetGlobalInterruptMask(const uint_reg_t GlobalIntState) ATTR_
 static inline void SetGlobalInterruptMask(const uint_reg_t GlobalIntState)
 {
 				GCC_MEMORY_BARRIER();
-
-				#if (ARCH == ARCH_AVR8)
 				SREG = GlobalIntState;
-				#elif (ARCH == ARCH_UC3)
-				if (GlobalIntState & AVR32_SR_GM)
-				  __builtin_ssrf(AVR32_SR_GM_OFFSET);
-				else
-				  __builtin_csrf(AVR32_SR_GM_OFFSET);
-				#elif (ARCH == ARCH_XMEGA)
-				SREG = GlobalIntState;
-				#endif
-
 				GCC_MEMORY_BARRIER();
 }
 
-		
-			static inline void GlobalInterruptEnable(void) ATTR_ALWAYS_INLINE;
-			static inline void GlobalInterruptEnable(void)
-			{
-				GCC_MEMORY_BARRIER();
-
-				#if (ARCH == ARCH_AVR8)
-				sei();
-				#elif (ARCH == ARCH_UC3)
-				__builtin_csrf(AVR32_SR_GM_OFFSET);
-				#elif (ARCH == ARCH_XMEGA)
-				sei();
-				#endif
-
-				GCC_MEMORY_BARRIER();
-			}
-
-			
-			static inline void GlobalInterruptDisable(void) ATTR_ALWAYS_INLINE;
-			static inline void GlobalInterruptDisable(void)
-			{
-				GCC_MEMORY_BARRIER();
-				cli();
-				GCC_MEMORY_BARRIER();
-			}
 #endif
 
 
@@ -648,20 +401,10 @@ static inline void SetGlobalInterruptMask(const uint_reg_t GlobalIntState)
 
 #define ENDPOINT_DIR_MASK                  0x80
 #define ENDPOINT_DIR_OUT                   0x00
-
 #define ENDPOINT_DIR_IN                    0x80
-#define PIPE_DIR_MASK                      0x80
-#define PIPE_DIR_OUT                       0x00
-#define PIPE_DIR_IN                        0x80
-
-#define EP_TYPE_MASK                       0x03
-
 #define EP_TYPE_CONTROL                    0x00
-
 #define EP_TYPE_ISOCHRONOUS                0x01
-
 #define EP_TYPE_BULK                       0x02
-
 #define EP_TYPE_INTERRUPT                  0x03
 
 enum USB_Modes_t
@@ -694,12 +437,9 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 #ifndef __USBDESCRIPTORS_H__
 #define __USBDESCRIPTORS_H__
 
-#ifndef __USBEVENTS_H__
-#define __USBEVENTS_H__
 
 
 
-#if !defined(__INCLUDE_FROM_EVENTS_C) || defined(__DOXYGEN__)
 void EVENT_USB_UIDChange(void);
 void EVENT_USB_Host_HostError(const uint8_t ErrorCode);
 void EVENT_USB_Host_DeviceAttached(void);
@@ -713,125 +453,36 @@ void EVENT_USB_Host_DeviceEnumerationComplete(void);
 
 void EVENT_USB_Host_StartOfFrame(void);
 
-void EVENT_USB_Device_Connect(void);
-void EVENT_USB_Device_Disconnect(void);
 void EVENT_USB_Device_ControlRequest(void);
-void EVENT_USB_Device_ConfigurationChanged(void);
 void EVENT_USB_Device_StartOfFrame(void);
-#endif
-
-#if defined(__INCLUDE_FROM_EVENTS_C)
-	void USB_Event_Stub(void) ATTR_CONST;
-	void EVENT_USB_Device_Connect(void) ATTR_WEAK ATTR_ALIAS(USB_Event_Stub);
-	void EVENT_USB_Device_Disconnect(void) ATTR_WEAK ATTR_ALIAS(USB_Event_Stub);
-	void EVENT_USB_Device_ControlRequest(void) ATTR_WEAK ATTR_ALIAS(USB_Event_Stub);
-	void EVENT_USB_Device_ConfigurationChanged(void) ATTR_WEAK ATTR_ALIAS(USB_Event_Stub);
-	void EVENT_USB_Device_StartOfFrame(void) ATTR_WEAK ATTR_ALIAS(USB_Event_Stub);
-#endif
-
-#endif
 
 
 #define NO_DESCRIPTOR    0
-
-
 #define USB_CONFIG_POWER_MA(mA)           ((mA) >> 1)
 
 #define USB_STRING_LEN(UnicodeChars) (sizeof(USB_Descriptor_Header_t) + ((UnicodeChars) << 1))
 
 #define USB_STRING_DESCRIPTOR(String)     { .Header = {.Size = sizeof(USB_Descriptor_Header_t) + (sizeof(String) - 2), .Type = DTYPE_String}, .UnicodeString = String }
 
-#if 0
-#define USB_STRING_DESCRIPTOR_ARRAY(...)  { .Header = {.Size = sizeof(USB_Descriptor_Header_t) + sizeof((uint16_t){__VA_ARGS__}), .Type = DTYPE_String}, .UnicodeString = {__VA_ARGS__} }
-#endif
-	
-#define VERSION_BCD(Major, Minor, Revision) \
-                                         CPU_TO_LE16( ((Major & 0xFF) << 8) | \
-                                                     ((Minor & 0x0F) << 4) | \
-                                                      (Revision & 0x0F) )
-
-#define LANGUAGE_ID_ENG                   0x0409
 #define USB_CONFIG_ATTR_RESERVED          0x80
+#define USB_CONFIG_ATTR_SELFPOWERED       0x40
+#define USB_CONFIG_ATTR_REMOTEWAKEUP      0x20
+#define ENDPOINT_ATTR_NO_SYNC             (0 << 2)
+#define ENDPOINT_ATTR_ASYNC               (1 << 2)
+#define ENDPOINT_ATTR_ADAPTIVE            (2 << 2)
+#define ENDPOINT_ATTR_SYNC                (3 << 2)
+#define ENDPOINT_USAGE_DATA               (0 << 4)
+#define ENDPOINT_USAGE_FEEDBACK           (1 << 4)
+#define ENDPOINT_USAGE_IMPLICIT_FEEDBACK  (2 << 4)
 
-			/** Can be masked with other configuration descriptor attributes for a \ref USB_Descriptor_Configuration_Header_t
-			 *  descriptor's \c ConfigAttributes value to indicate that the specified configuration can draw its power
-			 *  from the device's own power source.
-			 */
-			#define USB_CONFIG_ATTR_SELFPOWERED       0x40
-
-			/** Can be masked with other configuration descriptor attributes for a \ref USB_Descriptor_Configuration_Header_t
-			 *  descriptor's \c ConfigAttributes value to indicate that the specified configuration supports the
-			 *  remote wakeup feature of the USB standard, allowing a suspended USB device to wake up the host upon
-			 *  request.
-			 */
-			#define USB_CONFIG_ATTR_REMOTEWAKEUP      0x20
-			//@}
-
-			/** \name Endpoint Descriptor Attribute Masks */
-			//@{
-			/** Can be masked with other endpoint descriptor attributes for a \ref USB_Descriptor_Endpoint_t descriptor's
-			 *  \c Attributes value to indicate that the specified endpoint is not synchronized.
-			 *
-			 *  \see The USB specification for more details on the possible Endpoint attributes.
-			 */
-			#define ENDPOINT_ATTR_NO_SYNC             (0 << 2)
-
-			/** Can be masked with other endpoint descriptor attributes for a \ref USB_Descriptor_Endpoint_t descriptor's
-			 *  \c Attributes value to indicate that the specified endpoint is asynchronous.
-			 *
-			 *  \see The USB specification for more details on the possible Endpoint attributes.
-			 */
-			#define ENDPOINT_ATTR_ASYNC               (1 << 2)
-
-			/** Can be masked with other endpoint descriptor attributes for a \ref USB_Descriptor_Endpoint_t descriptor's
-			 *  \c Attributes value to indicate that the specified endpoint is adaptive.
-			 *
-			 *  \see The USB specification for more details on the possible Endpoint attributes.
-			 */
-			#define ENDPOINT_ATTR_ADAPTIVE            (2 << 2)
-
-			/** Can be masked with other endpoint descriptor attributes for a \ref USB_Descriptor_Endpoint_t descriptor's
-			 *  \c Attributes value to indicate that the specified endpoint is synchronized.
-			 *
-			 *  \see The USB specification for more details on the possible Endpoint attributes.
-			 */
-			#define ENDPOINT_ATTR_SYNC                (3 << 2)
-			//@}
-
-			/** \name Endpoint Descriptor Usage Masks */
-			//@{
-			/** Can be masked with other endpoint descriptor attributes for a \ref USB_Descriptor_Endpoint_t descriptor's
-			 *  \c Attributes value to indicate that the specified endpoint is used for data transfers.
-			 *
-			 *  \see The USB specification for more details on the possible Endpoint usage attributes.
-			 */
-			#define ENDPOINT_USAGE_DATA               (0 << 4)
-
-			/** Can be masked with other endpoint descriptor attributes for a \ref USB_Descriptor_Endpoint_t descriptor's
-			 *  \c Attributes value to indicate that the specified endpoint is used for feedback.
-			 *
-			 *  \see The USB specification for more details on the possible Endpoint usage attributes.
-			 */
-			#define ENDPOINT_USAGE_FEEDBACK           (1 << 4)
-
-			/** Can be masked with other endpoint descriptor attributes for a \ref USB_Descriptor_Endpoint_t descriptor's
-			 *  \c Attributes value to indicate that the specified endpoint is used for implicit feedback.
-			 *
-			 *  \see The USB specification for more details on the possible Endpoint usage attributes.
-			 */
-			#define ENDPOINT_USAGE_IMPLICIT_FEEDBACK  (2 << 4)
-			//@}
-
-		/* Enums: */
-			/** Enum for the possible standard descriptor types, as given in each descriptor's header. */
-			enum USB_DescriptorTypes_t
-			{
-				DTYPE_Device                    = 0x01, /**< Indicates that the descriptor is a device descriptor. */
-				DTYPE_Configuration             = 0x02, /**< Indicates that the descriptor is a configuration descriptor. */
-				DTYPE_String                    = 0x03, /**< Indicates that the descriptor is a string descriptor. */
-				DTYPE_Interface                 = 0x04, /**< Indicates that the descriptor is an interface descriptor. */
-				DTYPE_Endpoint                  = 0x05, /**< Indicates that the descriptor is an endpoint descriptor. */
-				DTYPE_DeviceQualifier           = 0x06, /**< Indicates that the descriptor is a device qualifier descriptor. */
+enum USB_DescriptorTypes_t
+{
+    DTYPE_Device = 0x01,
+				DTYPE_Configuration = 0x02,
+				DTYPE_String = 0x03, /**< Indicates that the descriptor is a string descriptor. */
+				DTYPE_Interface = 0x04, /**< hat the descriptor is an interface descriptor. */
+				DTYPE_Endpoint = 0x05, /**< In the descriptor is an endpoint descriptor. */
+				DTYPE_DeviceQualifier = 0x06, /**< Ir is a device qualifier descriptor. */
 				DTYPE_Other                     = 0x07, /**< Indicates that the descriptor is of other type. */
 				DTYPE_InterfacePower            = 0x08, /**< Indicates that the descriptor is an interface power descriptor. */
 				DTYPE_InterfaceAssociation      = 0x0B, /**< Indicates that the descriptor is an interface association descriptor. */
@@ -854,9 +505,7 @@ void EVENT_USB_Device_StartOfFrame(void);
 				USB_CSCP_VendorSpecificClass    = 0xFF, /**< Descriptor Class value indicating that the device/interface belongs
 				                                         *   to a vendor specific class.
 				                                         */
-				USB_CSCP_VendorSpecificSubclass = 0xFF, /**< Descriptor Subclass value indicating that the device/interface belongs
-				                                         *   to a vendor specific subclass.
-				                                         */
+				USB_CSCP_VendorSpecificSubclass = 0xFF,
 				USB_CSCP_VendorSpecificProtocol = 0xFF, /**< Descriptor Protocol value indicating that the device/interface belongs
 				                                         *   to a vendor specific protocol.
 				                                         */
@@ -935,15 +584,6 @@ void EVENT_USB_Device_StartOfFrame(void);
 				                                  */
 			} ATTR_PACKED USB_Descriptor_Device_t;
 
-			/** \brief Standard USB Device Descriptor (USB-IF naming conventions).
-			 *
-			 *  Type define for a standard Device Descriptor. This structure uses the relevant standard's given element names
-			 *  to ensure compatibility with the standard.
-			 *
-			 *  \see \ref USB_Descriptor_Device_t for the version of this type with non-standard LUFA specific element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
 			typedef struct
 			{
 				uint8_t  bLength; /**< Size of the descriptor, in bytes. */
@@ -1006,13 +646,6 @@ void EVENT_USB_Device_StartOfFrame(void);
 				uint8_t  Reserved; /**< Reserved for future use, must be 0. */
 			} ATTR_PACKED USB_Descriptor_DeviceQualifier_t;
 
-			/** \brief Standard USB Device Qualifier Descriptor (USB-IF naming conventions).
-			 *
-			 *  Type define for a standard Device Qualifier Descriptor. This structure uses the relevant standard's given element names
-			 *  to ensure compatibility with the standard.
-			 *
-			 *  \see \ref USB_Descriptor_DeviceQualifier_t for the version of this type with non-standard LUFA specific element names.
-			 */
 			typedef struct
 			{
 				uint8_t  bLength; /**< Size of the descriptor, in bytes. */
@@ -1033,23 +666,13 @@ void EVENT_USB_Device_StartOfFrame(void);
 				uint8_t  bReserved; /**< Reserved for future use, must be 0. */
 			} ATTR_PACKED USB_StdDescriptor_DeviceQualifier_t;
 
-			/** \brief Standard USB Configuration Descriptor (LUFA naming conventions).
-			 *
-			 *  Type define for a standard Configuration Descriptor header. This structure uses LUFA-specific element names
-			 *  to make each element's purpose clearer.
-			 *
-			 *  \see \ref USB_StdDescriptor_Configuration_Header_t for the version of this type with standard element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
-			typedef struct
-			{
-				USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
-
-				uint16_t TotalConfigurationSize; /**< Size of the configuration descriptor header,
-				                                  *   and all sub descriptors inside the configuration.
-				                                  */
-				uint8_t  TotalInterfaces; /**< Total number of interfaces in the configuration. */
+typedef struct
+{
+    USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
+    uint16_t TotalConfigurationSize; /**< Size of the configuration descriptor header,
+                                  *   and all sub descriptors inside the configuration.
+	                                  */
+    uint8_t  TotalInterfaces; /**< Total number of interfaces in the configuration. */
 
 				uint8_t  ConfigurationNumber; /**< Configuration index of the current configuration. */
 				uint8_t  ConfigurationStrIndex; /**< Index of a string descriptor describing the configuration. */
@@ -1076,9 +699,7 @@ void EVENT_USB_Device_StartOfFrame(void);
 			typedef struct
 			{
 				uint8_t  bLength; /**< Size of the descriptor, in bytes. */
-				uint8_t  bDescriptorType; /**< Type of the descriptor, either a value in \ref USB_DescriptorTypes_t or a value
-				                           *   given by the specific class.
-				                           */
+				uint8_t  bDescriptorType;
 				uint16_t wTotalLength; /**< Size of the configuration descriptor header,
 				                           *   and all sub descriptors inside the configuration.
 				                           */
@@ -1094,15 +715,7 @@ void EVENT_USB_Device_StartOfFrame(void);
 				                     */
 			} ATTR_PACKED USB_StdDescriptor_Configuration_Header_t;
 
-			/** \brief Standard USB Interface Descriptor (LUFA naming conventions).
-			 *
-			 *  Type define for a standard Interface Descriptor. This structure uses LUFA-specific element names
-			 *  to make each element's purpose clearer.
-			 *
-			 *  \see \ref USB_StdDescriptor_Interface_t for the version of this type with standard element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
+			
 			typedef struct
 			{
 				USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
@@ -1122,23 +735,12 @@ void EVENT_USB_Device_StartOfFrame(void);
 				uint8_t InterfaceStrIndex; /**< Index of the string descriptor describing the interface. */
 			} ATTR_PACKED USB_Descriptor_Interface_t;
 
-			/** \brief Standard USB Interface Descriptor (USB-IF naming conventions).
-			 *
-			 *  Type define for a standard Interface Descriptor. This structure uses the relevant standard's given element names
-			 *  to ensure compatibility with the standard.
-			 *
-			 *  \see \ref USB_Descriptor_Interface_t for the version of this type with non-standard LUFA specific element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
-			typedef struct
-			{
-				uint8_t bLength; /**< Size of the descriptor, in bytes. */
-				uint8_t bDescriptorType; /**< Type of the descriptor, either a value in \ref USB_DescriptorTypes_t or a value
-				                          *   given by the specific class.
-				                          */
-				uint8_t bInterfaceNumber; /**< Index of the interface in the current configuration. */
-				uint8_t bAlternateSetting; /**< Alternate setting for the interface number. The same
+typedef struct
+{
+    uint8_t bLength; /**< Size of the descriptor, in bytes. */
+    uint8_t bDescriptorType; /**< iptor, either a value in \ref USB_DescriptorTypes_t or a va*/
+    uint8_t bInterfaceNumber; /**< Index of the interface in the current configuration. */
+    uint8_t bAlternateSetting; /**< Alternate setting for the interface number. The same
 				                            *   interface number can have multiple alternate settings
 				                            *   with different endpoint configurations, which can be
 				                            *   selected by the host.
@@ -1152,21 +754,6 @@ void EVENT_USB_Device_StartOfFrame(void);
 				                     */
 			} ATTR_PACKED USB_StdDescriptor_Interface_t;
 
-			/** \brief Standard USB Interface Association Descriptor (LUFA naming conventions).
-			 *
-			 *  Type define for a standard Interface Association Descriptor. This structure uses LUFA-specific element names
-			 *  to make each element's purpose clearer.
-			 *
-			 *  This descriptor has been added as a supplement to the USB2.0 standard, in the ECN located at
-			 *  <a>http://www.usb.org/developers/docs/InterfaceAssociationDescriptor_ecn.pdf</a>. It allows composite
-			 *  devices with multiple interfaces related to the same function to have the multiple interfaces bound
-			 *  together at the point of enumeration, loading one generic driver for all the interfaces in the single
-			 *  function. Read the ECN for more information.
-			 *
-			 *  \see \ref USB_StdDescriptor_Interface_Association_t for the version of this type with standard element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
 			typedef struct
 			{
 				USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
@@ -1183,22 +770,6 @@ void EVENT_USB_Device_StartOfFrame(void);
 				                      */
 			} ATTR_PACKED USB_Descriptor_Interface_Association_t;
 
-			/** \brief Standard USB Interface Association Descriptor (USB-IF naming conventions).
-			 *
-			 *  Type define for a standard Interface Association Descriptor. This structure uses the relevant standard's given
-			 *  element names to ensure compatibility with the standard.
-			 *
-			 *  This descriptor has been added as a supplement to the USB2.0 standard, in the ECN located at
-			 *  <a>http://www.usb.org/developers/docs/InterfaceAssociationDescriptor_ecn.pdf</a>. It allows composite
-			 *  devices with multiple interfaces related to the same function to have the multiple interfaces bound
-			 *  together at the point of enumeration, loading one generic driver for all the interfaces in the single
-			 *  function. Read the ECN for more information.
-			 *
-			 *  \see \ref USB_Descriptor_Interface_Association_t for the version of this type with non-standard LUFA specific
-			 *       element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
 			typedef struct
 			{
 				uint8_t bLength; /**< Size of the descriptor, in bytes. */
@@ -1215,15 +786,6 @@ void EVENT_USB_Device_StartOfFrame(void);
 				                    */
 			} ATTR_PACKED USB_StdDescriptor_Interface_Association_t;
 
-			/** \brief Standard USB Endpoint Descriptor (LUFA naming conventions).
-			 *
-			 *  Type define for a standard Endpoint Descriptor. This structure uses LUFA-specific element names
-			 *  to make each element's purpose clearer.
-			 *
-			 *  \see \ref USB_StdDescriptor_Endpoint_t for the version of this type with standard element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
 			typedef struct
 			{
 				USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
@@ -1242,97 +804,31 @@ void EVENT_USB_Device_StartOfFrame(void);
 				                             */
 			} ATTR_PACKED USB_Descriptor_Endpoint_t;
 
-			/** \brief Standard USB Endpoint Descriptor (USB-IF naming conventions).
-			 *
-			 *  Type define for a standard Endpoint Descriptor. This structure uses the relevant standard's given
-			 *  element names to ensure compatibility with the standard.
-			 *
-			 *  \see \ref USB_Descriptor_Endpoint_t for the version of this type with non-standard LUFA specific
-			 *       element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
-			typedef struct
-			{
-				uint8_t  bLength; /**< Size of the descriptor, in bytes. */
-				uint8_t  bDescriptorType; /**< Type of the descriptor, either a value in \ref USB_DescriptorTypes_t or a
-				                           *   value given by the specific class.
-				                           */
-				uint8_t  bEndpointAddress; /**< Logical address of the endpoint within the device for the current
-				                            *   configuration, including direction mask.
-				                            */
-				uint8_t  bmAttributes; /**< Endpoint attributes, comprised of a mask of the endpoint type (EP_TYPE_*)
-				                        *   and attributes (ENDPOINT_ATTR_*) masks.
-				                        */
-				uint16_t wMaxPacketSize; /**< Size of the endpoint bank, in bytes. This indicates the maximum packet size
-				                          *   that the endpoint can receive at a time.
-				                          */
-				uint8_t  bInterval; /**< Polling interval in milliseconds for the endpoint if it is an INTERRUPT or
-				                     *   ISOCHRONOUS type.
-				                     */
-			} ATTR_PACKED USB_StdDescriptor_Endpoint_t;
+typedef struct
+{
+uint8_t  bLength; /**< Size of the descriptor, in bytes. */
+uint8_t  bDescriptorType; 
+uint8_t  bEndpointAddress; /**< Logical address of the endpoint within the device for the curr*/
+uint8_t  bmAttributes;
+uint16_t wMaxPacketSize;
+uint8_t  bInterval;
+} ATTR_PACKED USB_StdDescriptor_Endpoint_t;
+			
+template <size_t S> struct USB_Descriptor_String_t
+{
+    USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
+    wchar_t UnicodeString[S];
+} ATTR_PACKED;
 
-			/** \brief Standard USB String Descriptor (LUFA naming conventions).
-			 *
-			 *  Type define for a standard string descriptor. Unlike other standard descriptors, the length
-			 *  of the descriptor for placement in the descriptor header must be determined by the \ref USB_STRING_LEN()
-			 *  macro rather than by the size of the descriptor structure, as the length is not fixed.
-			 *
-			 *  This structure should also be used for string index 0, which contains the supported language IDs for
-			 *  the device as an array.
-			 *
-			 *  This structure uses LUFA-specific element names to make each element's purpose clearer.
-			 *
-			 *  \see \ref USB_StdDescriptor_String_t for the version of this type with standard element names.
-			 *
-			 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-			 */
-			typedef struct
-			{
-				USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
-
-				#if (((ARCH == ARCH_AVR8) || (ARCH == ARCH_XMEGA)) && !defined(__DOXYGEN__))
-				wchar_t  UnicodeString[];
-				#else
-				uint16_t UnicodeString[]; /**< String data, as unicode characters (alternatively,
-				                           *   string language IDs). If normal ASCII characters are
-				                           *   to be used, they must be added as an array of characters
-				                           *   rather than a normal C string so that they are widened to
-				                           *   Unicode size.
-				                           *
-				                           *   Under GCC, strings prefixed with the "L" character (before
-				                           *   the opening string quotation mark) are considered to be
-				                           *   Unicode strings, and may be used instead of an explicit
-				                           *   array of ASCII characters on little endian devices with
-				                           *   UTF-16-LE \c wchar_t encoding.
-				                           */
-				#endif
-			} ATTR_PACKED USB_Descriptor_String_t;
-
-			typedef struct
-			{
-				uint8_t bLength; /**< Size of the descriptor, in bytes. */
-				uint8_t bDescriptorType;
-				uint16_t bString[]; /**< String data, as unicode characters (alternatively, string language IDs).
-				                     *   If normal ASCII characters are to be used, they must be added as an array
-				                     *   of characters rather than a normal C string so that they are widened to
-				                     *   Unicode size.
-				                     *
-				                     *   Under GCC, strings prefixed with the "L" character (before the opening string
-				                     *   quotation mark) are considered to be Unicode strings, and may be used instead
-				                     *   of an explicit array of ASCII characters.
-				                     */
-			} ATTR_PACKED USB_StdDescriptor_String_t;
-
-
+typedef struct
+{
+    uint8_t bLength; /**< Size of the descriptor, in bytes. */
+    uint8_t bDescriptorType;
+    uint16_t bString[];
+} ATTR_PACKED USB_StdDescriptor_String_t;
 #endif
 
 
-#ifndef __USBINTERRUPT_AVR8_H__
-#define __USBINTERRUPT_AVR8_H__
-
-
-#if !defined(__DOXYGEN__)
 enum USB_Interrupts_t
 {
     USB_INT_VBUSTI  = 0,
@@ -1343,52 +839,13 @@ enum USB_Interrupts_t
     USB_INT_RXSTPI  = 6,
 };
 
-static inline void USB_INT_Enable(const uint8_t Interrupt) ATTR_ALWAYS_INLINE;
-static inline void USB_INT_Enable(const uint8_t Interrupt)
+static inline void USB_INT_Disable(const uint8_t Interrupt)
 {
     switch (Interrupt)
     {
-#if (defined(USB_SERIES_4_AVR) || defined(USB_SERIES_6_AVR) || defined(USB_SERIES_7_AVR))
         case USB_INT_VBUSTI:
-            USBCON |= (1 << VBUSTE);
-            break;
-#endif
-        case USB_INT_WAKEUPI:
-            UDIEN  |= (1 << WAKEUPE);
-            break;
-					case USB_INT_SUSPI:
-						UDIEN  |= (1 << SUSPE);
-						break;
-					case USB_INT_EORSTI:
-						UDIEN  |= (1 << EORSTE);
-						break;
-					case USB_INT_SOFI:
-						UDIEN  |= (1 << SOFE);
-						break;
-					case USB_INT_RXSTPI:
-						UEIENX |= (1 << RXSTPE);
-						break;
-					default:
-						break;
-				}
-			}
-
-			static inline void USB_INT_Disable(const uint8_t Interrupt) ATTR_ALWAYS_INLINE;
-			static inline void USB_INT_Disable(const uint8_t Interrupt)
-			{
-				switch (Interrupt)
-				{
-#if (defined(USB_SERIES_4_AVR) || defined(USB_SERIES_6_AVR) || defined(USB_SERIES_7_AVR))
-					case USB_INT_VBUSTI:
 						USBCON &= ~(1 << VBUSTE);
 						break;
-					#endif
-					#if defined(USB_CAN_BE_BOTH)
-					case USB_INT_IDTI:
-						USBCON &= ~(1 << IDTE);
-						break;
-					#endif
-					#if defined(USB_CAN_BE_DEVICE)
 					case USB_INT_WAKEUPI:
 						UDIEN  &= ~(1 << WAKEUPE);
 						break;
@@ -1404,52 +861,19 @@ static inline void USB_INT_Enable(const uint8_t Interrupt)
 					case USB_INT_RXSTPI:
 						UEIENX &= ~(1 << RXSTPE);
 						break;
-					#endif
-					default:
-						break;
-				}
-			}
-
-			static inline void USB_INT_Clear(const uint8_t Interrupt) ATTR_ALWAYS_INLINE;
-			static inline void USB_INT_Clear(const uint8_t Interrupt)
-			{
-				switch (Interrupt)
-				{
-#if (defined(USB_SERIES_4_AVR) || defined(USB_SERIES_6_AVR) || defined(USB_SERIES_7_AVR))
-					case USB_INT_VBUSTI:
-						USBINT &= ~(1 << VBUSTI);
-						break;
-#endif
-					case USB_INT_WAKEUPI:
-						UDINT  &= ~(1 << WAKEUPI);
-						break;
-					case USB_INT_SUSPI:
-						UDINT  &= ~(1 << SUSPI);
-						break;
-					case USB_INT_EORSTI:
-						UDINT  &= ~(1 << EORSTI);
-						break;
-					case USB_INT_SOFI:
-						UDINT  &= ~(1 << SOFI);
-						break;
-					case USB_INT_RXSTPI:
-						UEINTX &= ~(1 << RXSTPI);
-						break;
-					default:
-						break;
-				}
-			}
+        default:
+            break;
+    }
+}
 
 static inline bool USB_INT_IsEnabled(const uint8_t Interrupt)
     ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
 static inline bool USB_INT_IsEnabled(const uint8_t Interrupt)
-			{
-				switch (Interrupt)
-				{
-#if (defined(USB_SERIES_4_AVR) || defined(USB_SERIES_6_AVR) || defined(USB_SERIES_7_AVR))
-					case USB_INT_VBUSTI:
+{
+    switch (Interrupt)
+    {
+        case USB_INT_VBUSTI:
 						return (USBCON & (1 << VBUSTE));
-#endif
 					case USB_INT_WAKEUPI:
 						return (UDIEN  & (1 << WAKEUPE));
 					case USB_INT_SUSPI:
@@ -1471,11 +895,8 @@ static inline bool USB_INT_HasOccurred(const uint8_t Interrupt)
 {
     switch (Interrupt)
     {
-#if (defined(USB_SERIES_4_AVR) || defined(USB_SERIES_6_AVR) || defined(USB_SERIES_7_AVR))
 					case USB_INT_VBUSTI:
 						return (USBINT & (1 << VBUSTI));
-#endif
-#if defined(USB_CAN_BE_DEVICE)
 					case USB_INT_WAKEUPI:
 						return (UDINT  & (1 << WAKEUPI));
 					case USB_INT_SUSPI:
@@ -1486,18 +907,10 @@ static inline bool USB_INT_HasOccurred(const uint8_t Interrupt)
 						return (UDINT  & (1 << SOFI));
 					case USB_INT_RXSTPI:
 						return (UEINTX & (1 << RXSTPI));
-#endif
 					default:
 						return false;
 				}
 			}
-
-
-void USB_INT_ClearAllInterrupts(void);
-void USB_INT_DisableAllInterrupts(void);
-#endif
-
-#endif
 
 
 
@@ -1535,7 +948,7 @@ bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number,
                                                 const uint8_t UECFG0XData,
                                                 const uint8_t UECFG1XData);
 
-#define ENDPOINT_TOTAL_ENDPOINTS        7
+static constexpr uint8_t ENDPOINT_TOTAL_ENDPOINTS = 7;
 
 enum Endpoint_WaitUntilReady_ErrorCodes_t
 {
@@ -1551,8 +964,7 @@ static inline bool Endpoint_ConfigureEndpoint(const uint8_t Address,
                                         const uint16_t Size,
                                     const uint8_t Banks) ATTR_ALWAYS_INLINE;
 
-static inline bool Endpoint_ConfigureEndpoint(const uint8_t Address,
-                                             const uint8_t Type,
+static inline bool Endpoint_ConfigureEndpoint(uint8_t Address, uint8_t Type,
                                              const uint16_t Size,
                                              const uint8_t Banks)
 {
@@ -1570,13 +982,7 @@ static inline uint16_t Endpoint_BytesInEndpoint(void) ATTR_WARN_UNUSED_RESULT AT
 
 static inline uint16_t Endpoint_BytesInEndpoint(void)
 {
-#if (defined(USB_SERIES_6_AVR) || defined(USB_SERIES_7_AVR))
-    return UEBCX;
-#elif defined(USB_SERIES_4_AVR)
     return (((uint16_t)UEBCHX << 8) | UEBCLX);
-#elif defined(USB_SERIES_2_AVR)
-    return UEBCLX;
-#endif
 }
 
 static inline uint8_t Endpoint_GetEndpointDirection(void)
@@ -1599,12 +1005,9 @@ static inline uint8_t Endpoint_GetCurrentEndpoint(void)
 #endif
 }
 
-static inline void Endpoint_SelectEndpoint(const uint8_t Address) ATTR_ALWAYS_INLINE;
 static inline void Endpoint_SelectEndpoint(const uint8_t Address)
 {
-#if !defined(CONTROL_ONLY_DEVICE)
     UENUM = (Address & ENDPOINT_EPNUM_MASK);
-#endif
 }
 
 static inline void Endpoint_ResetEndpoint(const uint8_t Address) ATTR_ALWAYS_INLINE;
@@ -1614,40 +1017,12 @@ static inline void Endpoint_ResetEndpoint(const uint8_t Address)
     UERST = 0;
 }
 
-static inline void Endpoint_EnableEndpoint(void) ATTR_ALWAYS_INLINE;
-static inline void Endpoint_EnableEndpoint(void)
-{
-    UECONX |= (1 << EPEN);
-}
-
-static inline void Endpoint_DisableEndpoint(void) ATTR_ALWAYS_INLINE;
-static inline void Endpoint_DisableEndpoint(void)
-{   
-    UECONX &= ~(1 << EPEN);
-}
-
-static inline bool Endpoint_IsEnabled(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
-static inline bool Endpoint_IsEnabled(void)
-{   
-    return ((UECONX & (1 << EPEN)) ? true : false);
-}
-
 static inline uint8_t Endpoint_GetBusyBanks(void) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
 static inline uint8_t Endpoint_GetBusyBanks(void)
 {
     return (UESTA0X & (0x03 << NBUSYBK0));
 }
 
-static inline void Endpoint_AbortPendingIN(void)
-{
-    while (Endpoint_GetBusyBanks() != 0)
-    {
-        UEINTX |= (1 << RXOUTI);
-        while (UEINTX & (1 << RXOUTI));
-    }
-}
-
-  
 static inline bool Endpoint_IsReadWriteAllowed(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 static inline bool Endpoint_IsReadWriteAllowed(void)
 {   
@@ -1695,35 +1070,10 @@ static inline bool Endpoint_IsSETUPReceived(void)
     return ((UEINTX & (1 << RXSTPI)) ? true : false);
 }
 
-static inline void Endpoint_ClearSETUP(void) ATTR_ALWAYS_INLINE;
-static inline void Endpoint_ClearSETUP(void)
-{   
-    UEINTX &= ~(1 << RXSTPI);
-}  
-
-            
-static inline void Endpoint_ClearIN(void) ATTR_ALWAYS_INLINE;
-static inline void Endpoint_ClearIN(void)
-{ 
-    UEINTX &= ~((1 << TXINI) | (1 << FIFOCON));
-}
-
 static inline void Endpoint_ClearOUT(void) ATTR_ALWAYS_INLINE;
 static inline void Endpoint_ClearOUT(void)
 {   
     UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
-}
-
-static inline void Endpoint_StallTransaction(void) ATTR_ALWAYS_INLINE;
-static inline void Endpoint_StallTransaction(void)
-{   
-    UECONX |= (1 << STALLRQ);
-} 
-
-static inline void Endpoint_ClearStall(void) ATTR_ALWAYS_INLINE;
-static inline void Endpoint_ClearStall(void)
-{ 
-    UECONX |= (1 << STALLRQC);
 }
 
 static inline bool Endpoint_IsStalled(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
@@ -1746,7 +1096,6 @@ static inline void Endpoint_SetEndpointDirection(const uint8_t DirectionMask)
     UECFG0X = ((UECFG0X & ~(1 << EPDIR)) | (DirectionMask ? (1 << EPDIR) : 0));
 }   
 
-static inline uint8_t Endpoint_Read_8(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 static inline uint8_t Endpoint_Read_8(void)
 {   
     return UEDATX;
@@ -1833,22 +1182,6 @@ static inline uint32_t Endpoint_Read_32_LE(void)
     return Data.Value;
 }
 
-static inline uint32_t Endpoint_Read_32_BE(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
-static inline uint32_t Endpoint_Read_32_BE(void)
-{
-    union
-    {
-        uint32_t Value;
-        uint8_t  Bytes[4];
-    } Data;
-
-    Data.Bytes[3] = UEDATX;
-    Data.Bytes[2] = UEDATX;
-    Data.Bytes[1] = UEDATX;
-    Data.Bytes[0] = UEDATX;
-    return Data.Value;
-}
-
 static inline void Endpoint_Write_32_LE(const uint32_t Data) ATTR_ALWAYS_INLINE;
 static inline void Endpoint_Write_32_LE(const uint32_t Data)
 {
@@ -1878,18 +1211,8 @@ static inline void Endpoint_Discard_32(void)
     (void)Dummy;
 }
 
-#if (!defined(FIXED_CONTROL_ENDPOINT_SIZE) || defined(__DOXYGEN__))
-extern uint8_t USB_Device_ControlEndpointSize;
-#else
-#define USB_Device_ControlEndpointSize FIXED_CONTROL_ENDPOINT_SIZE
-#endif
-
 bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
                                                  const uint8_t Entries);
-
-
-void Endpoint_ClearStatusStage(void);
-uint8_t Endpoint_WaitUntilReady(void);
 
 
 #if (defined(USE_RAM_DESCRIPTORS) && defined(USE_EEPROM_DESCRIPTORS))
@@ -1934,19 +1257,6 @@ static inline uint16_t USB_Device_GetFrameNumber(void)
     return UDFNUM;
 }
 
-#if !defined(__DOXYGEN__)
-static inline void USB_Device_SetLowSpeed(void) ATTR_ALWAYS_INLINE;
-static inline void USB_Device_SetLowSpeed(void)
-{
-    UDCON |=  (1 << LSM);
-}
-
-static inline void USB_Device_SetFullSpeed(void) ATTR_ALWAYS_INLINE;
-static inline void USB_Device_SetFullSpeed(void)
-{
-    UDCON &= ~(1 << LSM);
-}
-
 static inline void USB_Device_SetDeviceAddress(const uint8_t Address) ATTR_ALWAYS_INLINE;
 static inline void USB_Device_SetDeviceAddress(const uint8_t Address)
 {
@@ -1960,20 +1270,13 @@ static inline void USB_Device_EnableDeviceAddress(const uint8_t Address)
     UDADDR |= (1 << ADDEN);
 }
 
-static inline bool USB_Device_IsAddressSet(void) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
-static inline bool USB_Device_IsAddressSet(void)
-{
-    return (UDADDR & (1 << ADDEN));
-}
-
-#if (USE_INTERNAL_SERIAL != NO_DESCRIPTOR)
 static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
     ATTR_NON_NULL_PTR_ARG(1);
 
 static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
 {
     uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
-    GlobalInterruptDisable();
+    cli();
 
     uint8_t SigReadAddress = INTERNAL_SERIAL_START_ADDRESS;
 
@@ -1997,9 +1300,6 @@ static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
 
     SetGlobalInterruptMask(CurrentGlobalInt);
 }
-#endif
-
-#endif
 
 #endif
 
@@ -2015,96 +1315,32 @@ static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
 #define CONTROL_REQTYPE_TYPE       0x60
 #define CONTROL_REQTYPE_RECIPIENT  0x1F
 #define REQDIR_HOSTTODEVICE        (0 << 7)
-
-			/** Request data direction mask, indicating that the request data will flow from device to host.
-			 *
-			 *  \see \ref CONTROL_REQTYPE_DIRECTION macro.
-			 */
-			#define REQDIR_DEVICETOHOST        (1 << 7)
-			//@}
-
-			
-			#define REQTYPE_STANDARD           (0 << 5)
-
-			/** Request type mask, indicating that the request is a class-specific request.
-			 *
-			 *  \see \ref CONTROL_REQTYPE_TYPE macro.
-			 */
-			#define REQTYPE_CLASS              (1 << 5)
-
-			/** Request type mask, indicating that the request is a vendor specific request.
-			 *
-			 *  \see \ref CONTROL_REQTYPE_TYPE macro.
-			 */
-			#define REQTYPE_VENDOR             (2 << 5)
-			//@}
-
-			/** \name Control Request Recipient Masks */
-			//@{
-			/** Request recipient mask, indicating that the request is to be issued to the device as a whole.
-			 *
-			 *  \see \ref CONTROL_REQTYPE_RECIPIENT macro.
-			 */
-			#define REQREC_DEVICE              (0 << 0)
-
-			/** Request recipient mask, indicating that the request is to be issued to an interface in the
-			 *  currently selected configuration.
-			 *
-			 *  \see \ref CONTROL_REQTYPE_RECIPIENT macro.
-			 */
-			#define REQREC_INTERFACE           (1 << 0)
-
-			/** Request recipient mask, indicating that the request is to be issued to an endpoint in the
-			 *  currently selected configuration.
-			 *
-			 *  \see \ref CONTROL_REQTYPE_RECIPIENT macro.
-			 */
-			#define REQREC_ENDPOINT            (2 << 0)
-
-			/** Request recipient mask, indicating that the request is to be issued to an unspecified element
-			 *  in the currently selected configuration.
-			 *
-			 *  \see \ref CONTROL_REQTYPE_RECIPIENT macro.
-			 */
-			#define REQREC_OTHER               (3 << 0)
-			//@}
+#define REQDIR_DEVICETOHOST        (1 << 7)
+#define REQTYPE_STANDARD           (0 << 5)
+#define REQTYPE_CLASS              (1 << 5)
+#define REQTYPE_VENDOR             (2 << 5)
+#define REQREC_DEVICE              (0 << 0)
+#define REQREC_INTERFACE           (1 << 0)
+#define REQREC_ENDPOINT            (2 << 0)
+#define REQREC_OTHER               (3 << 0)
 
 			
-			typedef struct
-			{
-				uint8_t  bmRequestType; /**< Type of the request. */
-				uint8_t  bRequest; /**< Request command code. */
-				uint16_t wValue; /**< wValue parameter of the request. */
-				uint16_t wIndex; /**< wIndex parameter of the request. */
-				uint16_t wLength; /**< Length of the data to transfer in bytes. */
-			} ATTR_PACKED USB_Request_Header_t;
+typedef struct
+{
+    uint8_t  bmRequestType; /**< Type of the request. */
+    uint8_t  bRequest; /**< Request command code. */
+    uint16_t wValue; /**< wValue parameter of the request. */
+    uint16_t wIndex; /**< wIndex parameter of the request. */
+    uint16_t wLength; /**< Length of the data to transfer in bytes. */
+} ATTR_PACKED USB_Request_Header_t;
 
-		/* Enums: */
-			/** Enumeration for the various standard request commands. These commands are applicable when the
-			 *  request type is \ref REQTYPE_STANDARD (with the exception of \ref REQ_GetDescriptor, which is always
-			 *  handled regardless of the request type value).
-			 *
-			 *  \see Chapter 9 of the USB 2.0 Specification.
-			 */
-			enum USB_Control_Request_t
-			{
-				REQ_GetStatus           = 0, /**< Implemented in the library for device and endpoint recipients. Passed
-				                              *   to the user application for other recipients via the
-				                              *   \ref EVENT_USB_Device_ControlRequest() event when received in
-				                              *   device mode. */
-				REQ_ClearFeature        = 1, /**< Implemented in the library for device and endpoint recipients. Passed
-				                              *   to the user application for other recipients via the
-				                              *   \ref EVENT_USB_Device_ControlRequest() event when received in
-				                              *   device mode. */
-				REQ_SetFeature          = 3, /**< Implemented in the library for device and endpoint recipients. Passed
-				                              *   to the user application for other recipients via the
-				                              *   \ref EVENT_USB_Device_ControlRequest() event when received in
-				                              *   device mode. */
-				REQ_SetAddress          = 5, /**< Implemented in the library for the device recipient. Passed
-				                              *   to the user application for other recipients via the
-				                              *   \ref EVENT_USB_Device_ControlRequest() event when received in
-				                              *   device mode. */
-				REQ_GetDescriptor       = 6, /**< Implemented in the library for device and interface recipients. Passed to the
+enum USB_Control_Request_t
+{
+REQ_GetStatus           = 0,
+REQ_ClearFeature        = 1,
+REQ_SetFeature          = 3,
+REQ_SetAddress          = 5,
+REQ_GetDescriptor       = 6, /**< Implemented in the library for device and interface recipients. Passed to the
 				                              *   user application for other recipients via the
 				                              *   \ref EVENT_USB_Device_ControlRequest() event when received in
 				                              *   device mode. */
@@ -2135,11 +1371,7 @@ static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
 			 */
 			enum USB_Feature_Selectors_t
 			{
-				FEATURE_SEL_EndpointHalt       = 0x00, /**< Feature selector for Clear Feature or Set Feature commands. When
-				                                        *   used in a Set Feature or Clear Feature request this indicates that an
-				                                        *   endpoint (whose address is given elsewhere in the request) should have
-				                                        *   its stall condition changed.
-				                                        */
+				FEATURE_SEL_EndpointHalt       = 0x00,
 				FEATURE_SEL_DeviceRemoteWakeup = 0x01, /**< Feature selector for Device level Remote Wakeup enable set or clear.
 			                                            *   This feature can be controlled by the host on devices which indicate
 			                                            *   remote wakeup support in their descriptors to selectively disable or
@@ -2182,14 +1414,6 @@ extern bool USB_Device_RemoteWakeupEnabled;
 extern bool USB_Device_CurrentlySelfPowered;
 #endif
 
-#if !defined(__DOXYGEN__)
-
-
-void USB_Device_ProcessControlRequest(void);
-
-
-#endif
-
 
 enum Endpoint_Stream_RW_ErrorCodes_t
 {
@@ -2209,20 +1433,12 @@ enum Endpoint_ControlStream_RW_ErrorCodes_t
     ENDPOINT_RWCSTREAM_BusSuspended = 3,
 };
 
-#ifndef __ENDPOINT_STREAM_AVR8_H__
-#define __ENDPOINT_STREAM_AVR8_H__
 
 
-uint8_t Endpoint_Discard_Stream(uint16_t Length,
-			                                uint16_t* const BytesProcessed);
-
-uint8_t Endpoint_Null_Stream(uint16_t Length,
-			                             uint16_t* const BytesProcessed);
-
-
+uint8_t Endpoint_Discard_Stream(uint16_t Length, uint16_t* const BytesProcessed);
 
 uint8_t Endpoint_Write_Stream_LE(const void* const Buffer,
-			                                 uint16_t Length,
+			                      uint16_t Length,
 			                      uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
 
 uint8_t Endpoint_Write_Stream_BE(const void* const Buffer,
@@ -2240,120 +1456,28 @@ uint8_t Endpoint_Write_Stream_BE(const void* const Buffer,
 	                          uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
 
 
-			uint8_t Endpoint_Write_Control_Stream_LE(const void* const Buffer,
-			                                         uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** Writes the given number of bytes to the CONTROL type endpoint from the given buffer in big endian,
-			 *  sending full packets to the host as needed. The host OUT acknowledgement is not automatically cleared
-			 *  in both failure and success states; the user is responsible for manually clearing the status OUT packet
-			 *  to finalize the transfer's status stage via the \ref Endpoint_ClearOUT() macro.
-			 *
-			 *  \note This function automatically sends the last packet in the data stage of the transaction; when the
-			 *        function returns, the user is responsible for clearing the <b>status</b> stage of the transaction.
-			 *        Note that the status stage packet is sent or received in the opposite direction of the data flow.
-			 *        \n\n
-			 *
-			 *  \note This routine should only be used on CONTROL type endpoints.
-			 *
-			 *  \warning Unlike the standard stream read/write commands, the control stream commands cannot be chained
-			 *           together; i.e. the entire stream data must be read or written at the one time.
-			 *
-			 *  \param[in] Buffer  Pointer to the source data buffer to read from.
-			 *  \param[in] Length  Number of bytes to read for the currently selected endpoint into the buffer.
-			 *
-			 *  \return A value from the \ref Endpoint_ControlStream_RW_ErrorCodes_t enum.
-			 */
 			uint8_t Endpoint_Write_Control_Stream_BE(const void* const Buffer,
-			                                         uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
+                                 uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** Reads the given number of bytes from the CONTROL endpoint from the given buffer in little endian,
-			 *  discarding fully read packets from the host as needed. The device IN acknowledgement is not
-			 *  automatically sent after success or failure states; the user is responsible for manually sending the
-			 *  status IN packet to finalize the transfer's status stage via the \ref Endpoint_ClearIN() macro.
-			 *
-			 *  \note This function automatically sends the last packet in the data stage of the transaction; when the
-			 *        function returns, the user is responsible for clearing the <b>status</b> stage of the transaction.
-			 *        Note that the status stage packet is sent or received in the opposite direction of the data flow.
-			 *        \n\n
-			 *
-			 *  \note This routine should only be used on CONTROL type endpoints.
-			 *
-			 *  \warning Unlike the standard stream read/write commands, the control stream commands cannot be chained
-			 *           together; i.e. the entire stream data must be read or written at the one time.
-			 *
-			 *  \param[out] Buffer  Pointer to the destination data buffer to write to.
-			 *  \param[in]  Length  Number of bytes to send via the currently selected endpoint.
-			 *
-			 *  \return A value from the \ref Endpoint_ControlStream_RW_ErrorCodes_t enum.
-			 */
 			uint8_t Endpoint_Read_Control_Stream_LE(void* const Buffer,
-			                                        uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
+                                uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** Reads the given number of bytes from the CONTROL endpoint from the given buffer in big endian,
-			 *  discarding fully read packets from the host as needed. The device IN acknowledgement is not
-			 *  automatically sent after success or failure states; the user is responsible for manually sending the
-			 *  status IN packet to finalize the transfer's status stage via the \ref Endpoint_ClearIN() macro.
-			 *
-			 *  \note This function automatically sends the last packet in the data stage of the transaction; when the
-			 *        function returns, the user is responsible for clearing the <b>status</b> stage of the transaction.
-			 *        Note that the status stage packet is sent or received in the opposite direction of the data flow.
-			 *        \n\n
-			 *
-			 *  \note This routine should only be used on CONTROL type endpoints.
-			 *
-			 *  \warning Unlike the standard stream read/write commands, the control stream commands cannot be chained
-			 *           together; i.e. the entire stream data must be read or written at the one time.
-			 *
-			 *  \param[out] Buffer  Pointer to the destination data buffer to write to.
-			 *  \param[in]  Length  Number of bytes to send via the currently selected endpoint.
-			 *
-			 *  \return A value from the \ref Endpoint_ControlStream_RW_ErrorCodes_t enum.
-			 */
 			uint8_t Endpoint_Read_Control_Stream_BE(void* const Buffer,
-			                                        uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
-			//@}
+                                 uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** \name Stream functions for EEPROM source/destination data */
-			//@{
-
-			/** EEPROM buffer source version of \ref Endpoint_Write_Stream_LE().
-			 *
-			 *  \param[in] Buffer          Pointer to the source data buffer to read from.
-			 *  \param[in] Length          Number of bytes to read for the currently selected endpoint into the buffer.
-			 *  \param[in] BytesProcessed  Pointer to a location where the total number of bytes processed in the current
-			 *                             transaction should be updated, \c NULL if the entire stream should be written at once.
-			 *
-			 *  \return A value from the \ref Endpoint_Stream_RW_ErrorCodes_t enum.
-			 */
 			uint8_t Endpoint_Write_EStream_LE(const void* const Buffer,
-			                                  uint16_t Length,
-			                                  uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
+                            uint16_t Length,
+                             uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** EEPROM buffer source version of \ref Endpoint_Write_Stream_BE().
-			 *
-			 *  \param[in] Buffer          Pointer to the source data buffer to read from.
-			 *  \param[in] Length          Number of bytes to read for the currently selected endpoint into the buffer.
-			 *  \param[in] BytesProcessed  Pointer to a location where the total number of bytes processed in the current
-			 *                             transaction should be updated, \c NULL if the entire stream should be written at once.
-			 *
-			 *  \return A value from the \ref Endpoint_Stream_RW_ErrorCodes_t enum.
-			 */
 			uint8_t Endpoint_Write_EStream_BE(const void* const Buffer,
-			                                  uint16_t Length,
-			                                  uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
+                           uint16_t Length,
+                         uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** EEPROM buffer destination version of \ref Endpoint_Read_Stream_LE().
-			 *
-			 *  \param[out] Buffer          Pointer to the destination data buffer to write to, located in EEPROM memory space.
-			 *  \param[in]  Length          Number of bytes to send via the currently selected endpoint.
-			 *  \param[in]  BytesProcessed  Pointer to a location where the total number of bytes processed in the current
-			 *                              transaction should be updated, \c NULL if the entire stream should be read at once.
-			 *
-			 *  \return A value from the \ref Endpoint_Stream_RW_ErrorCodes_t enum.
-			 */
+
 			uint8_t Endpoint_Read_EStream_LE(void* const Buffer,
-			                                 uint16_t Length,
-			                                 uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
+                            uint16_t Length,
+                           uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
 
 			uint8_t Endpoint_Read_EStream_BE(void* const Buffer,
                               uint16_t Length,
@@ -2379,62 +1503,15 @@ uint8_t Endpoint_Write_Stream_BE(const void* const Buffer,
 
 	
 			uint8_t Endpoint_Write_PStream_BE(const void* const Buffer,
-			                                  uint16_t Length,
-			                                  uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
+                    uint16_t Length,
+                    uint16_t* const BytesProcessed) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** FLASH buffer source version of \ref Endpoint_Write_Control_Stream_LE().
-			 *
-			 *  \pre The FLASH data must be located in the first 64KB of FLASH for this function to work correctly.
-			 *
-			 *  \note This function automatically sends the last packet in the data stage of the transaction; when the
-			 *        function returns, the user is responsible for clearing the <b>status</b> stage of the transaction.
-			 *        Note that the status stage packet is sent or received in the opposite direction of the data flow.
-			 *        \n\n
-			 *
-			 *  \note This routine should only be used on CONTROL type endpoints.
-			 *        \n\n
-			 *
-			 *  \warning Unlike the standard stream read/write commands, the control stream commands cannot be chained
-			 *           together; i.e. the entire stream data must be read or written at the one time.
-			 *
-			 *  \param[in] Buffer  Pointer to the source data buffer to read from.
-			 *  \param[in] Length  Number of bytes to read for the currently selected endpoint into the buffer.
-			 *
-			 *  \return A value from the \ref Endpoint_ControlStream_RW_ErrorCodes_t enum.
-			 */
 			uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer,
-			                                          uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
+                           uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
 
-			/** FLASH buffer source version of \ref Endpoint_Write_Control_Stream_BE().
-			 *
-			 *  \pre The FLASH data must be located in the first 64KB of FLASH for this function to work correctly.
-			 *
-			 *  \note This function automatically sends the last packet in the data stage of the transaction; when the
-			 *        function returns, the user is responsible for clearing the <b>status</b> stage of the transaction.
-			 *        Note that the status stage packet is sent or received in the opposite direction of the data flow.
-			 *        \n\n
-			 *
-			 *  \note This routine should only be used on CONTROL type endpoints.
-			 *        \n\n
-			 *
-			 *  \warning Unlike the standard stream read/write commands, the control stream commands cannot be chained
-			 *           together; i.e. the entire stream data must be read or written at the one time.
-			 *
-			 *  \param[in] Buffer  Pointer to the source data buffer to read from.
-			 *  \param[in] Length  Number of bytes to read for the currently selected endpoint into the buffer.
-			 *
-			 *  \return A value from the \ref Endpoint_ControlStream_RW_ErrorCodes_t enum.
-			 */
 			uint8_t Endpoint_Write_Control_PStream_BE(const void* const Buffer,
-			                                          uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
-#endif
+                                uint16_t Length) ATTR_NON_NULL_PTR_ARG(1);
 
-
-
-
-#if !defined(F_USB)
-#error F_USB is not defined. 
-#endif
 
 #if (F_USB == 8000000)
 #if (defined(__AVR_AT90USB82__) || defined(__AVR_AT90USB162__) || \
@@ -2462,85 +1539,15 @@ defined(__AVR_ATmega32U2__))
 #endif
 #endif
 
-#if !defined(USB_PLL_PSC)
-#error No PLL prescale value available for chosen F_USB value and AVR model.
-#endif
-
-#define USB_OPT_REG_DISABLED               (1 << 1)
-#define USB_OPT_REG_ENABLED                (0 << 1)
-#define USB_OPT_REG_KEEP_ENABLED           (1 << 3)
-
-#define USB_OPT_MANUAL_PLL                 (1 << 2)
-
-#define USB_OPT_AUTO_PLL                   (0 << 2)
-
 #if !defined(USB_STREAM_TIMEOUT_MS) || defined(__DOXYGEN__)
 #define USB_STREAM_TIMEOUT_MS       100
 #endif
-
-
-static inline bool USB_VBUS_GetStatus(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
-static inline bool USB_VBUS_GetStatus(void)
-{
-    return ((USBSTA & (1 << VBUS)) ? true : false);
-}
-
-void USB_Init(void);
-
-void USB_Disable(void);
-
-
-#define USB_CurrentMode USB_MODE_Device
-
-#if !defined(USE_STATIC_OPTIONS) || defined(__DOXYGEN__)
-                extern volatile uint8_t USB_Options;
-#elif defined(USE_STATIC_OPTIONS)
-#define USB_Options USE_STATIC_OPTIONS
-#endif
-
-static inline void USB_PLL_On(void) ATTR_ALWAYS_INLINE;
-static inline void USB_PLL_On(void)
-{
-    PLLCSR = USB_PLL_PSC;
-    PLLCSR = (USB_PLL_PSC | (1 << PLLE));
-}
-
-static inline void USB_PLL_Off(void) ATTR_ALWAYS_INLINE;
-static inline void USB_PLL_Off(void)
-{
-    PLLCSR = 0;
-}
 
 static inline bool USB_PLL_IsReady(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 static inline bool USB_PLL_IsReady(void)
 {
     return ((PLLCSR & (1 << PLOCK)) ? true : false);
 }
-
-static inline void USB_CLK_Freeze(void) ATTR_ALWAYS_INLINE;
-static inline void USB_CLK_Freeze(void)
-{
-    USBCON |=  (1 << FRZCLK);
-}
-
-static inline void USB_CLK_Unfreeze(void) ATTR_ALWAYS_INLINE;
-static inline void USB_CLK_Unfreeze(void)
-{
-    USBCON &= ~(1 << FRZCLK);
-}
-
-static inline void USB_Controller_Enable(void) ATTR_ALWAYS_INLINE;
-static inline void USB_Controller_Enable(void)
-{
-    USBCON |=  (1 << USBE);
-}
-
-static inline void USB_Controller_Disable(void) ATTR_ALWAYS_INLINE;
-static inline void USB_Controller_Disable(void)
-{
-    USBCON &= ~(1 << USBE);
-}
-
 
 
 #endif
@@ -2571,15 +1578,11 @@ static inline void USB_Controller_Disable(void)
 #define _HID_RI_ENCODE_8(Data)                  , (Data & 0xFF)
 #define _HID_RI_ENCODE_16(Data)        _HID_RI_ENCODE_8(Data)  _HID_RI_ENCODE_8(Data >> 8)
 #define _HID_RI_ENCODE_32(Data)        _HID_RI_ENCODE_16(Data) _HID_RI_ENCODE_16(Data >> 16)
-			#define _HID_RI_ENCODE(DataBits, ...)           CONCAT_EXPANDED(_HID_RI_ENCODE_, DataBits(__VA_ARGS__))
+#define _HID_RI_ENCODE(DataBits, ...) CONCAT_EXPANDED(_HID_RI_ENCODE_, DataBits(__VA_ARGS__))
 
 			#define _HID_RI_ENTRY(Type, Tag, DataBits, ...) (Type | Tag | HID_RI_DATA_BITS(DataBits)) _HID_RI_ENCODE(DataBits, (__VA_ARGS__))
 	#endif
 
-	/* Public Interface - May be used in end-application: */
-		/* Macros: */
-		/** \name HID Input, Output and Feature Report Descriptor Item Flags */
-		//@{
 			#define HID_IOF_CONSTANT                        (1 << 0)
 			#define HID_IOF_DATA                            (0 << 0)
 			#define HID_IOF_VARIABLE                        (1 << 1)
@@ -2598,7 +1601,6 @@ static inline void USB_Controller_Disable(void)
 			#define HID_IOF_NON_VOLATILE                    (0 << 7)
 			#define HID_IOF_BUFFERED_BYTES                  (1 << 8)
 			#define HID_IOF_BITFIELD                        (0 << 8)
-		//@}
 
 #define HID_RI_INPUT(DataBits, ...) _HID_RI_ENTRY(HID_RI_TYPE_MAIN  , 0x80, DataBits, __VA_ARGS__)
 #define HID_RI_OUTPUT(DataBits, ...) _HID_RI_ENTRY(HID_RI_TYPE_MAIN  , 0x90, DataBits, __VA_ARGS__)
@@ -2761,442 +1763,253 @@ typedef struct
 #define HID_KEYBOARD_MODIFIER_RIGHTALT                    (1 << 6)
 #define HID_KEYBOARD_MODIFIER_RIGHTGUI                    (1 << 7)
 #define HID_KEYBOARD_LED_NUMLOCK                          (1 << 0)
+#define HID_KEYBOARD_LED_CAPSLOCK                         (1 << 1)
+#define HID_KEYBOARD_LED_SCROLLLOCK                       (1 << 2)
+#define HID_KEYBOARD_LED_COMPOSE                          (1 << 3)
+#define HID_KEYBOARD_LED_KANA                             (1 << 4)
 
-		/** Constant for a keyboard output report LED byte, indicating that the host's CAPS LOCK mode is currently set. */
-		#define HID_KEYBOARD_LED_CAPSLOCK                         (1 << 1)
+#define HID_KEYBOARD_SC_ERROR_ROLLOVER                    0x01
+#define HID_KEYBOARD_SC_POST_FAIL                         0x02
+#define HID_KEYBOARD_SC_ERROR_UNDEFINED                   0x03
+#define HID_KEYBOARD_SC_A                                 0x04
+#define HID_KEYBOARD_SC_B                                 0x05
+#define HID_KEYBOARD_SC_C                                 0x06
+#define HID_KEYBOARD_SC_D                                 0x07
+#define HID_KEYBOARD_SC_E                                 0x08
+#define HID_KEYBOARD_SC_F                                 0x09
+#define HID_KEYBOARD_SC_G                                 0x0A
+#define HID_KEYBOARD_SC_H                                 0x0B
+#define HID_KEYBOARD_SC_I                                 0x0C
+#define HID_KEYBOARD_SC_J                                 0x0D
+#define HID_KEYBOARD_SC_K                                 0x0E
+#define HID_KEYBOARD_SC_L                                 0x0F
+#define HID_KEYBOARD_SC_M                                 0x10
+#define HID_KEYBOARD_SC_N                                 0x11
+#define HID_KEYBOARD_SC_O                                 0x12
+#define HID_KEYBOARD_SC_P                                 0x13
+#define HID_KEYBOARD_SC_Q                                 0x14
+#define HID_KEYBOARD_SC_R                                 0x15
+#define HID_KEYBOARD_SC_S                                 0x16
+#define HID_KEYBOARD_SC_T                                 0x17
+#define HID_KEYBOARD_SC_U                                 0x18
+#define HID_KEYBOARD_SC_V                                 0x19
+#define HID_KEYBOARD_SC_W                                 0x1A
+#define HID_KEYBOARD_SC_X                                 0x1B
+#define HID_KEYBOARD_SC_Y                                 0x1C
+#define HID_KEYBOARD_SC_Z                                 0x1D
+#define HID_KEYBOARD_SC_1_AND_EXCLAMATION                 0x1E
+#define HID_KEYBOARD_SC_2_AND_AT                          0x1F
+#define HID_KEYBOARD_SC_3_AND_HASHMARK                    0x20
+#define HID_KEYBOARD_SC_4_AND_DOLLAR                      0x21
+#define HID_KEYBOARD_SC_5_AND_PERCENTAGE                  0x22
+#define HID_KEYBOARD_SC_6_AND_CARET                       0x23
+#define HID_KEYBOARD_SC_7_AND_AMPERSAND                   0x24
+#define HID_KEYBOARD_SC_8_AND_ASTERISK                    0x25
+#define HID_KEYBOARD_SC_9_AND_OPENING_PARENTHESIS         0x26
+#define HID_KEYBOARD_SC_0_AND_CLOSING_PARENTHESIS         0x27
+#define HID_KEYBOARD_SC_ENTER                             0x28
+#define HID_KEYBOARD_SC_ESCAPE                            0x29
+#define HID_KEYBOARD_SC_BACKSPACE                         0x2A
+#define HID_KEYBOARD_SC_TAB                               0x2B
+#define HID_KEYBOARD_SC_SPACE                             0x2C
+#define HID_KEYBOARD_SC_MINUS_AND_UNDERSCORE              0x2D
+#define HID_KEYBOARD_SC_EQUAL_AND_PLUS                    0x2E
+#define HID_KEYBOARD_SC_OPENING_BRACKET_AND_OPENING_BRACE 0x2F
+#define HID_KEYBOARD_SC_CLOSING_BRACKET_AND_CLOSING_BRACE 0x30
+#define HID_KEYBOARD_SC_BACKSLASH_AND_PIPE                0x31
+#define HID_KEYBOARD_SC_NON_US_HASHMARK_AND_TILDE         0x32
+#define HID_KEYBOARD_SC_SEMICOLON_AND_COLON               0x33
+#define HID_KEYBOARD_SC_APOSTROPHE_AND_QUOTE              0x34
+#define HID_KEYBOARD_SC_GRAVE_ACCENT_AND_TILDE            0x35
+#define HID_KEYBOARD_SC_COMMA_AND_LESS_THAN_SIGN          0x36
+#define HID_KEYBOARD_SC_DOT_AND_GREATER_THAN_SIGN         0x37
+#define HID_KEYBOARD_SC_SLASH_AND_QUESTION_MARK           0x38
+#define HID_KEYBOARD_SC_CAPS_LOCK                         0x39
+#define HID_KEYBOARD_SC_F1                                0x3A
+#define HID_KEYBOARD_SC_F2                                0x3B
+#define HID_KEYBOARD_SC_F3                                0x3C
+#define HID_KEYBOARD_SC_F4                                0x3D
+#define HID_KEYBOARD_SC_F5                                0x3E
+#define HID_KEYBOARD_SC_F6                                0x3F
+#define HID_KEYBOARD_SC_F7                                0x40
+#define HID_KEYBOARD_SC_F8                                0x41
+#define HID_KEYBOARD_SC_F9                                0x42
+#define HID_KEYBOARD_SC_F10                               0x43
+#define HID_KEYBOARD_SC_F11                               0x44
+#define HID_KEYBOARD_SC_F12                               0x45
+#define HID_KEYBOARD_SC_PRINT_SCREEN                      0x46
+#define HID_KEYBOARD_SC_SCROLL_LOCK                       0x47
+#define HID_KEYBOARD_SC_PAUSE                             0x48
+#define HID_KEYBOARD_SC_INSERT                            0x49
+#define HID_KEYBOARD_SC_HOME                              0x4A
+#define HID_KEYBOARD_SC_PAGE_UP                           0x4B
+#define HID_KEYBOARD_SC_DELETE                            0x4C
+#define HID_KEYBOARD_SC_END                               0x4D
+#define HID_KEYBOARD_SC_PAGE_DOWN                         0x4E
+#define HID_KEYBOARD_SC_RIGHT_ARROW                       0x4F
+#define HID_KEYBOARD_SC_LEFT_ARROW                        0x50
+#define HID_KEYBOARD_SC_DOWN_ARROW                        0x51
+#define HID_KEYBOARD_SC_UP_ARROW                          0x52
+#define HID_KEYBOARD_SC_NUM_LOCK                          0x53
+#define HID_KEYBOARD_SC_KEYPAD_SLASH                      0x54
+#define HID_KEYBOARD_SC_KEYPAD_ASTERISK                   0x55
+#define HID_KEYBOARD_SC_KEYPAD_MINUS                      0x56
+#define HID_KEYBOARD_SC_KEYPAD_PLUS                       0x57
+#define HID_KEYBOARD_SC_KEYPAD_ENTER                      0x58
+#define HID_KEYBOARD_SC_KEYPAD_1_AND_END                  0x59
+#define HID_KEYBOARD_SC_KEYPAD_2_AND_DOWN_ARROW           0x5A
+#define HID_KEYBOARD_SC_KEYPAD_3_AND_PAGE_DOWN            0x5B
+#define HID_KEYBOARD_SC_KEYPAD_4_AND_LEFT_ARROW           0x5C
+#define HID_KEYBOARD_SC_KEYPAD_5                          0x5D
+#define HID_KEYBOARD_SC_KEYPAD_6_AND_RIGHT_ARROW          0x5E
+#define HID_KEYBOARD_SC_KEYPAD_7_AND_HOME                 0x5F
+#define HID_KEYBOARD_SC_KEYPAD_8_AND_UP_ARROW             0x60
+#define HID_KEYBOARD_SC_KEYPAD_9_AND_PAGE_UP              0x61
+#define HID_KEYBOARD_SC_KEYPAD_0_AND_INSERT               0x62
+#define HID_KEYBOARD_SC_KEYPAD_DOT_AND_DELETE             0x63
+#define HID_KEYBOARD_SC_NON_US_BACKSLASH_AND_PIPE         0x64
+#define HID_KEYBOARD_SC_APPLICATION                       0x65
+#define HID_KEYBOARD_SC_POWER                             0x66
+#define HID_KEYBOARD_SC_KEYPAD_EQUAL_SIGN                 0x67
+#define HID_KEYBOARD_SC_F13                               0x68
+#define HID_KEYBOARD_SC_F14                               0x69
+#define HID_KEYBOARD_SC_F15                               0x6A
+#define HID_KEYBOARD_SC_F16                               0x6B
+#define HID_KEYBOARD_SC_F17                               0x6C
+#define HID_KEYBOARD_SC_F18                               0x6D
+#define HID_KEYBOARD_SC_F19                               0x6E
+#define HID_KEYBOARD_SC_F20                               0x6F
+#define HID_KEYBOARD_SC_F21                               0x70
+#define HID_KEYBOARD_SC_F22                               0x71
+#define HID_KEYBOARD_SC_F23                               0x72
+#define HID_KEYBOARD_SC_F24                               0x73
+#define HID_KEYBOARD_SC_EXECUTE                           0x74
+#define HID_KEYBOARD_SC_HELP                              0x75
+#define HID_KEYBOARD_SC_MENU                              0x76
+#define HID_KEYBOARD_SC_SELECT                            0x77
+#define HID_KEYBOARD_SC_STOP                              0x78
+#define HID_KEYBOARD_SC_AGAIN                             0x79
+#define HID_KEYBOARD_SC_UNDO                              0x7A
+#define HID_KEYBOARD_SC_CUT                               0x7B
+#define HID_KEYBOARD_SC_COPY                              0x7C
+#define HID_KEYBOARD_SC_PASTE                             0x7D
+#define HID_KEYBOARD_SC_FIND                              0x7E
+#define HID_KEYBOARD_SC_MUTE                              0x7F
+#define HID_KEYBOARD_SC_VOLUME_UP                         0x80
+#define HID_KEYBOARD_SC_VOLUME_DOWN                       0x81
+#define HID_KEYBOARD_SC_LOCKING_CAPS_LOCK                 0x82
+#define HID_KEYBOARD_SC_LOCKING_NUM_LOCK                  0x83
+#define HID_KEYBOARD_SC_LOCKING_SCROLL_LOCK               0x84
+#define HID_KEYBOARD_SC_KEYPAD_COMMA                      0x85
+#define HID_KEYBOARD_SC_KEYPAD_EQUAL_SIGN_AS400           0x86
+#define HID_KEYBOARD_SC_INTERNATIONAL1                    0x87
+#define HID_KEYBOARD_SC_INTERNATIONAL2                    0x88
+#define HID_KEYBOARD_SC_INTERNATIONAL3                    0x89
+#define HID_KEYBOARD_SC_INTERNATIONAL4                    0x8A
+#define HID_KEYBOARD_SC_INTERNATIONAL5                    0x8B
+#define HID_KEYBOARD_SC_INTERNATIONAL6                    0x8C
+#define HID_KEYBOARD_SC_INTERNATIONAL7                    0x8D
+#define HID_KEYBOARD_SC_INTERNATIONAL8                    0x8E
+#define HID_KEYBOARD_SC_INTERNATIONAL9                    0x8F
+#define HID_KEYBOARD_SC_LANG1                             0x90
+#define HID_KEYBOARD_SC_LANG2                             0x91
+#define HID_KEYBOARD_SC_LANG3                             0x92
+#define HID_KEYBOARD_SC_LANG4                             0x93
+#define HID_KEYBOARD_SC_LANG5                             0x94
+#define HID_KEYBOARD_SC_LANG6                             0x95
+#define HID_KEYBOARD_SC_LANG7                             0x96
+#define HID_KEYBOARD_SC_LANG8                             0x97
+#define HID_KEYBOARD_SC_LANG9                             0x98
+#define HID_KEYBOARD_SC_ALTERNATE_ERASE                   0x99
+#define HID_KEYBOARD_SC_SYSREQ                            0x9A
+#define HID_KEYBOARD_SC_CANCEL                            0x9B
+#define HID_KEYBOARD_SC_CLEAR                             0x9C
+#define HID_KEYBOARD_SC_PRIOR                             0x9D
+#define HID_KEYBOARD_SC_RETURN                            0x9E
+#define HID_KEYBOARD_SC_SEPARATOR                         0x9F
+#define HID_KEYBOARD_SC_OUT                               0xA0
+#define HID_KEYBOARD_SC_OPER                              0xA1
+#define HID_KEYBOARD_SC_CLEAR_AND_AGAIN                   0xA2
+#define HID_KEYBOARD_SC_CRSEL_AND_PROPS                   0xA3
+#define HID_KEYBOARD_SC_EXSEL                             0xA4
+#define HID_KEYBOARD_SC_KEYPAD_00                         0xB0
+#define HID_KEYBOARD_SC_KEYPAD_000                        0xB1
+#define HID_KEYBOARD_SC_THOUSANDS_SEPARATOR               0xB2
+#define HID_KEYBOARD_SC_DECIMAL_SEPARATOR                 0xB3
+#define HID_KEYBOARD_SC_CURRENCY_UNIT                     0xB4
+#define HID_KEYBOARD_SC_CURRENCY_SUB_UNIT                 0xB5
+#define HID_KEYBOARD_SC_KEYPAD_OPENING_PARENTHESIS        0xB6
+#define HID_KEYBOARD_SC_KEYPAD_CLOSING_PARENTHESIS        0xB7
+#define HID_KEYBOARD_SC_KEYPAD_OPENING_BRACE              0xB8
+#define HID_KEYBOARD_SC_KEYPAD_CLOSING_BRACE              0xB9
+#define HID_KEYBOARD_SC_KEYPAD_TAB                        0xBA
+#define HID_KEYBOARD_SC_KEYPAD_BACKSPACE                  0xBB
+#define HID_KEYBOARD_SC_KEYPAD_A                          0xBC
+#define HID_KEYBOARD_SC_KEYPAD_B                          0xBD
+#define HID_KEYBOARD_SC_KEYPAD_C                          0xBE
+#define HID_KEYBOARD_SC_KEYPAD_D                          0xBF
+#define HID_KEYBOARD_SC_KEYPAD_E                          0xC0
+#define HID_KEYBOARD_SC_KEYPAD_F                          0xC1
+#define HID_KEYBOARD_SC_KEYPAD_XOR                        0xC2
+#define HID_KEYBOARD_SC_KEYPAD_CARET                      0xC3
+#define HID_KEYBOARD_SC_KEYPAD_PERCENTAGE                 0xC4
+#define HID_KEYBOARD_SC_KEYPAD_LESS_THAN_SIGN             0xC5
+#define HID_KEYBOARD_SC_KEYPAD_GREATER_THAN_SIGN          0xC6
+#define HID_KEYBOARD_SC_KEYPAD_AMP                        0xC7
+#define HID_KEYBOARD_SC_KEYPAD_AMP_AMP                    0xC8
+#define HID_KEYBOARD_SC_KEYPAD_PIPE                       0xC9
+#define HID_KEYBOARD_SC_KEYPAD_PIPE_PIPE                  0xCA
+#define HID_KEYBOARD_SC_KEYPAD_COLON                      0xCB
+#define HID_KEYBOARD_SC_KEYPAD_HASHMARK                   0xCC
+#define HID_KEYBOARD_SC_KEYPAD_SPACE                      0xCD
+#define HID_KEYBOARD_SC_KEYPAD_AT                         0xCE
+#define HID_KEYBOARD_SC_KEYPAD_EXCLAMATION_SIGN           0xCF
+#define HID_KEYBOARD_SC_KEYPAD_MEMORY_STORE               0xD0
+#define HID_KEYBOARD_SC_KEYPAD_MEMORY_RECALL              0xD1
+#define HID_KEYBOARD_SC_KEYPAD_MEMORY_CLEAR               0xD2
+#define HID_KEYBOARD_SC_KEYPAD_MEMORY_ADD                 0xD3
+#define HID_KEYBOARD_SC_KEYPAD_MEMORY_SUBTRACT            0xD4
+#define HID_KEYBOARD_SC_KEYPAD_MEMORY_MULTIPLY            0xD5
+#define HID_KEYBOARD_SC_KEYPAD_MEMORY_DIVIDE              0xD6
+#define HID_KEYBOARD_SC_KEYPAD_PLUS_AND_MINUS             0xD7
+#define HID_KEYBOARD_SC_KEYPAD_CLEAR                      0xD8
+#define HID_KEYBOARD_SC_KEYPAD_CLEAR_ENTRY                0xD9
+#define HID_KEYBOARD_SC_KEYPAD_BINARY                     0xDA
+#define HID_KEYBOARD_SC_KEYPAD_OCTAL                      0xDB
+#define HID_KEYBOARD_SC_KEYPAD_DECIMAL                    0xDC
+#define HID_KEYBOARD_SC_KEYPAD_HEXADECIMAL                0xDD
+#define HID_KEYBOARD_SC_LEFT_CONTROL                      0xE0
+#define HID_KEYBOARD_SC_LEFT_SHIFT                        0xE1
+#define HID_KEYBOARD_SC_LEFT_ALT                          0xE2
+#define HID_KEYBOARD_SC_LEFT_GUI                          0xE3
+#define HID_KEYBOARD_SC_RIGHT_CONTROL                     0xE4
+#define HID_KEYBOARD_SC_RIGHT_SHIFT                       0xE5
+#define HID_KEYBOARD_SC_RIGHT_ALT                         0xE6
+#define HID_KEYBOARD_SC_RIGHT_GUI                         0xE7
+#define HID_KEYBOARD_SC_MEDIA_PLAY                        0xE8
+#define HID_KEYBOARD_SC_MEDIA_STOP                        0xE9
+#define HID_KEYBOARD_SC_MEDIA_PREVIOUS_TRACK              0xEA
+#define HID_KEYBOARD_SC_MEDIA_NEXT_TRACK                  0xEB
+#define HID_KEYBOARD_SC_MEDIA_EJECT                       0xEC
+#define HID_KEYBOARD_SC_MEDIA_VOLUME_UP                   0xED
+#define HID_KEYBOARD_SC_MEDIA_VOLUME_DOWN                 0xEE
+#define HID_KEYBOARD_SC_MEDIA_MUTE                        0xEF
+#define HID_KEYBOARD_SC_MEDIA_WWW                         0xF0
+#define HID_KEYBOARD_SC_MEDIA_BACKWARD                    0xF1
+#define HID_KEYBOARD_SC_MEDIA_FORWARD                     0xF2
+#define HID_KEYBOARD_SC_MEDIA_CANCEL                      0xF3
+#define HID_KEYBOARD_SC_MEDIA_SEARCH                      0xF4
+#define HID_KEYBOARD_SC_MEDIA_SLEEP                       0xF8
+#define HID_KEYBOARD_SC_MEDIA_LOCK                        0xF9
+#define HID_KEYBOARD_SC_MEDIA_RELOAD                      0xFA
+#define HID_KEYBOARD_SC_MEDIA_CALCULATOR                  0xFB
 
-		/** Constant for a keyboard output report LED byte, indicating that the host's SCROLL LOCK mode is currently set. */
-		#define HID_KEYBOARD_LED_SCROLLLOCK                       (1 << 2)
-
-		/** Constant for a keyboard output report LED byte, indicating that the host's COMPOSE mode is currently set. */
-		#define HID_KEYBOARD_LED_COMPOSE                          (1 << 3)
-
-		/** Constant for a keyboard output report LED byte, indicating that the host's KANA mode is currently set. */
-		#define HID_KEYBOARD_LED_KANA                             (1 << 4)
-		//@}
-
-		/** \name Keyboard Standard Report Key Scan-codes */
-		//@{
-		#define HID_KEYBOARD_SC_ERROR_ROLLOVER                    0x01
-		#define HID_KEYBOARD_SC_POST_FAIL                         0x02
-		#define HID_KEYBOARD_SC_ERROR_UNDEFINED                   0x03
-		#define HID_KEYBOARD_SC_A                                 0x04
-		#define HID_KEYBOARD_SC_B                                 0x05
-		#define HID_KEYBOARD_SC_C                                 0x06
-		#define HID_KEYBOARD_SC_D                                 0x07
-		#define HID_KEYBOARD_SC_E                                 0x08
-		#define HID_KEYBOARD_SC_F                                 0x09
-		#define HID_KEYBOARD_SC_G                                 0x0A
-		#define HID_KEYBOARD_SC_H                                 0x0B
-		#define HID_KEYBOARD_SC_I                                 0x0C
-		#define HID_KEYBOARD_SC_J                                 0x0D
-		#define HID_KEYBOARD_SC_K                                 0x0E
-		#define HID_KEYBOARD_SC_L                                 0x0F
-		#define HID_KEYBOARD_SC_M                                 0x10
-		#define HID_KEYBOARD_SC_N                                 0x11
-		#define HID_KEYBOARD_SC_O                                 0x12
-		#define HID_KEYBOARD_SC_P                                 0x13
-		#define HID_KEYBOARD_SC_Q                                 0x14
-		#define HID_KEYBOARD_SC_R                                 0x15
-		#define HID_KEYBOARD_SC_S                                 0x16
-		#define HID_KEYBOARD_SC_T                                 0x17
-		#define HID_KEYBOARD_SC_U                                 0x18
-		#define HID_KEYBOARD_SC_V                                 0x19
-		#define HID_KEYBOARD_SC_W                                 0x1A
-		#define HID_KEYBOARD_SC_X                                 0x1B
-		#define HID_KEYBOARD_SC_Y                                 0x1C
-		#define HID_KEYBOARD_SC_Z                                 0x1D
-		#define HID_KEYBOARD_SC_1_AND_EXCLAMATION                 0x1E
-		#define HID_KEYBOARD_SC_2_AND_AT                          0x1F
-		#define HID_KEYBOARD_SC_3_AND_HASHMARK                    0x20
-		#define HID_KEYBOARD_SC_4_AND_DOLLAR                      0x21
-		#define HID_KEYBOARD_SC_5_AND_PERCENTAGE                  0x22
-		#define HID_KEYBOARD_SC_6_AND_CARET                       0x23
-		#define HID_KEYBOARD_SC_7_AND_AMPERSAND                   0x24
-		#define HID_KEYBOARD_SC_8_AND_ASTERISK                    0x25
-		#define HID_KEYBOARD_SC_9_AND_OPENING_PARENTHESIS         0x26
-		#define HID_KEYBOARD_SC_0_AND_CLOSING_PARENTHESIS         0x27
-		#define HID_KEYBOARD_SC_ENTER                             0x28
-		#define HID_KEYBOARD_SC_ESCAPE                            0x29
-		#define HID_KEYBOARD_SC_BACKSPACE                         0x2A
-		#define HID_KEYBOARD_SC_TAB                               0x2B
-		#define HID_KEYBOARD_SC_SPACE                             0x2C
-		#define HID_KEYBOARD_SC_MINUS_AND_UNDERSCORE              0x2D
-		#define HID_KEYBOARD_SC_EQUAL_AND_PLUS                    0x2E
-		#define HID_KEYBOARD_SC_OPENING_BRACKET_AND_OPENING_BRACE 0x2F
-		#define HID_KEYBOARD_SC_CLOSING_BRACKET_AND_CLOSING_BRACE 0x30
-		#define HID_KEYBOARD_SC_BACKSLASH_AND_PIPE                0x31
-		#define HID_KEYBOARD_SC_NON_US_HASHMARK_AND_TILDE         0x32
-		#define HID_KEYBOARD_SC_SEMICOLON_AND_COLON               0x33
-		#define HID_KEYBOARD_SC_APOSTROPHE_AND_QUOTE              0x34
-		#define HID_KEYBOARD_SC_GRAVE_ACCENT_AND_TILDE            0x35
-		#define HID_KEYBOARD_SC_COMMA_AND_LESS_THAN_SIGN          0x36
-		#define HID_KEYBOARD_SC_DOT_AND_GREATER_THAN_SIGN         0x37
-		#define HID_KEYBOARD_SC_SLASH_AND_QUESTION_MARK           0x38
-		#define HID_KEYBOARD_SC_CAPS_LOCK                         0x39
-		#define HID_KEYBOARD_SC_F1                                0x3A
-		#define HID_KEYBOARD_SC_F2                                0x3B
-		#define HID_KEYBOARD_SC_F3                                0x3C
-		#define HID_KEYBOARD_SC_F4                                0x3D
-		#define HID_KEYBOARD_SC_F5                                0x3E
-		#define HID_KEYBOARD_SC_F6                                0x3F
-		#define HID_KEYBOARD_SC_F7                                0x40
-		#define HID_KEYBOARD_SC_F8                                0x41
-		#define HID_KEYBOARD_SC_F9                                0x42
-		#define HID_KEYBOARD_SC_F10                               0x43
-		#define HID_KEYBOARD_SC_F11                               0x44
-		#define HID_KEYBOARD_SC_F12                               0x45
-		#define HID_KEYBOARD_SC_PRINT_SCREEN                      0x46
-		#define HID_KEYBOARD_SC_SCROLL_LOCK                       0x47
-		#define HID_KEYBOARD_SC_PAUSE                             0x48
-		#define HID_KEYBOARD_SC_INSERT                            0x49
-		#define HID_KEYBOARD_SC_HOME                              0x4A
-		#define HID_KEYBOARD_SC_PAGE_UP                           0x4B
-		#define HID_KEYBOARD_SC_DELETE                            0x4C
-		#define HID_KEYBOARD_SC_END                               0x4D
-		#define HID_KEYBOARD_SC_PAGE_DOWN                         0x4E
-		#define HID_KEYBOARD_SC_RIGHT_ARROW                       0x4F
-		#define HID_KEYBOARD_SC_LEFT_ARROW                        0x50
-		#define HID_KEYBOARD_SC_DOWN_ARROW                        0x51
-		#define HID_KEYBOARD_SC_UP_ARROW                          0x52
-		#define HID_KEYBOARD_SC_NUM_LOCK                          0x53
-		#define HID_KEYBOARD_SC_KEYPAD_SLASH                      0x54
-		#define HID_KEYBOARD_SC_KEYPAD_ASTERISK                   0x55
-		#define HID_KEYBOARD_SC_KEYPAD_MINUS                      0x56
-		#define HID_KEYBOARD_SC_KEYPAD_PLUS                       0x57
-		#define HID_KEYBOARD_SC_KEYPAD_ENTER                      0x58
-		#define HID_KEYBOARD_SC_KEYPAD_1_AND_END                  0x59
-		#define HID_KEYBOARD_SC_KEYPAD_2_AND_DOWN_ARROW           0x5A
-		#define HID_KEYBOARD_SC_KEYPAD_3_AND_PAGE_DOWN            0x5B
-		#define HID_KEYBOARD_SC_KEYPAD_4_AND_LEFT_ARROW           0x5C
-		#define HID_KEYBOARD_SC_KEYPAD_5                          0x5D
-		#define HID_KEYBOARD_SC_KEYPAD_6_AND_RIGHT_ARROW          0x5E
-		#define HID_KEYBOARD_SC_KEYPAD_7_AND_HOME                 0x5F
-		#define HID_KEYBOARD_SC_KEYPAD_8_AND_UP_ARROW             0x60
-		#define HID_KEYBOARD_SC_KEYPAD_9_AND_PAGE_UP              0x61
-		#define HID_KEYBOARD_SC_KEYPAD_0_AND_INSERT               0x62
-		#define HID_KEYBOARD_SC_KEYPAD_DOT_AND_DELETE             0x63
-		#define HID_KEYBOARD_SC_NON_US_BACKSLASH_AND_PIPE         0x64
-		#define HID_KEYBOARD_SC_APPLICATION                       0x65
-		#define HID_KEYBOARD_SC_POWER                             0x66
-		#define HID_KEYBOARD_SC_KEYPAD_EQUAL_SIGN                 0x67
-		#define HID_KEYBOARD_SC_F13                               0x68
-		#define HID_KEYBOARD_SC_F14                               0x69
-		#define HID_KEYBOARD_SC_F15                               0x6A
-		#define HID_KEYBOARD_SC_F16                               0x6B
-		#define HID_KEYBOARD_SC_F17                               0x6C
-		#define HID_KEYBOARD_SC_F18                               0x6D
-		#define HID_KEYBOARD_SC_F19                               0x6E
-		#define HID_KEYBOARD_SC_F20                               0x6F
-		#define HID_KEYBOARD_SC_F21                               0x70
-		#define HID_KEYBOARD_SC_F22                               0x71
-		#define HID_KEYBOARD_SC_F23                               0x72
-		#define HID_KEYBOARD_SC_F24                               0x73
-		#define HID_KEYBOARD_SC_EXECUTE                           0x74
-		#define HID_KEYBOARD_SC_HELP                              0x75
-		#define HID_KEYBOARD_SC_MENU                              0x76
-		#define HID_KEYBOARD_SC_SELECT                            0x77
-		#define HID_KEYBOARD_SC_STOP                              0x78
-		#define HID_KEYBOARD_SC_AGAIN                             0x79
-		#define HID_KEYBOARD_SC_UNDO                              0x7A
-		#define HID_KEYBOARD_SC_CUT                               0x7B
-		#define HID_KEYBOARD_SC_COPY                              0x7C
-		#define HID_KEYBOARD_SC_PASTE                             0x7D
-		#define HID_KEYBOARD_SC_FIND                              0x7E
-		#define HID_KEYBOARD_SC_MUTE                              0x7F
-		#define HID_KEYBOARD_SC_VOLUME_UP                         0x80
-		#define HID_KEYBOARD_SC_VOLUME_DOWN                       0x81
-		#define HID_KEYBOARD_SC_LOCKING_CAPS_LOCK                 0x82
-		#define HID_KEYBOARD_SC_LOCKING_NUM_LOCK                  0x83
-		#define HID_KEYBOARD_SC_LOCKING_SCROLL_LOCK               0x84
-		#define HID_KEYBOARD_SC_KEYPAD_COMMA                      0x85
-		#define HID_KEYBOARD_SC_KEYPAD_EQUAL_SIGN_AS400           0x86
-		#define HID_KEYBOARD_SC_INTERNATIONAL1                    0x87
-		#define HID_KEYBOARD_SC_INTERNATIONAL2                    0x88
-		#define HID_KEYBOARD_SC_INTERNATIONAL3                    0x89
-		#define HID_KEYBOARD_SC_INTERNATIONAL4                    0x8A
-		#define HID_KEYBOARD_SC_INTERNATIONAL5                    0x8B
-		#define HID_KEYBOARD_SC_INTERNATIONAL6                    0x8C
-		#define HID_KEYBOARD_SC_INTERNATIONAL7                    0x8D
-		#define HID_KEYBOARD_SC_INTERNATIONAL8                    0x8E
-		#define HID_KEYBOARD_SC_INTERNATIONAL9                    0x8F
-		#define HID_KEYBOARD_SC_LANG1                             0x90
-		#define HID_KEYBOARD_SC_LANG2                             0x91
-		#define HID_KEYBOARD_SC_LANG3                             0x92
-		#define HID_KEYBOARD_SC_LANG4                             0x93
-		#define HID_KEYBOARD_SC_LANG5                             0x94
-		#define HID_KEYBOARD_SC_LANG6                             0x95
-		#define HID_KEYBOARD_SC_LANG7                             0x96
-		#define HID_KEYBOARD_SC_LANG8                             0x97
-		#define HID_KEYBOARD_SC_LANG9                             0x98
-		#define HID_KEYBOARD_SC_ALTERNATE_ERASE                   0x99
-		#define HID_KEYBOARD_SC_SYSREQ                            0x9A
-		#define HID_KEYBOARD_SC_CANCEL                            0x9B
-		#define HID_KEYBOARD_SC_CLEAR                             0x9C
-		#define HID_KEYBOARD_SC_PRIOR                             0x9D
-		#define HID_KEYBOARD_SC_RETURN                            0x9E
-		#define HID_KEYBOARD_SC_SEPARATOR                         0x9F
-		#define HID_KEYBOARD_SC_OUT                               0xA0
-		#define HID_KEYBOARD_SC_OPER                              0xA1
-		#define HID_KEYBOARD_SC_CLEAR_AND_AGAIN                   0xA2
-		#define HID_KEYBOARD_SC_CRSEL_AND_PROPS                   0xA3
-		#define HID_KEYBOARD_SC_EXSEL                             0xA4
-		#define HID_KEYBOARD_SC_KEYPAD_00                         0xB0
-		#define HID_KEYBOARD_SC_KEYPAD_000                        0xB1
-		#define HID_KEYBOARD_SC_THOUSANDS_SEPARATOR               0xB2
-		#define HID_KEYBOARD_SC_DECIMAL_SEPARATOR                 0xB3
-		#define HID_KEYBOARD_SC_CURRENCY_UNIT                     0xB4
-		#define HID_KEYBOARD_SC_CURRENCY_SUB_UNIT                 0xB5
-		#define HID_KEYBOARD_SC_KEYPAD_OPENING_PARENTHESIS        0xB6
-		#define HID_KEYBOARD_SC_KEYPAD_CLOSING_PARENTHESIS        0xB7
-		#define HID_KEYBOARD_SC_KEYPAD_OPENING_BRACE              0xB8
-		#define HID_KEYBOARD_SC_KEYPAD_CLOSING_BRACE              0xB9
-		#define HID_KEYBOARD_SC_KEYPAD_TAB                        0xBA
-		#define HID_KEYBOARD_SC_KEYPAD_BACKSPACE                  0xBB
-		#define HID_KEYBOARD_SC_KEYPAD_A                          0xBC
-		#define HID_KEYBOARD_SC_KEYPAD_B                          0xBD
-		#define HID_KEYBOARD_SC_KEYPAD_C                          0xBE
-		#define HID_KEYBOARD_SC_KEYPAD_D                          0xBF
-		#define HID_KEYBOARD_SC_KEYPAD_E                          0xC0
-		#define HID_KEYBOARD_SC_KEYPAD_F                          0xC1
-		#define HID_KEYBOARD_SC_KEYPAD_XOR                        0xC2
-		#define HID_KEYBOARD_SC_KEYPAD_CARET                      0xC3
-		#define HID_KEYBOARD_SC_KEYPAD_PERCENTAGE                 0xC4
-		#define HID_KEYBOARD_SC_KEYPAD_LESS_THAN_SIGN             0xC5
-		#define HID_KEYBOARD_SC_KEYPAD_GREATER_THAN_SIGN          0xC6
-		#define HID_KEYBOARD_SC_KEYPAD_AMP                        0xC7
-		#define HID_KEYBOARD_SC_KEYPAD_AMP_AMP                    0xC8
-		#define HID_KEYBOARD_SC_KEYPAD_PIPE                       0xC9
-		#define HID_KEYBOARD_SC_KEYPAD_PIPE_PIPE                  0xCA
-		#define HID_KEYBOARD_SC_KEYPAD_COLON                      0xCB
-		#define HID_KEYBOARD_SC_KEYPAD_HASHMARK                   0xCC
-		#define HID_KEYBOARD_SC_KEYPAD_SPACE                      0xCD
-		#define HID_KEYBOARD_SC_KEYPAD_AT                         0xCE
-		#define HID_KEYBOARD_SC_KEYPAD_EXCLAMATION_SIGN           0xCF
-		#define HID_KEYBOARD_SC_KEYPAD_MEMORY_STORE               0xD0
-		#define HID_KEYBOARD_SC_KEYPAD_MEMORY_RECALL              0xD1
-		#define HID_KEYBOARD_SC_KEYPAD_MEMORY_CLEAR               0xD2
-		#define HID_KEYBOARD_SC_KEYPAD_MEMORY_ADD                 0xD3
-		#define HID_KEYBOARD_SC_KEYPAD_MEMORY_SUBTRACT            0xD4
-		#define HID_KEYBOARD_SC_KEYPAD_MEMORY_MULTIPLY            0xD5
-		#define HID_KEYBOARD_SC_KEYPAD_MEMORY_DIVIDE              0xD6
-		#define HID_KEYBOARD_SC_KEYPAD_PLUS_AND_MINUS             0xD7
-		#define HID_KEYBOARD_SC_KEYPAD_CLEAR                      0xD8
-		#define HID_KEYBOARD_SC_KEYPAD_CLEAR_ENTRY                0xD9
-		#define HID_KEYBOARD_SC_KEYPAD_BINARY                     0xDA
-		#define HID_KEYBOARD_SC_KEYPAD_OCTAL                      0xDB
-		#define HID_KEYBOARD_SC_KEYPAD_DECIMAL                    0xDC
-		#define HID_KEYBOARD_SC_KEYPAD_HEXADECIMAL                0xDD
-		#define HID_KEYBOARD_SC_LEFT_CONTROL                      0xE0
-		#define HID_KEYBOARD_SC_LEFT_SHIFT                        0xE1
-		#define HID_KEYBOARD_SC_LEFT_ALT                          0xE2
-		#define HID_KEYBOARD_SC_LEFT_GUI                          0xE3
-		#define HID_KEYBOARD_SC_RIGHT_CONTROL                     0xE4
-		#define HID_KEYBOARD_SC_RIGHT_SHIFT                       0xE5
-		#define HID_KEYBOARD_SC_RIGHT_ALT                         0xE6
-		#define HID_KEYBOARD_SC_RIGHT_GUI                         0xE7
-		#define HID_KEYBOARD_SC_MEDIA_PLAY                        0xE8
-		#define HID_KEYBOARD_SC_MEDIA_STOP                        0xE9
-		#define HID_KEYBOARD_SC_MEDIA_PREVIOUS_TRACK              0xEA
-		#define HID_KEYBOARD_SC_MEDIA_NEXT_TRACK                  0xEB
-		#define HID_KEYBOARD_SC_MEDIA_EJECT                       0xEC
-		#define HID_KEYBOARD_SC_MEDIA_VOLUME_UP                   0xED
-		#define HID_KEYBOARD_SC_MEDIA_VOLUME_DOWN                 0xEE
-		#define HID_KEYBOARD_SC_MEDIA_MUTE                        0xEF
-		#define HID_KEYBOARD_SC_MEDIA_WWW                         0xF0
-		#define HID_KEYBOARD_SC_MEDIA_BACKWARD                    0xF1
-		#define HID_KEYBOARD_SC_MEDIA_FORWARD                     0xF2
-		#define HID_KEYBOARD_SC_MEDIA_CANCEL                      0xF3
-		#define HID_KEYBOARD_SC_MEDIA_SEARCH                      0xF4
-		#define HID_KEYBOARD_SC_MEDIA_SLEEP                       0xF8
-		#define HID_KEYBOARD_SC_MEDIA_LOCK                        0xF9
-		#define HID_KEYBOARD_SC_MEDIA_RELOAD                      0xFA
-		#define HID_KEYBOARD_SC_MEDIA_CALCULATOR                  0xFB
-		//@}
-
-
-		#define HID_DESCRIPTOR_JOYSTICK(MinAxisVal, MaxAxisVal, MinPhysicalVal, MaxPhysicalVal, Buttons) \
-			HID_RI_USAGE_PAGE(8, 0x01),                     \
-			HID_RI_USAGE(8, 0x04),                          \
-			HID_RI_COLLECTION(8, 0x01),                     \
-				HID_RI_USAGE(8, 0x01),                      \
-				HID_RI_COLLECTION(8, 0x00),                 \
-					HID_RI_USAGE(8, 0x30),                  \
-					HID_RI_USAGE(8, 0x31),                  \
-					HID_RI_USAGE(8, 0x32),                  \
-					HID_RI_LOGICAL_MINIMUM(16, MinAxisVal), \
-					HID_RI_LOGICAL_MAXIMUM(16, MaxAxisVal), \
-					HID_RI_PHYSICAL_MINIMUM(16, MinPhysicalVal), \
-					HID_RI_PHYSICAL_MAXIMUM(16, MaxPhysicalVal), \
-					HID_RI_REPORT_COUNT(8, 3),              \
-					HID_RI_REPORT_SIZE(8, (((MinAxisVal >= -128) && (MaxAxisVal <= 127)) ? 8 : 16)), \
-					HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE), \
-				HID_RI_END_COLLECTION(0),                   \
-				HID_RI_USAGE_PAGE(8, 0x09),                 \
-				HID_RI_USAGE_MINIMUM(8, 0x01),              \
-				HID_RI_USAGE_MAXIMUM(8, Buttons),           \
-				HID_RI_LOGICAL_MINIMUM(8, 0x00),            \
-				HID_RI_LOGICAL_MAXIMUM(8, 0x01),            \
-				HID_RI_REPORT_SIZE(8, 0x01),                \
-				HID_RI_REPORT_COUNT(8, Buttons),            \
-				HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE), \
-				HID_RI_REPORT_SIZE(8, (Buttons % 8) ? (8 - (Buttons % 8)) : 0), \
-				HID_RI_REPORT_COUNT(8, 0x01),               \
-				HID_RI_INPUT(8, HID_IOF_CONSTANT),          \
-			HID_RI_END_COLLECTION(0)
-
-		/** \hideinitializer
-		 *  A list of HID report item array elements that describe a typical HID USB keyboard. The resulting report descriptor
-		 *  is compatible with \ref USB_KeyboardReport_Data_t when \c MaxKeys is equal to 6. For other values, the report will
-		 *  be structured according to the following layout:
-		 *
-		 *  \code
-		 *  struct
-		 *  {
-		 *      uint8_t Modifier; // Keyboard modifier byte indicating pressed modifier keys (\c HID_KEYBOARD_MODIFER_* masks)
-		 *      uint8_t Reserved; // Reserved for OEM use, always set to 0.
-		 *      uint8_t KeyCode[MaxKeys]; // Length determined by the number of keys that can be reported
-		 *  } Keyboard_Report;
-		 *  \endcode
-		 *
-		 *  \param[in] MaxKeys  Number of simultaneous keys that can be reported at the one time (8-bit).
-		 */
-		#define HID_DESCRIPTOR_KEYBOARD(MaxKeys)            \
-			HID_RI_USAGE_PAGE(8, 0x01),                     \
-			HID_RI_USAGE(8, 0x06),                          \
-			HID_RI_COLLECTION(8, 0x01),                     \
-				HID_RI_USAGE_PAGE(8, 0x07),                 \
-				HID_RI_USAGE_MINIMUM(8, 0xE0),              \
-				HID_RI_USAGE_MAXIMUM(8, 0xE7),              \
-				HID_RI_LOGICAL_MINIMUM(8, 0x00),            \
-				HID_RI_LOGICAL_MAXIMUM(8, 0x01),            \
-				HID_RI_REPORT_SIZE(8, 0x01),                \
-				HID_RI_REPORT_COUNT(8, 0x08),               \
-				HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE), \
-				HID_RI_REPORT_COUNT(8, 0x01),               \
-				HID_RI_REPORT_SIZE(8, 0x08),                \
-				HID_RI_INPUT(8, HID_IOF_CONSTANT),          \
-				HID_RI_USAGE_PAGE(8, 0x08),                 \
-				HID_RI_USAGE_MINIMUM(8, 0x01),              \
-				HID_RI_USAGE_MAXIMUM(8, 0x05),              \
-				HID_RI_REPORT_COUNT(8, 0x05),               \
-				HID_RI_REPORT_SIZE(8, 0x01),                \
-				HID_RI_OUTPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE | HID_IOF_NON_VOLATILE), \
-				HID_RI_REPORT_COUNT(8, 0x01),               \
-				HID_RI_REPORT_SIZE(8, 0x03),                \
-				HID_RI_OUTPUT(8, HID_IOF_CONSTANT),         \
-				HID_RI_LOGICAL_MINIMUM(8, 0x00),            \
-				HID_RI_LOGICAL_MAXIMUM(16, 0xFF),           \
-				HID_RI_USAGE_PAGE(8, 0x07),                 \
-				HID_RI_USAGE_MINIMUM(8, 0x00),              \
-				HID_RI_USAGE_MAXIMUM(8, 0xFF),              \
-				HID_RI_REPORT_COUNT(8, MaxKeys),            \
-				HID_RI_REPORT_SIZE(8, 0x08),                \
-				HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_ARRAY | HID_IOF_ABSOLUTE), \
-			HID_RI_END_COLLECTION(0)
-
-		/** \hideinitializer
-		 *  A list of HID report item array elements that describe a typical HID USB mouse. The resulting report descriptor
-		 *  is compatible with \ref USB_MouseReport_Data_t if the \c MinAxisVal and \c MaxAxisVal values fit within a \c int8_t range
-		 *  and the number of Buttons is less than 8. For other values, the report is structured according to the following layout:
-		 *
-		 *  \code
-		 *  struct
-		 *  {
-		 *      uintA_t Buttons; // Pressed buttons bitmask
-		 *      intB_t X; // X axis value
-		 *      intB_t Y; // Y axis value
-		 *  } Mouse_Report;
-		 *  \endcode
-		 *
-		 *  Where \c intA_t is a type large enough to hold one bit per button, and \c intB_t is a type large enough to hold the
-		 *  ranges of the signed \c MinAxisVal and \c MaxAxisVal values.
-		 *
-		 *  \param[in] MinAxisVal      Minimum X/Y logical axis value (16-bit).
-		 *  \param[in] MaxAxisVal      Maximum X/Y logical axis value (16-bit).
-		 *  \param[in] MinPhysicalVal  Minimum X/Y physical axis value, for movement resolution calculations (16-bit).
-		 *  \param[in] MaxPhysicalVal  Maximum X/Y physical axis value, for movement resolution calculations (16-bit).
-		 *  \param[in] Buttons         Total number of buttons in the device (8-bit).
-		 *  \param[in] AbsoluteCoords  Boolean \c true to use absolute X/Y coordinates (e.g. touchscreen).
-		 */
-		#define HID_DESCRIPTOR_MOUSE(MinAxisVal, MaxAxisVal, MinPhysicalVal, MaxPhysicalVal, Buttons, AbsoluteCoords) \
-			HID_RI_USAGE_PAGE(8, 0x01),                     \
-			HID_RI_USAGE(8, 0x02),                          \
-			HID_RI_COLLECTION(8, 0x01),                     \
-				HID_RI_USAGE(8, 0x01),                      \
-				HID_RI_COLLECTION(8, 0x00),                 \
-					HID_RI_USAGE_PAGE(8, 0x09),             \
-					HID_RI_USAGE_MINIMUM(8, 0x01),          \
-					HID_RI_USAGE_MAXIMUM(8, Buttons),       \
-					HID_RI_LOGICAL_MINIMUM(8, 0x00),        \
-					HID_RI_LOGICAL_MAXIMUM(8, 0x01),        \
-					HID_RI_REPORT_COUNT(8, Buttons),        \
-					HID_RI_REPORT_SIZE(8, 0x01),            \
-					HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE), \
-					HID_RI_REPORT_COUNT(8, 0x01),           \
-					HID_RI_REPORT_SIZE(8, (Buttons % 8) ? (8 - (Buttons % 8)) : 0), \
-					HID_RI_INPUT(8, HID_IOF_CONSTANT),      \
-					HID_RI_USAGE_PAGE(8, 0x01),             \
-					HID_RI_USAGE(8, 0x30),                  \
-					HID_RI_USAGE(8, 0x31),                  \
-					HID_RI_LOGICAL_MINIMUM(16, MinAxisVal), \
-					HID_RI_LOGICAL_MAXIMUM(16, MaxAxisVal), \
-					HID_RI_PHYSICAL_MINIMUM(16, MinPhysicalVal), \
-					HID_RI_PHYSICAL_MAXIMUM(16, MaxPhysicalVal), \
-					HID_RI_REPORT_COUNT(8, 0x02),           \
-					HID_RI_REPORT_SIZE(8, (((MinAxisVal >= -128) && (MaxAxisVal <= 127)) ? 8 : 16)), \
-					HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | (AbsoluteCoords ? HID_IOF_ABSOLUTE : HID_IOF_RELATIVE)), \
-				HID_RI_END_COLLECTION(0),                   \
-			HID_RI_END_COLLECTION(0)
-
-		/** \hideinitializer
-		 *  A list of HID report item array elements that describe a typical Vendor Defined byte array HID report descriptor,
-		 *  used for transporting arbitrary data between the USB host and device via HID reports. The resulting report should be
-		 *  a \c uint8_t byte array of the specified length in both Device to Host (IN) and Host to Device (OUT) directions.
-		 *
-		 *  \param[in] VendorPageNum    Vendor Defined HID Usage Page index, ranging from 0x00 to 0xFF.
-		 *  \param[in] CollectionUsage  Vendor Usage for the encompassing report IN and OUT collection, ranging from 0x00 to 0xFF.
-		 *  \param[in] DataINUsage      Vendor Usage for the IN report data, ranging from 0x00 to 0xFF.
-		 *  \param[in] DataOUTUsage     Vendor Usage for the OUT report data, ranging from 0x00 to 0xFF.
-		 *  \param[in] NumBytes         Length of the data IN and OUT reports.
-		 */
-		#define HID_DESCRIPTOR_VENDOR(VendorPageNum, CollectionUsage, DataINUsage, DataOUTUsage, NumBytes) \
-			HID_RI_USAGE_PAGE(16, (0xFF00 | VendorPageNum)), \
-			HID_RI_USAGE(8, CollectionUsage),           \
-			HID_RI_COLLECTION(8, 0x01),                 \
-				HID_RI_USAGE(8, DataINUsage),           \
-				HID_RI_LOGICAL_MINIMUM(8, 0x00),        \
-				HID_RI_LOGICAL_MAXIMUM(8, 0xFF),        \
-				HID_RI_REPORT_SIZE(8, 0x08),            \
-				HID_RI_REPORT_COUNT(8, NumBytes),       \
-				HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE), \
-				HID_RI_USAGE(8, DataOUTUsage),          \
-				HID_RI_LOGICAL_MINIMUM(8, 0x00),        \
-				HID_RI_LOGICAL_MAXIMUM(8, 0xFF),        \
-				HID_RI_REPORT_SIZE(8, 0x08),            \
-				HID_RI_REPORT_COUNT(8, NumBytes),       \
-				HID_RI_OUTPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE | HID_IOF_NON_VOLATILE), \
-			HID_RI_END_COLLECTION(0)
-		//@}
-
-	/* Type Defines: */
-		/** Enum for possible Class, Subclass and Protocol values of device and interface descriptors relating to the HID
-		 *  device class.
-		 */
-		enum HID_Descriptor_ClassSubclassProtocol_t
-		{
-			HID_CSCP_HIDClass             = 0x03, /**< Descriptor Class value indicating that the device or interface
-			                                       *   belongs to the HID class.
-			                                       */
-			HID_CSCP_NonBootSubclass      = 0x00, /**< Descriptor Subclass value indicating that the device or interface
-			                                       *   does not implement a HID boot protocol.
-			                                       */
-			HID_CSCP_BootSubclass         = 0x01, /**< Descriptor Subclass value indicating that the device or interface
-			                                       *   implements a HID boot protocol.
-			                                       */
-			HID_CSCP_NonBootProtocol      = 0x00, /**< Descriptor Protocol value indicating that the device or interface
-			                                       *   does not belong to a HID boot protocol.
-			                                       */
+enum HID_Descriptor_ClassSubclassProtocol_t
+{
+    HID_CSCP_HIDClass             = 0x03,
+    HID_CSCP_NonBootSubclass      = 0x00,
+    HID_CSCP_BootSubclass         = 0x01,
+         HID_CSCP_NonBootProtocol      = 0x00,
 			HID_CSCP_KeyboardBootProtocol = 0x01, /**< Descriptor Protocol value indicating that the device or interface
 			                                       *   belongs to the Keyboard HID boot protocol.
 			                                       */
@@ -3205,7 +2018,6 @@ typedef struct
 			                                       */
 		};
 
-		/** Enum for the HID class specific control requests that can be issued by the USB bus host. */
 		enum HID_ClassRequests_t
 		{
 			HID_REQ_GetReport       = 0x01, /**< HID class-specific Request to get the current HID report from the device. */
@@ -3231,23 +2043,11 @@ typedef struct
 			HID_REPORT_ITEM_Feature = 2, /**< Indicates that the item is a FEATURE report type. */
 		};
 
-		/** \brief HID class-specific HID Descriptor (LUFA naming conventions).
-		 *
-		 *  Type define for the HID class-specific HID descriptor, to describe the HID device's specifications. Refer to the HID
-		 *  specification for details on the structure elements.
-		 *
-		 *  \see \ref USB_HID_StdDescriptor_HID_t for the version of this type with standard element names.
-		 *
-		 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-		 */
 		typedef struct
 		{
-			USB_Descriptor_Header_t Header; /**< Regular descriptor header containing the descriptor's type and length. */
+			USB_Descriptor_Header_t Header; /**< Regular  descriptor's type and length. */
 
-			uint16_t                HIDSpec; /**< BCD encoded version that the HID descriptor and device complies to.
-			                                  *
-			                                  *   \see \ref VERSION_BCD() utility macro.
-			                                  */
+			uint16_t                HIDSpec;
             uint8_t CountryCode; /**< Countcalized device, or zero if universal. */
 
 			uint8_t                 TotalReportDescriptors; /**< Total number of HID report descriptors for the interface. */
@@ -3256,22 +2056,11 @@ typedef struct
 			uint16_t                HIDReportLength; /**< Length of the associated HID report descriptor, in bytes. */
 		} ATTR_PACKED USB_HID_Descriptor_HID_t;
 
-		/** \brief HID class-specific HID Descriptor (USB-IF naming conventions).
-		 *
-		 *  Type define for the HID class-specific HID descriptor, to describe the HID device's specifications. Refer to the HID
-		 *  specification for details on the structure elements.
-		 *
-		 *  \see \ref USB_HID_Descriptor_HID_t for the version of this type with non-standard LUFA specific
-		 *       element names.
-		 *
-		 *  \note Regardless of CPU architecture, these values should be stored as little endian.
-		 */
+		
 		typedef struct
 		{
 			uint8_t  bLength; /**< Size of the descriptor, in bytes. */
-			uint8_t  bDescriptorType; /**< Type of the descriptor, either a value in \ref USB_DescriptorTypes_t or a value
-			                           *   given by the specific class.
-			                           */
+			uint8_t  bDescriptorType;
 
 			uint16_t bcdHID; /**< BCD encoded version that the HID descriptor and device complies to.
 			                  *
@@ -3308,9 +2097,6 @@ typedef struct
 #endif
 
 
-
-
-#include <avr/pgmspace.h>
 
 #define DESCRIPTOR_PCAST(DescriptorPtr, Type) ((Type*)(DescriptorPtr))
 #define DESCRIPTOR_CAST(DescriptorPtr, Type)  (*DESCRIPTOR_PCAST(DescriptorPtr, Type))
@@ -3435,32 +2221,48 @@ enum StringDescriptors_t
 };
 
 #define KEYBOARD_IN_EPADDR        (ENDPOINT_DIR_IN  | 1)
-
 #define KEYBOARD_OUT_EPADDR       (ENDPOINT_DIR_OUT | 2)
-
-#define KEYBOARD_EPSIZE           8
 
 uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
                      const uint16_t wIndex, const void** const DescriptorAddress)
                                             ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
-void EVENT_USB_Device_Connect(void);
-void EVENT_USB_Device_Disconnect(void);
-void EVENT_USB_Device_ConfigurationChanged(void);
 void EVENT_USB_Device_ControlRequest(void);
 void EVENT_USB_Device_StartOfFrame(void);
-
 void CreateKeyboardReport(USB_KeyboardReport_Data_t* const ReportData);
-
-
 
 static uint16_t IdleCount = 500;
 static uint16_t IdleMSRemaining = 0;
 volatile bool USB_IsInitialized;
-USB_Request_Header_t USB_ControlRequest;
-volatile uint8_t     USB_DeviceState;
 
-void USB_USBTask(void)
+class USBKB
+{
+private:
+    USB_Request_Header_t USB_ControlRequest;
+    volatile uint8_t USB_DeviceState;
+    uint8_t Endpoint_Write_Stream_LE(const void * const buf, uint16_t len, uint16_t* const bytes);
+    uint8_t Endpoint_Read_Stream_LE (void * const buf, uint16_t len, uint16_t* const bytes);
+    uint8_t Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Length);
+    uint8_t Endpoint_WaitUntilReady();
+    uint8_t Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint16_t Length);
+    void USB_Device_GetDescriptor();
+    void USB_Device_ProcessControlRequest();
+    void Endpoint_ClearStatusStage();
+    void Device_ClearSetFeature();
+    uint8_t Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Length);
+    void USB_Device_GetInternalSerialDescriptor();
+public:
+    static USBKB *instance;
+    void com();
+    void gen();
+    USBKB();
+    void USBTask();
+    void hidtask();
+};
+
+USBKB *USBKB::instance;
+
+void USBKB::USBTask()
 {
     uint8_t PrevEndpoint = Endpoint_GetCurrentEndpoint();
     Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
@@ -3490,7 +2292,7 @@ uint16_t USB_GetHIDReportSize(HID_ReportInfo_t* const ParserData,
 void USB_SetHIDReportItemInfo(uint8_t* ReportData, HID_ReportItem_t* const ReportItem)
 {
     if (ReportItem == NULL)
-      return;
+        return;
 
     uint16_t DataBitsRem  = ReportItem->Attributes.BitSize;
     uint16_t CurrentBit   = ReportItem->BitOffset;
@@ -3515,7 +2317,7 @@ void USB_SetHIDReportItemInfo(uint8_t* ReportData, HID_ReportItem_t* const Repor
 }
 
 
-void hidtask(void)
+void USBKB::hidtask()
 {
     if (USB_DeviceState != DEVICE_STATE_Configured)
         return;
@@ -3543,7 +2345,7 @@ void hidtask(void)
     {
         PrevKeyboardReportData = KeyboardReportData;
         Endpoint_Write_Stream_LE(&KeyboardReportData, sizeof(KeyboardReportData), NULL);
-        Endpoint_ClearIN();
+        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
     }
 
     Endpoint_SelectEndpoint(KEYBOARD_OUT_EPADDR);
@@ -3559,10 +2361,9 @@ void hidtask(void)
     }
 }
 
-int main(void)
+USBKB::USBKB()
 {
-    DDRF &= ~(1<<0 | 1<<1 | 1<<4 | 1<<5 | 1<<6 | 1<<7);
-    PORTF |= 1<<0 | 1<<1 | 1<<4 | 1<<5 | 1<<6 | 1<<7;
+    instance = this;
 	clock_prescale_set(clock_div_2);
     UHWCON |= 1<<UVREGE;
     USB_IsInitialized = true;
@@ -3578,8 +2379,8 @@ int main(void)
     USB_Device_ConfigurationNumber  = 0;
     USB_Device_RemoteWakeupEnabled  = false;
     USB_Device_CurrentlySelfPowered = false;
-    USB_Device_SetFullSpeed();
-    USB_INT_Enable(USB_INT_VBUSTI);
+    UDCON &= ~(1<<LSM);         // full speed
+    USBCON |= 1<<VBUSTE;        // enable vbus int
     Endpoint_ConfigureEndpoint(ENDPOINT_CONTROLEP, EP_TYPE_CONTROL, 8, 1);
     UDINT &= ~(1<<SUSPI);
     UDIEN |= 1<<SUSPE;
@@ -3587,27 +2388,28 @@ int main(void)
     UDCON &= ~(1<<DETACH);
     USBCON |= 1<<OTGPADE;
 	sei();
+}
+
+int main(void)
+{
+    DDRF &= ~(1<<0 | 1<<1 | 1<<4 | 1<<5 | 1<<6 | 1<<7);
+    PORTF |= 1<<0 | 1<<1 | 1<<4 | 1<<5 | 1<<6 | 1<<7;
+    USBKB kb;
 
 	while (true)
 	{
-        hidtask();
-        USB_USBTask();
+        kb.hidtask();
+        kb.USBTask();
 	}
 }
 
-void EVENT_USB_Device_Connect(void)
-{
-}
-
-void Endpoint_ClearStatusStage(void)
+void USBKB::Endpoint_ClearStatusStage()
 {
     if (USB_ControlRequest.bmRequestType & REQDIR_DEVICETOHOST)
     {
         while (!(Endpoint_IsOUTReceived()))
-        {
             if (USB_DeviceState == DEVICE_STATE_Unattached)
-              return;
-        }
+                return;
 
         Endpoint_ClearOUT();
     }
@@ -3619,37 +2421,36 @@ void Endpoint_ClearStatusStage(void)
               return;
         }
 
-        Endpoint_ClearIN();
+        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);     // clear IN
     }
 }
 
-uint8_t Endpoint_WaitUntilReady(void)
+uint8_t USBKB::Endpoint_WaitUntilReady()
 {
     uint8_t  TimeoutMSRem = USB_STREAM_TIMEOUT_MS;
-
     uint16_t PreviousFrameNumber = USB_Device_GetFrameNumber();
 
-    for (;;)
+    while (true)
     {
         if (Endpoint_GetEndpointDirection() == ENDPOINT_DIR_IN)
         {
             if (Endpoint_IsINReady())
-              return ENDPOINT_READYWAIT_NoError;
+                return ENDPOINT_READYWAIT_NoError;
         }
         else
         {
             if (Endpoint_IsOUTReceived())
-              return ENDPOINT_READYWAIT_NoError;
+                return ENDPOINT_READYWAIT_NoError;
         }
 
         uint8_t USB_DeviceState_LCL = USB_DeviceState;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-          return ENDPOINT_READYWAIT_DeviceDisconnected;
+            return ENDPOINT_READYWAIT_DeviceDisconnected;
         else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-          return ENDPOINT_READYWAIT_BusSuspended;
+            return ENDPOINT_READYWAIT_BusSuspended;
         else if (Endpoint_IsStalled())
-          return ENDPOINT_READYWAIT_EndpointStalled;
+            return ENDPOINT_READYWAIT_EndpointStalled;
 
         uint16_t CurrentFrameNumber = USB_Device_GetFrameNumber();
 
@@ -3658,7 +2459,7 @@ uint8_t Endpoint_WaitUntilReady(void)
             PreviousFrameNumber = CurrentFrameNumber;
 
             if (!(TimeoutMSRem--))
-              return ENDPOINT_READYWAIT_Timeout;
+                return ENDPOINT_READYWAIT_Timeout;
         }
     }
 }
@@ -3688,25 +2489,25 @@ bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number,
             UEIENXTemp  = UEIENX;
         }
 
-        if (!(UECFG1XTemp & (1 << ALLOC)))
-          continue;
+        if (!(UECFG1XTemp & 1<<ALLOC))
+            continue;
 
-        Endpoint_DisableEndpoint();
-        UECFG1X &= ~(1 << ALLOC);
-        Endpoint_EnableEndpoint();
+        UECONX &= ~(1<<EPEN);
+        UECFG1X &= ~(1<<ALLOC);
+        UECONX |= 1<<EPEN;
         UECFG0X = UECFG0XTemp;
         UECFG1X = UECFG1XTemp;
         UEIENX  = UEIENXTemp;
 
         if (!(Endpoint_IsConfigured()))
-          return false;
+            return false;
     }
 
     Endpoint_SelectEndpoint(Number);
     return true;
 }
 
-void USB_Device_GetInternalSerialDescriptor(void)
+void USBKB::USB_Device_GetInternalSerialDescriptor()
 {
     struct
     {
@@ -3737,7 +2538,7 @@ bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
     return true;
 }
 
-void USB_Device_GetDescriptor(void)
+void USBKB::USB_Device_GetDescriptor()
 {
     const void* DescriptorPointer;
     uint16_t    DescriptorSize;
@@ -3765,7 +2566,7 @@ bool    USB_Device_CurrentlySelfPowered;
 
 bool    USB_Device_RemoteWakeupEnabled;
 
-void USB_Device_ClearSetFeature(void)
+void USBKB::Device_ClearSetFeature()
 {
     switch (USB_ControlRequest.bmRequestType & CONTROL_REQTYPE_RECIPIENT)
     {
@@ -3786,7 +2587,7 @@ void USB_Device_ClearSetFeature(void)
 
                 Endpoint_SelectEndpoint(index);
 
-                if (Endpoint_IsEnabled())
+                if (UECONX & 1<<EPEN)
                 {
                     if (USB_ControlRequest.bRequest == REQ_SetFeature)
                     {
@@ -3810,7 +2611,7 @@ void USB_Device_ClearSetFeature(void)
     Endpoint_ClearStatusStage();
 }
 
-void USB_Device_ProcessControlRequest(void)
+void USBKB::USB_Device_ProcessControlRequest()
 {
     uint8_t* RequestHeader = (uint8_t*)&USB_ControlRequest;
 
@@ -3869,7 +2670,7 @@ void USB_Device_ProcessControlRequest(void)
                 if ((bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE)) ||
                     (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_ENDPOINT)))
                 {
-                    USB_Device_ClearSetFeature();
+                    Device_ClearSetFeature();
                 }
 
                 break;
@@ -3896,19 +2697,18 @@ void USB_Device_ProcessControlRequest(void)
             case REQ_GetConfiguration:
                 if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
                 {
-                    Endpoint_ClearSETUP();
+                    UEINTX &= ~(1<<RXSTPI);
                     Endpoint_Write_8(USB_Device_ConfigurationNumber);
-                    Endpoint_ClearIN();
+                    UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
                     Endpoint_ClearStatusStage();
                 }
                 break;
             case REQ_SetConfiguration:
                 if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
                 {
-#if 0
-                    if ((uint8_t)USB_ControlRequest.wValue > FIXED_NUM_CONFIGURATIONS)
+                    if ((uint8_t)USB_ControlRequest.wValue > 1)
                         return;
-#endif
+
                     UEINTX &= ~(1<<RXSTPI);
                     USB_Device_ConfigurationNumber = (uint8_t)USB_ControlRequest.wValue;
                     Endpoint_ClearStatusStage();
@@ -3919,7 +2719,7 @@ void USB_Device_ProcessControlRequest(void)
                     }
                     else
                     {
-                        USB_DeviceState = (USB_Device_IsAddressSet()) ? DEVICE_STATE_Configured :
+                        USB_DeviceState = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured :
                             DEVICE_STATE_Powered;
                     }
 
@@ -3928,7 +2728,6 @@ void USB_Device_ProcessControlRequest(void)
                     UDIEN |= 1<<SOFE;
                 }
                 break;
-
             default:
                 break;
         }
@@ -3939,14 +2738,6 @@ void USB_Device_ProcessControlRequest(void)
         UEINTX &= ~(1<<RXSTPI);     // clear setup
         UECONX |= 1<<STALLRQ;
     }
-}
-
-void EVENT_USB_Device_Disconnect(void)
-{
-}
-
-void EVENT_USB_Device_ConfigurationChanged(void)
-{
 }
 
 void EVENT_USB_Device_ControlRequest(void)
@@ -3994,83 +2785,88 @@ bool USB_GetHIDReportItemInfo(const uint8_t* ReportData,
 
 ISR(USB_COM_vect, ISR_BLOCK)
 {
+    USBKB::instance->com();
+}
+
+void USBKB::com()
+{
     uint8_t PrevSelectedEndpoint = Endpoint_GetCurrentEndpoint();
     Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
-    USB_INT_Disable(USB_INT_RXSTPI);
-    GlobalInterruptEnable();
+    UEIENX &= ~(1<<RXSTPE);
+    sei();
     USB_Device_ProcessControlRequest();
     Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
-    USB_INT_Enable(USB_INT_RXSTPI);
+    UEIENX |= 1<<RXSTPE;
     Endpoint_SelectEndpoint(PrevSelectedEndpoint);
 }
 
 ISR(USB_GEN_vect, ISR_BLOCK)
 {
+    USBKB::instance->gen();
+}
+
+void USBKB::gen()
+{
     if (USB_INT_HasOccurred(USB_INT_SOFI) && USB_INT_IsEnabled(USB_INT_SOFI))
     {
-        USB_INT_Clear(USB_INT_SOFI);
+        UDINT &= ~(1<<SOFI);    // clear INT SOFI
         EVENT_USB_Device_StartOfFrame();
     }
 
     if (USB_INT_HasOccurred(USB_INT_VBUSTI) && USB_INT_IsEnabled(USB_INT_VBUSTI))
     {
-        USB_INT_Clear(USB_INT_VBUSTI);
+        USBINT &= ~(1<<VBUSTI);
 
-        if (USB_VBUS_GetStatus())
+        if (USBSTA & 1<<VBUS)
         {
-            USB_PLL_On();
+            PLLCSR = USB_PLL_PSC;
+            PLLCSR = (USB_PLL_PSC | (1 << PLLE));
             while (!(USB_PLL_IsReady()));
             USB_DeviceState = DEVICE_STATE_Powered;
-            EVENT_USB_Device_Connect();
         }
         else
         {
-            USB_PLL_Off();
+            PLLCSR = 0;
             USB_DeviceState = DEVICE_STATE_Unattached;
-            EVENT_USB_Device_Disconnect();
         }
     }
 
     if (USB_INT_HasOccurred(USB_INT_SUSPI) && USB_INT_IsEnabled(USB_INT_SUSPI))
     {
         USB_INT_Disable(USB_INT_SUSPI);
-        USB_INT_Enable(USB_INT_WAKEUPI);
-        USB_CLK_Freeze();
-        USB_PLL_Off();
+        UDIEN |= 1<<WAKEUPE;
+        USBCON |= 1<<FRZCLK;
+        PLLCSR = 0;
         USB_DeviceState = DEVICE_STATE_Suspended;
     }
 
-    if (USB_INT_HasOccurred(USB_INT_WAKEUPI) && USB_INT_IsEnabled(USB_INT_WAKEUPI))
+    if (UDINT & 1<<WAKEUPI && UDIEN & 1<<WAKEUPE)
     {
-        USB_PLL_On();
+        PLLCSR = USB_PLL_PSC;
+        PLLCSR = USB_PLL_PSC | 1<<PLLE;
         while (!(USB_PLL_IsReady()));
-        USB_CLK_Unfreeze();
-        USB_INT_Clear(USB_INT_WAKEUPI);
-        USB_INT_Disable(USB_INT_WAKEUPI);
-        USB_INT_Enable(USB_INT_SUSPI);
+        USBCON &= ~(1 << FRZCLK);
+        UDINT &= ~(1<<WAKEUPI);     // int clear
+        UDIEN &= ~(1<<WAKEUPI);     // int disable
+        UDIEN |= 1<<SUSPE;
 
         if (USB_Device_ConfigurationNumber)
             USB_DeviceState = DEVICE_STATE_Configured;
         else
-            USB_DeviceState = (USB_Device_IsAddressSet()) ? DEVICE_STATE_Addressed : DEVICE_STATE_Powered;
+            USB_DeviceState = UDADDR & 1<<ADDEN ? DEVICE_STATE_Addressed : DEVICE_STATE_Powered;
 
     }
 
-    if (USB_INT_HasOccurred(USB_INT_EORSTI) && USB_INT_IsEnabled(USB_INT_EORSTI))
+    if (UDINT & 1<<EORSTI && UDIEN & 1<<EORSTE)
     {
-        USB_INT_Clear(USB_INT_EORSTI);
-
-        USB_DeviceState                = DEVICE_STATE_Default;
+        UDINT &= ~(1<<EORSTI);
+        USB_DeviceState = DEVICE_STATE_Default;
         USB_Device_ConfigurationNumber = 0;
-
-        USB_INT_Clear(USB_INT_SUSPI);
-        USB_INT_Disable(USB_INT_SUSPI);
-        USB_INT_Enable(USB_INT_WAKEUPI);
-
-        Endpoint_ConfigureEndpoint(ENDPOINT_CONTROLEP, EP_TYPE_CONTROL,
-                                   8, 1);
-
-        USB_INT_Enable(USB_INT_RXSTPI);
+        UDINT &= ~(1<<SUSPI);
+        UDIEN &= ~(1<<SUSPE);
+        UDIEN |= 1<<WAKEUPE;
+        Endpoint_ConfigureEndpoint(ENDPOINT_CONTROLEP, EP_TYPE_CONTROL, 8, 1);
+        UEIENX |= 1<<RXSTPE;
     }
 }
 
@@ -4084,7 +2880,7 @@ void Endpoint_ClearEndpoints(void)
         UEIENX  = 0;
         UEINTX  = 0;
         UECFG1X = 0;
-        Endpoint_DisableEndpoint();
+        UECONX &= ~(1<<EPEN);
     }
 }
 
@@ -4095,17 +2891,17 @@ void CreateKeyboardReport(USB_KeyboardReport_Data_t* const ReportData)
 	memset(ReportData, 0, sizeof(USB_KeyboardReport_Data_t));
 
 	if ((PINF & 1<<0) == 0)
-	  ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_A;
+	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_A;
 	else if ((PINF & 1<<1) == 0)
-	  ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_B;
+	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_B;
 
 	if ((PINF & 1<<4) == 0)
-	  ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_C;
+	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_C;
 	else if ((PINF & 1<<5) == 0)
-	  ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_D;
+	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_D;
 
 	if ((PINF & 1<<6) == 0)
-	  ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_E;
+	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_E;
 
     if ((PINF & 1<<7) == 0)
         ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_F;
@@ -4142,7 +2938,7 @@ uint8_t USB_ProcessHIDReport(const uint8_t* ReportData,
 		switch (HIDReportItem & HID_RI_DATA_SIZE_MASK)
 		{
 			case HID_RI_DATA_BITS_32:
-				ReportItemData  = (((uint32_t)ReportData[3] << 24) | ((uint32_t)ReportData[2] << 16) |
+				ReportItemData = (((uint32_t)ReportData[3] << 24) | ((uint32_t)ReportData[2] << 16) |
 			                       ((uint16_t)ReportData[1] << 8)  | ReportData[0]);
 				ReportSize     -= 4;
 				ReportData     += 4;
@@ -4393,8 +3189,7 @@ uint8_t USB_ProcessHIDReport(const uint8_t* ReportData,
 	return HID_PARSE_Successful;
 }
 
-uint8_t Endpoint_Write_Stream_LE (const void * const Buffer,
-                            uint16_t Length,
+uint8_t USBKB::Endpoint_Write_Stream_LE (const void * const Buffer, uint16_t Length,
                             uint16_t* const BytesProcessed)
 {
     uint8_t* DataStream = (uint8_t*)Buffer;
@@ -4402,7 +3197,7 @@ uint8_t Endpoint_Write_Stream_LE (const void * const Buffer,
     uint8_t  ErrorCode;
 
     if ((ErrorCode = Endpoint_WaitUntilReady()))
-      return ErrorCode;
+        return ErrorCode;
 
     if (BytesProcessed != NULL)
     {
@@ -4414,11 +3209,8 @@ uint8_t Endpoint_Write_Stream_LE (const void * const Buffer,
     {
         if (!(Endpoint_IsReadWriteAllowed()))
         {
-            Endpoint_ClearIN();
-
-            #if !defined(INTERRUPT_CONTROL_ENDPOINT)
-            USB_USBTask();
-            #endif
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+            USBTask();
 
             if (BytesProcessed != NULL)
             {
@@ -4441,8 +3233,7 @@ uint8_t Endpoint_Write_Stream_LE (const void * const Buffer,
     return ENDPOINT_RWSTREAM_NoError;
 }
 
-uint8_t Endpoint_Read_Stream_LE (void * const Buffer,
-                            uint16_t Length,
+uint8_t USBKB::Endpoint_Read_Stream_LE(void * const Buffer, uint16_t Length,
                             uint16_t* const BytesProcessed)
 {
     uint8_t* DataStream      = ((uint8_t*)Buffer);
@@ -4461,10 +3252,7 @@ uint8_t Endpoint_Read_Stream_LE (void * const Buffer,
         if (!(Endpoint_IsReadWriteAllowed()))
         {
             Endpoint_ClearOUT();
-
-            #if !defined(INTERRUPT_CONTROL_ENDPOINT)
-            USB_USBTask();
-            #endif
+            USBTask();
 
             if (BytesProcessed != NULL)
             {
@@ -4487,12 +3275,12 @@ uint8_t Endpoint_Read_Stream_LE (void * const Buffer,
     return ENDPOINT_RWSTREAM_NoError;
 }
 
-uint8_t Endpoint_Read_Control_Stream_LE (void* const Buffer, uint16_t Length)
+uint8_t USBKB::Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Length)
 {
     uint8_t* DataStream = ((uint8_t*)Buffer);
 
     if (!(Length))
-      Endpoint_ClearOUT();
+        Endpoint_ClearOUT();
 
     while (Length)
     {
@@ -4531,15 +3319,15 @@ uint8_t Endpoint_Read_Control_Stream_LE (void* const Buffer, uint16_t Length)
     return ENDPOINT_RWCSTREAM_NoError;
 }
 
-uint8_t Endpoint_Write_Control_Stream_LE (const void* const Buffer, uint16_t Length)
+uint8_t USBKB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Length)
 {
     uint8_t* DataStream     = ((uint8_t*)Buffer);
     bool     LastPacketFull = false;
 
     if (Length > USB_ControlRequest.wLength)
-      Length = USB_ControlRequest.wLength;
+        Length = USB_ControlRequest.wLength;
     else if (!(Length))
-      Endpoint_ClearIN();
+        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);     // clear IN
 
     while (Length || LastPacketFull)
     {
@@ -4567,7 +3355,7 @@ uint8_t Endpoint_Write_Control_Stream_LE (const void* const Buffer, uint16_t Len
             }
             
             LastPacketFull = (BytesInEndpoint == 8);
-            Endpoint_ClearIN();
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON);     // clear IN
         }
     }
 
@@ -4586,15 +3374,15 @@ uint8_t Endpoint_Write_Control_Stream_LE (const void* const Buffer, uint16_t Len
     return ENDPOINT_RWCSTREAM_NoError;
 }
 
-uint8_t Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint16_t Length)
+uint8_t USBKB::Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint16_t Length)
 {
     uint8_t* DataStream     = (uint8_t*)Buffer;
     bool     LastPacketFull = false;
 
     if (Length > USB_ControlRequest.wLength)
-      Length = USB_ControlRequest.wLength;
+        Length = USB_ControlRequest.wLength;
     else if (!(Length))
-      Endpoint_ClearIN();
+        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
 
     while (Length || LastPacketFull)
     {
@@ -4622,7 +3410,8 @@ uint8_t Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint16_t Le
             }
             
             LastPacketFull = (BytesInEndpoint == 8);
-            Endpoint_ClearIN();
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+            //Endpoint_ClearIN();
         }
     }
 
@@ -4645,31 +3434,31 @@ uint8_t Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint16_t Le
 
 const USB_Descriptor_HIDReport_Datatype_t PROGMEM KeyboardReport[] =
 {
-HID_RI_USAGE_PAGE(8, 0x01), /* Generic Desktop */
-HID_RI_USAGE(8, 0x06), /* Keyboard */
-HID_RI_COLLECTION(8, 0x01), /* Application */
-HID_RI_USAGE_PAGE(8, 0x07), /* Key Codes */
-HID_RI_USAGE_MINIMUM(8, 0xE0), /* Keyboard Left Control */
-HID_RI_USAGE_MAXIMUM(8, 0xE7), /* Keyboard Right GUI */
-HID_RI_LOGICAL_MINIMUM(8, 0x00),
-HID_RI_LOGICAL_MAXIMUM(8, 0x01),
-HID_RI_REPORT_SIZE(8, 0x01),
-HID_RI_REPORT_COUNT(8, 0x08),
-HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
-HID_RI_REPORT_COUNT(8, 0x01),
-HID_RI_REPORT_SIZE(8, 0x08),
-HID_RI_INPUT(8, HID_IOF_CONSTANT),
-HID_RI_USAGE_PAGE(8, 0x08), /* LEDs */
-HID_RI_USAGE_MINIMUM(8, 0x01), /* Num Lock */
-HID_RI_USAGE_MAXIMUM(8, 0x05), /* Kana */
-HID_RI_REPORT_COUNT(8, 0x05),
-HID_RI_REPORT_SIZE(8, 0x01),
-HID_RI_OUTPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE | HID_IOF_NON_VOLATILE),
-HID_RI_REPORT_COUNT(8, 0x01),
-HID_RI_REPORT_SIZE(8, 0x03),
-HID_RI_OUTPUT(8, HID_IOF_CONSTANT),
-HID_RI_LOGICAL_MINIMUM(8, 0x00),
-HID_RI_LOGICAL_MAXIMUM(8, 0x65),
+    HID_RI_USAGE_PAGE(8, 0x01), /* Generic Desktop */
+    HID_RI_USAGE(8, 0x06), /* Keyboard */
+    HID_RI_COLLECTION(8, 0x01), /* Application */
+    HID_RI_USAGE_PAGE(8, 0x07), /* Key Codes */
+    HID_RI_USAGE_MINIMUM(8, 0xE0), /* Keyboard Left Control */
+    HID_RI_USAGE_MAXIMUM(8, 0xE7), /* Keyboard Right GUI */
+    HID_RI_LOGICAL_MINIMUM(8, 0x00),
+    HID_RI_LOGICAL_MAXIMUM(8, 0x01),
+    HID_RI_REPORT_SIZE(8, 0x01),
+    HID_RI_REPORT_COUNT(8, 0x08),
+    HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+    HID_RI_REPORT_COUNT(8, 0x01),
+    HID_RI_REPORT_SIZE(8, 0x08),
+    HID_RI_INPUT(8, HID_IOF_CONSTANT),
+    HID_RI_USAGE_PAGE(8, 0x08), /* LEDs */
+    HID_RI_USAGE_MINIMUM(8, 0x01), /* Num Lock */
+    HID_RI_USAGE_MAXIMUM(8, 0x05), /* Kana */
+    HID_RI_REPORT_COUNT(8, 0x05),
+    HID_RI_REPORT_SIZE(8, 0x01),
+    HID_RI_OUTPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE | HID_IOF_NON_VOLATILE),
+    HID_RI_REPORT_COUNT(8, 0x01),
+    HID_RI_REPORT_SIZE(8, 0x03),
+    HID_RI_OUTPUT(8, HID_IOF_CONSTANT),
+    HID_RI_LOGICAL_MINIMUM(8, 0x00),
+    HID_RI_LOGICAL_MAXIMUM(8, 0x65),
     HID_RI_USAGE_PAGE(8, 0x07), /* Keyboard */
     HID_RI_USAGE_MINIMUM(8, 0x00), /* Reserved (no event indicated) */
     HID_RI_USAGE_MAXIMUM(8, 0x65), /* Keyboard Application */
@@ -4681,124 +3470,116 @@ HID_RI_LOGICAL_MAXIMUM(8, 0x65),
 
 const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
 {
-	.Header                 = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
+    {
+        sizeof(USB_Descriptor_Device_t),
+        DTYPE_Device
+    },
 
-	.USBSpecification       = VERSION_BCD(1,1,0),
-	.Class                  = USB_CSCP_NoDeviceClass,
-	.SubClass               = USB_CSCP_NoDeviceSubclass,
-	.Protocol               = USB_CSCP_NoDeviceProtocol,
-    .Endpoint0Size = 8,
-	.VendorID               = 0x03EB,
-	.ProductID              = 0x2042,
-	.ReleaseNumber          = VERSION_BCD(0,0,1),
-	.ManufacturerStrIndex   = STRING_ID_Manufacturer,
-	.ProductStrIndex        = STRING_ID_Product,
-	.SerialNumStrIndex      = NO_DESCRIPTOR,
-    .NumberOfConfigurations = 1
+	0x0110,
+	USB_CSCP_NoDeviceClass,
+	USB_CSCP_NoDeviceSubclass,
+	USB_CSCP_NoDeviceProtocol,
+    8,
+	0x03EB,
+	0x2042,
+	0x0001,
+	STRING_ID_Manufacturer,
+	STRING_ID_Product,
+	NO_DESCRIPTOR,
+    1
 };
 
 const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 {
-	.Config =
-		{
-			.Header                 = {.Size = sizeof(USB_Descriptor_Configuration_Header_t), .Type = DTYPE_Configuration},
+    {
+        {
+            sizeof(USB_Descriptor_Configuration_Header_t),
+            DTYPE_Configuration
+        },
 
-			.TotalConfigurationSize = sizeof(USB_Descriptor_Configuration_t),
-			.TotalInterfaces        = 1,
+        sizeof(USB_Descriptor_Configuration_t),
+        1,
+        1,
+        NO_DESCRIPTOR,
+        USB_CONFIG_ATTR_RESERVED | USB_CONFIG_ATTR_SELFPOWERED,
+        USB_CONFIG_POWER_MA(100)
+    },
+    {   // HID_Interface
+        {
+            sizeof(USB_Descriptor_Interface_t),
+            DTYPE_Interface
+        },
+        INTERFACE_ID_Keyboard,
+        0,
+        2,
+        HID_CSCP_HIDClass,
+        HID_CSCP_BootSubclass,
+        HID_CSCP_KeyboardBootProtocol,
+        NO_DESCRIPTOR
+    },
+    {   // HID_KeyboardHID
+        .Header =
+        {
+            sizeof(USB_HID_Descriptor_HID_t),
+            HID_DTYPE_HID
+        },
+        0x0111,
+        0x00,
+        1,
+        HID_DTYPE_Report,
+        sizeof(KeyboardReport)
+    },
+    {   // HID_ReportINEndpoint
+        {
+            sizeof(USB_Descriptor_Endpoint_t),
+            DTYPE_Endpoint
+        },
 
-			.ConfigurationNumber    = 1,
-			.ConfigurationStrIndex  = NO_DESCRIPTOR,
+        KEYBOARD_IN_EPADDR,
+        EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
+        8,
+        5
+    },
 
-			.ConfigAttributes       = (USB_CONFIG_ATTR_RESERVED | USB_CONFIG_ATTR_SELFPOWERED),
+    .HID_ReportOUTEndpoint =
+    {
+        .Header =
+        {
+            .Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint
+        },
 
-			.MaxPowerConsumption    = USB_CONFIG_POWER_MA(100)
-		},
-
-	.HID_Interface =
-		{
-			.Header                 = {.Size = sizeof(USB_Descriptor_Interface_t), .Type = DTYPE_Interface},
-
-			.InterfaceNumber        = INTERFACE_ID_Keyboard,
-			.AlternateSetting       = 0x00,
-
-			.TotalEndpoints         = 2,
-
-			.Class                  = HID_CSCP_HIDClass,
-			.SubClass               = HID_CSCP_BootSubclass,
-			.Protocol               = HID_CSCP_KeyboardBootProtocol,
-
-			.InterfaceStrIndex      = NO_DESCRIPTOR
-		},
-
-	.HID_KeyboardHID =
-		{
-			.Header                 = {.Size = sizeof(USB_HID_Descriptor_HID_t), .Type = HID_DTYPE_HID},
-
-			.HIDSpec                = VERSION_BCD(1,1,1),
-			.CountryCode            = 0x00,
-			.TotalReportDescriptors = 1,
-			.HIDReportType          = HID_DTYPE_Report,
-			.HIDReportLength        = sizeof(KeyboardReport)
-		},
-
-	.HID_ReportINEndpoint =
-		{
-			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
-
-			.EndpointAddress        = KEYBOARD_IN_EPADDR,
-			.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-			.EndpointSize           = KEYBOARD_EPSIZE,
-			.PollingIntervalMS      = 0x05
-		},
-
-	.HID_ReportOUTEndpoint =
-		{
-			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
-
-			.EndpointAddress        = KEYBOARD_OUT_EPADDR,
-			.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-			.EndpointSize           = KEYBOARD_EPSIZE,
-			.PollingIntervalMS      = 0x05
-		}
+        .EndpointAddress        = KEYBOARD_OUT_EPADDR,
+        .Attributes = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+        .EndpointSize           = 8,
+        .PollingIntervalMS      = 5
+    }
 };
 
-#if 0
-const USB_Descriptor_String_t PROGMEM LanguageString = USB_STRING_DESCRIPTOR_ARRAY(LANGUAGE_ID_ENG);
-#endif
-
-const USB_Descriptor_String_t PROGMEM LanguageString =
+const USB_Descriptor_String_t<2> PROGMEM LanguageString =
 {
     {
         USB_STRING_LEN(1),
         DTYPE_String
     },
-    //(wchar_t)0x0409
+    (wchar_t)0x0409
 };
 
-#if 0
-const USB_Descriptor_String_t PROGMEM ManufacturerString = USB_STRING_DESCRIPTOR(L"Dean Camera");
-#endif
-
-const USB_Descriptor_String_t PROGMEM ManufacturerString =
+const USB_Descriptor_String_t<12> PROGMEM ManufacturerString =
 {
     {
         USB_STRING_LEN(11),
         DTYPE_String
     },
-    //L"Dean Camera"
+    L"Dean Camera"
 };
 
-#if 0
-const USB_Descriptor_String_t PROGMEM ProductString = USB_STRING_DESCRIPTOR(L"LUFA Keyboard Demo");
-#endif
-
-const USB_Descriptor_String_t PROGMEM ProductString =
+const USB_Descriptor_String_t<23> PROGMEM ProductString =
 {
     {
         USB_STRING_LEN(22),
         DTYPE_String
-    }
-    //L"LUFA USB-RS232 Adapter"
+    },
+    L"LUFA USB-RS232 Adapter"
 };
 
 uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,

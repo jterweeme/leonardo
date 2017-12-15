@@ -79,7 +79,7 @@ uint8_t USB::Endpoint_WaitUntilReady()
                 return ENDPOINT_READYWAIT_NoError;
         }
 
-        uint8_t USB_DeviceState_LCL = GPIOR0;
+        uint8_t USB_DeviceState_LCL = state;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_READYWAIT_DeviceDisconnected;
@@ -105,7 +105,7 @@ void USB::Endpoint_ClearStatusStage()
     if (USB_ControlRequest.bmRequestType & REQDIR_DEVICETOHOST)
     {
         while (!(UEINTX & 1<<RXOUTI))
-            if (GPIOR0 == DEVICE_STATE_Unattached)
+            if (state == DEVICE_STATE_Unattached)
                 return;
 
         UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
@@ -113,7 +113,7 @@ void USB::Endpoint_ClearStatusStage()
     else
     {
         while (!(UEINTX & 1<<TXINI))
-            if (GPIOR0 == DEVICE_STATE_Unattached)
+            if (state == DEVICE_STATE_Unattached)
                 return;
 
         UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
@@ -231,7 +231,7 @@ uint8_t USB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t
 
     while (Length || LastPacketFull)
     {
-        uint8_t USB_DeviceState_LCL = GPIOR0;
+        uint8_t USB_DeviceState_LCL = state;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_RWCSTREAM_DeviceDisconnected;
@@ -261,7 +261,7 @@ uint8_t USB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t
 
     while (!(UEINTX & 1<<RXOUTI))
     {
-        uint8_t USB_DeviceState_LCL = GPIOR0;
+        uint8_t USB_DeviceState_LCL = state;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_RWCSTREAM_DeviceDisconnected;
@@ -284,7 +284,7 @@ uint8_t USB::Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_
 
     while (Length || LastPacketFull)
     {
-        uint8_t USB_DeviceState_LCL = GPIOR0;
+        uint8_t USB_DeviceState_LCL = state;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_RWCSTREAM_DeviceDisconnected;
@@ -314,7 +314,7 @@ uint8_t USB::Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_
 
     while (!(UEINTX & 1<<RXOUTI))
     {
-        uint8_t USB_DeviceState_LCL = GPIOR0;
+        uint8_t USB_DeviceState_LCL = state;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_RWCSTREAM_DeviceDisconnected;

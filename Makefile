@@ -17,6 +17,7 @@ all: app_hellousb1.elf \
     app_uartloop1.elf \
     app_usbkb1.elf \
     app_usbkb3.elf \
+    app_usbkb4.elf \
     app_usbloop1.elf \
     app_usbloop2.elf \
 	app_vga1.elf \
@@ -32,6 +33,7 @@ app_uartloop1.elf: app_uartloop1.o misc.o
 app_usbkb1.elf: app_usbkb1.o usbkb.o busby.o misc.o
 app_usbkb2.elf: app_usbkb2.o usbkb2.o busby.o misc.o
 app_usbkb3.elf: app_usbkb3.o
+app_usbkb4.elf: app_usbkb4.o usbkb2.o busby2.o
 app_usbloop1.elf: app_usbloop1.o cdc.o busby.o misc.o
 app_usbloop2.elf: app_usbloop2.o
 app_vga1.elf: app_vga1.o vga.o
@@ -47,6 +49,7 @@ app_uartloop1.o: app_uartloop1.cpp misc.h
 app_usbkb1.o: app_usbkb1.cpp
 app_usbkb2.o: app_usbkb2.cpp
 app_usbkb3.o: app_usbkb3.cpp
+app_usbkb4.o: app_usbkb4.cpp
 app_usbloop1.o: app_usbloop1.cpp
 app_usbloop2.o: app_usbloop2.cpp
 app_vga1.o: app_vga1.cpp vga.h screenFont.h

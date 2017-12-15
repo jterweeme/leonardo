@@ -1,6 +1,5 @@
 #include "usbkb.h"
 #include <avr/pgmspace.h>
-#include <avr/wdt.h>
 #include <avr/power.h>
 #include <avr/interrupt.h>
 #include <stdio.h>
@@ -26,25 +25,61 @@ const DescDev PROGMEM DeviceDescriptor =
     USB_CSCP_NoDeviceClass,
     USB_CSCP_NoSpecificSubclass,
     USB_CSCP_NoSpecificProtocol,
-    FIXED_CONTROL_ENDPOINT_SIZE,
+    8,
     0x03EB,
-    0x204B,
+    0x2042,
     0x0001,
     STRING_ID_Manufacturer,
     STRING_ID_Product,
     NO_DESCRIPTOR,
-    FIXED_NUM_CONFIGURATIONS
+    1
 };
 
-struct USB_KeyboardReport_Data_t
+struct USB_Descriptor_Configuration_t
 {
-    uint8_t Modifier;
-    uint8_t Reserved;
-    uint8_t KeyCode[6];
+    DescConf Config;
+    DescIface HID_Interface;
+    USB_HID_Descriptor_HID_t HID_KeyboardHID;
+    DescEndpoint HID_ReportINEndpoint;
+    DescEndpoint HID_ReportOUTEndpoint;
 }
 __attribute__ ((packed));
 
-USB_KeyboardReport_Data_t *KeyboardReport;
+const uint8_t PROGMEM KeyboardReport[] =
+{
+    0x04 | 0x00 | 0x01, 0x01 & 0xFF,
+    0x08 | 0x00 | 0x01, 0x06 & 0xFF,
+    0x00 | 0xA0 | 0x01, 0x01 & 0xFF,
+    0x04 | 0x00 | 0x01, 0x07 & 0xFF,
+    0x08 | 0x10 | 0x01, 0xE0 & 0xFF,
+    0x08 | 0x20 | 0x01, 0xE7 & 0xFF,
+    0x04 | 0x10 | 0x01, 0x00 & 0xFF,
+    0x04 | 0x20 | 0x01, 0x01 & 0xFF,
+    0x04 | 0x70 | 0x01, 0x01 & 0xFF,
+    0x04 | 0x90 | 0x01, 0x08 & 0xFF,
+    0x00 | 0x80 | 0x01, ((0<<0 | 1<<1 | 0<<2) & 0xFF),
+    0x04 | 0x90 | 0x01, ((0x01) & 0xFF),
+    0x04 | 0x70 | 0x01, ((0x08) & 0xFF),
+    0x00 | 0x80 | 0x01, (((1 << 0)) & 0xFF),
+    0x04 | 0x00 | 0x01, 0x08 & 0xFF,
+    0x08 | 0x10 | 0x01, 0x01 & 0xFF,
+    0x08 | 0x20 | 0x01, 0x05 & 0xFF,
+    0x04 | 0x90 | 0x01, 0x05 & 0xFF,
+    0x04 | 0x70 | 0x01, 0x01 & 0xFF, 
+    0x00 | 0x90 | 0x01, (((0 << 0) | (1 << 1) | (0 << 2) | (0 << 7)) & 0xFF),
+    0x04 | 0x90 | 0x01, ((0x01) & 0xFF),
+    0x04 | 0x70 | 0x01, ((0x03) & 0xFF),
+    0x00 | 0x90 | 0x01, (((1 << 0)) & 0xFF),
+    0x04 | 0x10 | 0x01, ((0x00) & 0xFF),
+    0x04 | 0x20 | 0x01, ((0x65) & 0xFF),
+    0x04 | 0x00 | 0x01, ((0x07) & 0xFF),
+    0x08 | 0x10 | 0x01, ((0x00) & 0xFF),
+    0x08 | 0x20 | 0x01, ((0x65) & 0xFF),
+    0x04 | 0x90 | 0x01, ((0x06) & 0xFF),
+    0x04 | 0x70 | 0x01, ((0x08) & 0xFF),
+    0x00 | 0x80 | 0x01, (((0 << 0) | (0 << 1) | (0 << 2)) & 0xFF),
+    0x00 | 0xC0 | 0x00
+};
 
 const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 {
@@ -68,7 +103,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
         },
         INTERFACE_ID_Keyboard,
         0,
-        1,
+        2,
         HID_CSCP_HIDClass,
         HID_CSCP_BootSubclass,
         HID_CSCP_KeyboardBootProtocol,
@@ -80,11 +115,11 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
             HID_DTYPE_HID
         },
 
-        .HIDSpec = 0x0111,
-        .CountryCode            = 0x00,
-        .TotalReportDescriptors = 1,
-        .HIDReportType          = HID_DTYPE_Report,
-        .HIDReportLength        = sizeof(KeyboardReport)
+        0x0111,
+        0,
+        1,
+        HID_DTYPE_Report,
+        sizeof(KeyboardReport)
     },
     {   // HID_ReportINEndpoint
         {
@@ -92,10 +127,21 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
             DTYPE_Endpoint
         },
 
-        KEYBOARD_EPADDR,
+        ENDPOINT_DIR_IN | 1,
         EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
-        KEYBOARD_EPSIZE,
-        0x05
+        8,
+        5
+    },
+    {   // HID_ReportOUTEndpoint
+        {
+            sizeof(DescEndpoint),
+            DTYPE_Endpoint
+        },
+
+        ENDPOINT_DIR_OUT | 2,
+        EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
+        8,
+        5
     }
 };
 
@@ -131,12 +177,7 @@ USBKB::USBKB() :
     _outpoint(KEYBOARD_OUT_EPADDR, KEYBOARD_EPSIZE, EP_TYPE_INTERRUPT, 1)
 {
     clock_prescale_set(clock_div_2);
-
-    if (!(USB_Options & USB_OPT_REG_DISABLED))
-        UHWCON |= 1<<UVREGE;    // usb reg on
-    else
-        UHWCON &= ~(1<<UVREGE); // usb reg off
-
+    UHWCON |= 1<<UVREGE;    // usb reg on
     USB_IsInitialized = true;
     USBCON &= ~(1<<VBUSTE);
     UDIEN = 0;
@@ -145,20 +186,12 @@ USBKB::USBKB() :
     USBCON &= ~(1<<USBE);   // disable usb controller
     USBCON |= 1<<USBE;      // enable usb controller
     USBCON &= ~(1<<FRZCLK);
-
-    if (!(USB_Options & USB_OPT_MANUAL_PLL))
-        PLLCSR = 0;
-
-    GPIOR0 = DEVICE_STATE_Unattached;
+    PLLCSR = 0;
+    state = DEVICE_STATE_Unattached;
     USB_Device_ConfigurationNumber  = 0;
     USB_Device_RemoteWakeupEnabled  = false;
     USB_Device_CurrentlySelfPowered = false;
-
-    if (USB_Options & USB_DEVICE_OPT_LOWSPEED)
-        UDCON |= 1<<LSM;
-    else
-        UDCON &= ~(1<<LSM);
-
+    UDCON &= ~(1<<LSM);         // full speed
     USBCON |= 1<<VBUSTE;        // enable vbus int
     configureEndpoint(_control.addr, _control.type, _control.size, 1);
     UDINT &= ~(1<<SUSPI);
@@ -181,10 +214,6 @@ ISR(USB_COM_vect)
 
 void USBKB::usbTask()
 {
-#if 0
-    if (USB_DeviceState == DEVICE_STATE_Unatached)
-        return;
-#endif
     uint8_t prevEndpoint = getCurrentEndpoint();
     _control.select();
 
@@ -212,14 +241,14 @@ void USBKB::gen()
                 while (!(PLLCSR & 1<<PLOCK));
             }
 
-            GPIOR0 = DEVICE_STATE_Powered;
+            state = DEVICE_STATE_Powered;
         }
         else
         {
             if (!(USB_Options & USB_OPT_MANUAL_PLL))
                 PLLCSR = 0;
 
-            GPIOR0 = DEVICE_STATE_Unattached;
+            state = DEVICE_STATE_Unattached;
         }
     }
     
@@ -232,32 +261,29 @@ void USBKB::gen()
         if (!(USB_Options & USB_OPT_MANUAL_PLL))
             PLLCSR = 0;
 
-        GPIOR0 = DEVICE_STATE_Suspended;
+        state = DEVICE_STATE_Suspended;
     }
 
     if (UDINT & 1<<WAKEUPI && UDIEN & 1<<WAKEUPE)
     {
-        if (!(USB_Options & USB_OPT_MANUAL_PLL))
-        {
-            PLLCSR = USB_PLL_PSC; PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
-            while (!(PLLCSR & 1<<PLOCK));   // PLL is ready?
-        }
-
+        PLLCSR = USB_PLL_PSC;
+        PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
+        while (!(PLLCSR & 1<<PLOCK));   // PLL is ready?
         USBCON &= ~(1<<FRZCLK);
         UDINT &= ~(1<<WAKEUPI);
         UDIEN &= ~(1<<WAKEUPI);
         UDIEN |= 1<<SUSPE;
 
         if (USB_Device_ConfigurationNumber)
-            GPIOR0 = DEVICE_STATE_Configured;
+            state = DEVICE_STATE_Configured;
         else
-            GPIOR0 = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
+            state = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
     }
 
     if (UDINT & 1<<EORSTI && UDIEN & 1<<EORSTE)
     {
         UDINT &= ~(1<<EORSTI);
-        GPIOR0 = DEVICE_STATE_Default;
+        state = DEVICE_STATE_Default;
         USB_Device_ConfigurationNumber = 0;
         UDINT &= ~(1<<SUSPI);
         UDIEN &= ~(1<<SUSPE);
@@ -278,22 +304,6 @@ void USBKB::com()
     _control.select();
     UEIENX |= 1<<RXSTPE;
     selectEndpoint(prevSelectedEndp);
-}
-
-void USBKB::EVENT_USB_Device_ControlRequest()
-{
-    if (!(UEINTX & 1<<RXSTPI))      // is setup received?
-        return;
-
-    if (USB_ControlRequest.wIndex != _control.addr)
-        return;
-
-    switch (USB_ControlRequest.bRequest)
-    {
-        case HID_REQ_GetReport:
-
-            break;
-    }
 }
 
 uint16_t USBKB::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddress)
@@ -351,20 +361,11 @@ void USBKB::Device_ProcessControlRequest()
     uint8_t* RequestHeader = (uint8_t*)&USB_ControlRequest;
 
     for (uint8_t i = 0; i < sizeof(USB_Request_Header_t); i++)
-    {
         *(RequestHeader++) = read8();
-    }
 
-#if 0
-    char buf[50];
-    snprintf(buf, 50, "%u\r\n", USB_ControlRequest.bmRequestType);
-    Serial::instance->write(buf);
-#endif
-    EVENT_USB_Device_ControlRequest();
-
-    if (UEINTX & 1<<RXSTPI)
+    if (UEINTX & 1<<RXSTPI) // is setup received?
     {
-        uint8_t bmRequestType = USB_ControlRequest.bRequest;
+        uint8_t bmRequestType = USB_ControlRequest.bmRequestType;
 
         switch (USB_ControlRequest.bRequest)
         {
@@ -376,21 +377,21 @@ void USBKB::Device_ProcessControlRequest()
 
                 switch (USB_ControlRequest.bmRequestType)
                 {
-                    case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
-                        if (USB_Device_CurrentlySelfPowered)
-                            CurrentStatus |= FEATURE_SELFPOWERED_ENABLED;
+                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
+                    if (USB_Device_CurrentlySelfPowered)
+                        CurrentStatus |= FEATURE_SELFPOWERED_ENABLED;
 
-                        if (USB_Device_RemoteWakeupEnabled)
-                            CurrentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
+                    if (USB_Device_RemoteWakeupEnabled)
+                        CurrentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
 
-                        break;
-                    case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
-                        selectEndpoint((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
-                        CurrentStatus = UECONX & 1<<STALLRQ;
-                        selectEndpoint(ENDPOINT_CONTROLEP);
-                        break;
-                    default:
-                        return;
+                    break;
+                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
+                    selectEndpoint((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
+                    CurrentStatus = UECONX & 1<<STALLRQ;
+                    selectEndpoint(ENDPOINT_CONTROLEP);
+                    break;
+                default:
+                    return;
                 }
 
                 UEINTX &= ~(1<<RXSTPI);
@@ -418,11 +419,9 @@ void USBKB::Device_ProcessControlRequest()
                 Endpoint_ClearStatusStage();
                 while (!(UEINTX & 1<<TXINI));
                 UDADDR |= 1<<ADDEN; // enable dev addr
-                GPIOR0 = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
+                state = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
             }
-
             break;
-
         case REQ_GetDescriptor:
             if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
                 (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_INTERFACE)))
@@ -482,9 +481,9 @@ void USBKB::Device_ProcessControlRequest()
                 Endpoint_ClearStatusStage();
 
                 if (USB_Device_ConfigurationNumber)
-                    GPIOR0 = DEVICE_STATE_Configured;
+                    state = DEVICE_STATE_Configured;
                 else
-                    GPIOR0 = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
+                    state = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
 
                 configureEndpoint(_inpoint.addr, _inpoint.type, _inpoint.size, _inpoint.banks);
                 configureEndpoint(_outpoint.addr, _outpoint.type, _outpoint.size, _outpoint.banks);

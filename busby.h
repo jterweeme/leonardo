@@ -111,8 +111,8 @@ static constexpr uint8_t ENDPOINT_DIR_MASK = 0x80,
 
 struct USB_Request_Header_t
 {
-    uint8_t  bmRequestType;
-    uint8_t  bRequest;
+    uint8_t bmRequestType;
+    uint8_t bRequest;
     uint16_t wValue;
     uint16_t wIndex;
     uint16_t wLength;
@@ -212,15 +212,14 @@ class USB
 protected:
     USB_Request_Header_t USB_ControlRequest;
     volatile bool USB_IsInitialized;
+    volatile uint8_t state;
     uint8_t USB_Device_ConfigurationNumber;
     bool USB_Device_CurrentlySelfPowered;
     bool USB_Device_RemoteWakeupEnabled;
     Endpoint _control;
     uint8_t Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Length);
     uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length);
-public:
-    static USB *instance;
-    USB();
+    static constexpr uint8_t USB_Options = USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL;
     uint8_t Endpoint_WaitUntilReady();
     uint8_t getEndpointDirection();
     uint8_t getCurrentEndpoint() { return UENUM & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
@@ -231,16 +230,16 @@ public:
     inline void write16(uint8_t dat) { UEDATX = dat & 0xff; UEDATX = dat >> 8; }
     void write32(uint32_t dat);
     inline uint16_t bytesInEndpoint() { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
-    virtual void gen() { }
-    virtual void com() { }
     void Device_ClearSetFeature();
     void Device_GetSerialString(uint16_t *UnicodeString);
     void Endpoint_ClearStatusStage();
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes);
-protected:
-    static constexpr uint8_t USB_Options = USB_DEVICE_OPT_FULLSPEED | USB_OPT_REG_ENABLED |
-            USB_OPT_AUTO_PLL;
+public:
+    static USB *instance;
+    USB();
+    virtual void gen() { }
+    virtual void com() { }
 };
 
 #endif

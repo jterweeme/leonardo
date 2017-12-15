@@ -56,15 +56,6 @@ struct USB_HID_Descriptor_HID_t
 }
 __attribute__ ((packed));
 
-struct USB_Descriptor_Configuration_t
-{
-    DescConf Config;
-    DescIface HID_Interface;
-    USB_HID_Descriptor_HID_t HID_KeyboardHID;
-    DescEndpoint HID_ReportINEndpoint;
-}
-__attribute__ ((packed));
-
 class USBKB : public USB
 {
 private:

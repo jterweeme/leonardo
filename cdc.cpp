@@ -261,7 +261,7 @@ uint16_t CDC::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAd
 
 uint8_t CDC::sendByte(uint8_t Data)
 {
-    if (GPIOR0 != DEVICE_STATE_Configured)
+    if (state != DEVICE_STATE_Configured)
         return ENDPOINT_RWSTREAM_DeviceDisconnected;
 
     _inpoint.select();
@@ -281,7 +281,7 @@ uint8_t CDC::sendByte(uint8_t Data)
 
 uint8_t CDC::flush()
 {
-    if ((GPIOR0 != DEVICE_STATE_Configured) || !_lineEncoding.BaudRateBPS)
+    if ((state != DEVICE_STATE_Configured) || !_lineEncoding.BaudRateBPS)
         return ENDPOINT_RWSTREAM_DeviceDisconnected;
 
     uint8_t ErrorCode;
@@ -306,7 +306,7 @@ uint8_t CDC::flush()
 
 int16_t CDC::receive()
 {
-    if ((GPIOR0 != DEVICE_STATE_Configured) || !(_lineEncoding.BaudRateBPS))
+    if ((state != DEVICE_STATE_Configured) || !(_lineEncoding.BaudRateBPS))
         return -1;
 
     int16_t ReceivedByte = -1;
@@ -331,36 +331,21 @@ CDC::CDC() :
 {
     clock_prescale_set(clock_div_2);
     USBCON &= ~(1<<OTGPADE);
-
-    if (!(USB_Options & USB_OPT_REG_DISABLED))
-        UHWCON |= 1<<UVREGE;    // enable USB pad regulator
-    else
-        UHWCON &= ~(1<<UVREGE); // disable USB pad regulator
-
-    if (!(USB_Options & USB_OPT_MANUAL_PLL))
-        PLLFRQ = 1<<PDIV2;
-
+    UHWCON |= 1<<UVREGE;    // enable USB pad regulator
     USB_IsInitialized = true;
     USBCON &= ~(1<<VBUSTE);     // disable VBUS transition interrupt
     UDIEN = 0;
     USBINT = 0;
+    UDINT = 0;
     USBCON &= ~(1<<USBE);   // disable USB controller clock inputs
     USBCON |= 1<<USBE;      // enable USB controller clock inputs
     USBCON &= ~(1<<FRZCLK); // enable clock inputs
-
-    if (!(USB_Options & USB_OPT_MANUAL_PLL))
-        PLLCSR = 0;
-
-    GPIOR0 = DEVICE_STATE_Unattached;
+    PLLCSR = 0;
+    state = DEVICE_STATE_Unattached;
     USB_Device_ConfigurationNumber  = 0;
     USB_Device_RemoteWakeupEnabled  = false;
     USB_Device_CurrentlySelfPowered = false;
-
-    if (USB_Options & USB_DEVICE_OPT_LOWSPEED)
-        UDCON |= 1<<LSM;
-    else
-        UDCON &= ~(1<<LSM);
-
+    UDCON &= ~(1<<LSM);
     USBCON |= 1<<VBUSTE;    // enable VBUS transition interrupt
     configureEndpoint(_control.addr, _control.type, _control.size, 1);
     UDINT &= ~(1<<SUSPI);   // clear suspend interrupt flag
@@ -370,7 +355,7 @@ CDC::CDC() :
     USBCON |= 1<<OTGPADE;   // otgpad on
     sei();
 
-    if ((GPIOR0 != DEVICE_STATE_Configured) || !(_lineEncoding.BaudRateBPS))
+    if ((state != DEVICE_STATE_Configured) || !(_lineEncoding.BaudRateBPS))
         return;
 
     _inpoint.select();
@@ -378,7 +363,7 @@ CDC::CDC() :
     if (UEINTX & 1<<TXINI)
         flush();
 
-    if (GPIOR0 == DEVICE_STATE_Unattached)
+    if (state == DEVICE_STATE_Unattached)
         return;
 
     uint8_t PrevEndpoint = getCurrentEndpoint();
@@ -413,14 +398,14 @@ void CDC::gen()
                 while (!(PLLCSR & 1<<PLOCK));
             }
 
-            GPIOR0 = DEVICE_STATE_Powered;
+            state = DEVICE_STATE_Powered;
         }
         else    // disconnect
         {
             if (!(USB_Options & USB_OPT_MANUAL_PLL))
                 PLLCSR = 0;
 
-            GPIOR0 = DEVICE_STATE_Unattached;
+            state = DEVICE_STATE_Unattached;
         }
     }
 
@@ -433,14 +418,15 @@ void CDC::gen()
         if (!(USB_Options & USB_OPT_MANUAL_PLL))
             PLLCSR = 0;
 
-        GPIOR0 = DEVICE_STATE_Suspended;
+        state = DEVICE_STATE_Suspended;
     }
 
     if (UDINT & 1<<WAKEUPI && UDIEN & 1<<WAKEUPE)   // wakeup
     {
         if (!(USB_Options & USB_OPT_MANUAL_PLL))
         {
-            PLLCSR = USB_PLL_PSC; PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
+            PLLCSR = USB_PLL_PSC;
+            PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
             while (!(PLLCSR & 1<<PLOCK));   // PLL is ready?
         }
 
@@ -450,15 +436,15 @@ void CDC::gen()
         UDIEN |= 1<<SUSPE;
 
         if (USB_Device_ConfigurationNumber)
-            GPIOR0 = DEVICE_STATE_Configured;
+            state = DEVICE_STATE_Configured;
         else
-            GPIOR0 = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
+            state = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
     }
 
     if (UDINT & 1<<EORSTI && UDIEN & 1<<EORSTE) // reset
     {
         UDINT &= ~(1<<EORSTI);
-        GPIOR0 = DEVICE_STATE_Default;
+        state = DEVICE_STATE_Default;
         USB_Device_ConfigurationNumber = 0;
         UDINT &= ~(1<<SUSPI);
         UDIEN &= ~(1<<SUSPE);
@@ -516,7 +502,7 @@ void CDC::EVENT_USB_Device_ControlRequest()
                 UEINTX &= ~(1<<RXSTPI);
 
                 while (!(UEINTX & 1<<RXOUTI))
-                    if (GPIOR0 == DEVICE_STATE_Unattached)
+                    if (state == DEVICE_STATE_Unattached)
                         return;
 
                 _lineEncoding.BaudRateBPS = read32();
@@ -616,7 +602,7 @@ void CDC::Device_ProcessControlRequest()
                 Endpoint_ClearStatusStage();
                 while (!(UEINTX & 1<<TXINI));
                 UDADDR |= 1<<ADDEN; // enable dev addr
-                GPIOR0 = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
+                state = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
             }
 
             break;
@@ -680,9 +666,9 @@ void CDC::Device_ProcessControlRequest()
                 Endpoint_ClearStatusStage();
 
                 if (USB_Device_ConfigurationNumber)
-                    GPIOR0 = DEVICE_STATE_Configured;
+                    state = DEVICE_STATE_Configured;
                 else
-                    GPIOR0 = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
+                    state = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
 
                 bool ConfigSuccess = true;
                 //ConfigSuccess &= configureEndpoints();
