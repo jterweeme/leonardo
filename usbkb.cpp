@@ -57,7 +57,7 @@ const uint8_t PROGMEM KeyboardReport[] =
     0x04 | 0x20 | 0x01, 0x01 & 0xFF,
     0x04 | 0x70 | 0x01, 0x01 & 0xFF,
     0x04 | 0x90 | 0x01, 0x08 & 0xFF,
-    0x00 | 0x80 | 0x01, ((0<<0 | 1<<1 | 0<<2) & 0xFF),
+    0x00 | 0x80 | 0x01, (0<<0 | 1<<1 | 0<<2) & 0xFF,
     0x04 | 0x90 | 0x01, ((0x01) & 0xFF),
     0x04 | 0x70 | 0x01, ((0x08) & 0xFF),
     0x00 | 0x80 | 0x01, (((1 << 0)) & 0xFF),
@@ -66,17 +66,17 @@ const uint8_t PROGMEM KeyboardReport[] =
     0x08 | 0x20 | 0x01, 0x05 & 0xFF,
     0x04 | 0x90 | 0x01, 0x05 & 0xFF,
     0x04 | 0x70 | 0x01, 0x01 & 0xFF, 
-    0x00 | 0x90 | 0x01, (((0 << 0) | (1 << 1) | (0 << 2) | (0 << 7)) & 0xFF),
+    0x00 | 0x90 | 0x01, ((0 << 0) | (1 << 1) | (0 << 2) | (0 << 7)) & 0xFF,
     0x04 | 0x90 | 0x01, ((0x01) & 0xFF),
     0x04 | 0x70 | 0x01, ((0x03) & 0xFF),
     0x00 | 0x90 | 0x01, (((1 << 0)) & 0xFF),
-    0x04 | 0x10 | 0x01, ((0x00) & 0xFF),
-    0x04 | 0x20 | 0x01, ((0x65) & 0xFF),
-    0x04 | 0x00 | 0x01, ((0x07) & 0xFF),
-    0x08 | 0x10 | 0x01, ((0x00) & 0xFF),
-    0x08 | 0x20 | 0x01, ((0x65) & 0xFF),
-    0x04 | 0x90 | 0x01, ((0x06) & 0xFF),
-    0x04 | 0x70 | 0x01, ((0x08) & 0xFF),
+    0x04 | 0x10 | 0x01, 0x00 & 0xFF,
+    0x04 | 0x20 | 0x01, 0x65 & 0xFF,
+    0x04 | 0x00 | 0x01, 0x07 & 0xFF,
+    0x08 | 0x10 | 0x01, 0x00 & 0xFF,
+    0x08 | 0x20 | 0x01, 0x65 & 0xFF,
+    0x04 | 0x90 | 0x01, 0x06 & 0xFF,
+    0x04 | 0x70 | 0x01, 0x08 & 0xFF,
     0x00 | 0x80 | 0x01, (((0 << 0) | (0 << 1) | (0 << 2)) & 0xFF),
     0x00 | 0xC0 | 0x00
 };
@@ -179,7 +179,7 @@ USBKB::USBKB() :
     clock_prescale_set(clock_div_2);
     UHWCON |= 1<<UVREGE;    // usb reg on
     USB_IsInitialized = true;
-    USBCON &= ~(1<<VBUSTE);
+    USBCON &= ~(1<<VBUSTE); // disable INT vbuste
     UDIEN = 0;
     USBINT = 0;
     UDINT = 0;
@@ -254,8 +254,8 @@ void USBKB::gen()
     
     if (UDINT & 1<<EORSTI && UDIEN & 1<<SUSPE)
     {
-        UDIEN &= ~(1<<SUSPE);
-        UDIEN |= 1<<WAKEUPI;
+        UDIEN &= ~(1<<SUSPE);   // disable int suspe
+        UDIEN |= 1<<WAKEUPI;    // enable int wakeup, moet dit niet 1<<WAKEUPE zijn?
         USBCON |= 1<<FRZCLK;
 
         if (!(USB_Options & USB_OPT_MANUAL_PLL))
@@ -282,11 +282,11 @@ void USBKB::gen()
 
     if (UDINT & 1<<EORSTI && UDIEN & 1<<EORSTE)
     {
-        UDINT &= ~(1<<EORSTI);
+        UDINT &= ~(1<<EORSTI);      // clear INT EORSTI
         state = DEVICE_STATE_Default;
         USB_Device_ConfigurationNumber = 0;
-        UDINT &= ~(1<<SUSPI);
-        UDIEN &= ~(1<<SUSPE);
+        UDINT &= ~(1<<SUSPI);       // clear INT SUSPI
+        UDIEN &= ~(1<<SUSPE);       // disable INT SUSPE
         UDIEN |= 1<<WAKEUPE;
         configureEndpoint(ENDPOINT_CONTROLEP, EP_TYPE_CONTROL, _control.size, 1);
         UEIENX |= 1<<RXSTPE;
@@ -355,6 +355,20 @@ uint16_t USBKB::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **desc
     return Size;
 }
 
+void USBKB::sendReport(USB_KeyboardReport_Data_t &report)
+{
+    _inpoint.select();
+
+    writeStream(&report, sizeof(report), NULL);
+    UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+    _outpoint.select();
+
+    if (UEINTX & 1<<RXOUTI)
+    {
+        read8();
+        UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+    }
+}
 
 void USBKB::Device_ProcessControlRequest()
 {
@@ -396,7 +410,7 @@ void USBKB::Device_ProcessControlRequest()
 
                 UEINTX &= ~(1<<RXSTPI);
                 write16(CurrentStatus);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
                 Endpoint_ClearStatusStage();
             }
 
@@ -442,7 +456,7 @@ void USBKB::Device_ProcessControlRequest()
                     sigDesc.Header.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.UnicodeString);
                     UEINTX &= ~(1<<RXSTPI);
-                    Endpoint_Write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
+                    write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
                     UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
                     return;
                 }
@@ -453,18 +467,18 @@ void USBKB::Device_ProcessControlRequest()
                     return;
                 }
 
-                UEINTX &= ~(1<<RXSTPI);
-                Endpoint_Write_Control_PStream_LE(DescriptorPointer, descSize);
-                UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+                UEINTX &= ~(1<<RXSTPI);     // clear setup
+                write_Control_PStream_LE(DescriptorPointer, descSize);
+                UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);    // clear out
             }
 
             break;
         case REQ_GetConfiguration:
             if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
             {
-                UEINTX &= ~(1<<RXSTPI);
+                UEINTX &= ~(1<<RXSTPI); // clear setup
                 write8(USB_Device_ConfigurationNumber);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
                 Endpoint_ClearStatusStage();
             }
 

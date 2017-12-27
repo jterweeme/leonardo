@@ -1,10 +1,39 @@
 #include "cdc.h"
 #include <avr/interrupt.h>
-#include <avr/power.h>
 #include <string.h>
 #include <avr/pgmspace.h>
 #include "misc.h"
 #include <stdio.h>
+
+static constexpr uint8_t
+    CDC_DSUBTYPE_CSInterface_Header           = 0x00,
+    CDC_DSUBTYPE_CSInterface_CallManagement   = 0x01,
+    CDC_DSUBTYPE_CSInterface_ACM              = 0x02,
+    CDC_DSUBTYPE_CSInterface_DirectLine       = 0x03,
+    CDC_DSUBTYPE_CSInterface_TelephoneRinger  = 0x04,
+    CDC_DSUBTYPE_CSInterface_TelephoneCall    = 0x05,
+    CDC_DSUBTYPE_CSInterface_Union            = 0x06,
+    CDC_DSUBTYPE_CSInterface_CountrySelection = 0x07,
+    CDC_DSUBTYPE_CSInterface_TelephoneOpModes = 0x08,
+    CDC_DSUBTYPE_CSInterface_USBTerminal      = 0x09,
+    CDC_DSUBTYPE_CSInterface_NetworkChannel   = 0x0A,
+    CDC_DSUBTYPE_CSInterface_ProtocolUnit     = 0x0B,
+    CDC_DSUBTYPE_CSInterface_ExtensionUnit    = 0x0C,
+    CDC_DSUBTYPE_CSInterface_MultiChannel     = 0x0D,
+    CDC_DSUBTYPE_CSInterface_CAPI             = 0x0E,
+    CDC_DSUBTYPE_CSInterface_Ethernet         = 0x0F,
+    CDC_DSUBTYPE_CSInterface_ATM              = 0x10,
+    CDC_NOTIFICATION_EPADDR = ENDPOINT_DIR_IN | 2,
+    CDC_TX_EPADDR = ENDPOINT_DIR_IN | 3,
+    CDC_RX_EPADDR = ENDPOINT_DIR_OUT | 4,
+    CDC_NOTIFICATION_EPSIZE = 8,
+    CDC_TXRX_EPSIZE = 16,
+    CDC_PARITY_None  = 0,
+    CDC_PARITY_Odd   = 1,
+    CDC_PARITY_Even  = 2,
+    CDC_PARITY_Mark  = 3,
+    CDC_PARITY_Space = 4;
+
 
 const DescDev PROGMEM DeviceDescriptor =
 {
@@ -79,9 +108,9 @@ struct USB_CDC_StdDescriptor_FunctionalUnion_t
 }
 __attribute__ ((packed));
 
-struct USB_Descriptor_Configuration_t
+struct MyConfiguration
 {
-    DescConf Config;
+    DescConf config;
     DescIface CDC_CCI_Interface;
     USB_CDC_Descriptor_FunctionalHeader_t    CDC_Functional_Header;
     USB_CDC_Descriptor_FunctionalACM_t       CDC_Functional_ACM;
@@ -93,7 +122,7 @@ struct USB_Descriptor_Configuration_t
 }
 __attribute__ ((packed));
 
-const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
+const MyConfiguration PROGMEM ConfigurationDescriptor =
 {
     {
         {
@@ -101,7 +130,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
             DTYPE_Configuration
         },
 
-        sizeof(USB_Descriptor_Configuration_t),
+        sizeof(MyConfiguration),
         2,
         1,
         NO_DESCRIPTOR,
@@ -233,7 +262,7 @@ uint16_t CDC::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAd
             break;
         case DTYPE_Configuration:
             addr = &ConfigurationDescriptor;
-            size = sizeof(USB_Descriptor_Configuration_t);
+            size = sizeof(ConfigurationDescriptor);
             break;
         case DTYPE_String:
             switch (descNumber)
@@ -329,7 +358,6 @@ CDC::CDC() :
     _outpoint(CDC_RX_EPADDR, CDC_TXRX_EPSIZE, EP_TYPE_BULK, 0),
     _notif(CDC_NOTIFICATION_EPADDR, CDC_NOTIFICATION_EPSIZE, EP_TYPE_INTERRUPT, 0)
 {
-    clock_prescale_set(clock_div_2);
     USBCON &= ~(1<<OTGPADE);
     UHWCON |= 1<<UVREGE;    // enable USB pad regulator
     USB_IsInitialized = true;
@@ -409,11 +437,11 @@ void CDC::gen()
         }
     }
 
-    if (UDINT & 1<<EORSTI && UDIEN & 1<<SUSPE)  // suspend
+    if (UDINT & 1<<SUSPI && UDIEN & 1<<SUSPE)  // suspend
     {
-        UDIEN &= ~(1<<SUSPE);
-        UDIEN |= 1<<WAKEUPI;
-        USBCON |= 1<<FRZCLK;
+        UDIEN &= ~(1<<SUSPE);   // disable int suspi
+        UDIEN |= 1<<WAKEUPE;    // enable int wakeupi
+        USBCON |= 1<<FRZCLK;    // clk freeze
 
         if (!(USB_Options & USB_OPT_MANUAL_PLL))
             PLLCSR = 0;
@@ -430,7 +458,7 @@ void CDC::gen()
             while (!(PLLCSR & 1<<PLOCK));   // PLL is ready?
         }
 
-        USBCON &= ~(1<<FRZCLK);
+        USBCON &= ~(1<<FRZCLK); // clk unfreeze
         UDINT &= ~(1<<WAKEUPI);
         UDIEN &= ~(1<<WAKEUPI);
         UDIEN |= 1<<SUSPE;
@@ -463,7 +491,7 @@ void CDC::com()
 {
     uint8_t PrevSelectedEndpoint = getCurrentEndpoint();
     _control.select();
-    UEIENX &= ~(1<<RXSTPE);
+    UEIENX &= ~(1<<RXSTPE);     // disable int rxstpi
     sei();
     Device_ProcessControlRequest();
     _control.select();
@@ -541,9 +569,6 @@ void CDC::Device_ProcessControlRequest()
     for (uint8_t i = 0; i < sizeof(USB_Request_Header_t); i++)
         RequestHeader[i] = read8();
 
-    char buf[50];
-    snprintf(buf, 50, "%u\r\n", USB_ControlRequest.bRequest);
-    Serial::instance->write(buf);
     EVENT_USB_Device_ControlRequest();
 
     if (UEINTX & 1<<RXSTPI) // endpoint isSetupReceived?
@@ -627,7 +652,7 @@ void CDC::Device_ProcessControlRequest()
                     sigDesc.Header.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.UnicodeString);
                     UEINTX &= ~(1<<RXSTPI);
-                    Endpoint_Write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
+                    write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
                     UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
                     return;
                 }
@@ -638,18 +663,18 @@ void CDC::Device_ProcessControlRequest()
                     return;
                 }
 
-                UEINTX &= ~(1<<RXSTPI);
-                Endpoint_Write_Control_PStream_LE(DescriptorPointer, descSize);
-                UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+                UEINTX &= ~(1<<RXSTPI); // clear setup
+                write_Control_PStream_LE(DescriptorPointer, descSize);
+                UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);    // clear out
             }
 
             break;
         case REQ_GetConfiguration:
             if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
             {
-                UEINTX &= ~(1<<RXSTPI);
+                UEINTX &= ~(1<<RXSTPI); // clear setup
                 write8(USB_Device_ConfigurationNumber);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
                 Endpoint_ClearStatusStage();
             }
 

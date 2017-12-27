@@ -30,7 +30,8 @@ inline char nibble(uint8_t n)
 
 int main()
 {
-    USBStream usb;
+    CDC cdc;
+    USBStream usb(&cdc);
     usb.writeString("Keyboard Test:\r\n");
     usb.flush();
     sei();

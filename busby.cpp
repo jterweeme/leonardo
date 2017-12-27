@@ -104,7 +104,7 @@ void USB::Endpoint_ClearStatusStage()
 {
     if (USB_ControlRequest.bmRequestType & REQDIR_DEVICETOHOST)
     {
-        while (!(UEINTX & 1<<RXOUTI))
+        while ((UEINTX & 1<<RXOUTI) == 0)
             if (state == DEVICE_STATE_Unattached)
                 return;
 
@@ -112,15 +112,15 @@ void USB::Endpoint_ClearStatusStage()
     }
     else
     {
-        while (!(UEINTX & 1<<TXINI))
+        while ((UEINTX & 1<<TXINI) == 0)
             if (state == DEVICE_STATE_Unattached)
                 return;
 
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+        UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
     }
 }
 
-bool USB::configureEndpoint(uint8_t addr, uint8_t Type, uint16_t Size, uint8_t Banks)
+bool USB::configureEndpoint(uint8_t addr, uint8_t Type, uint16_t Size, uint8_t banks)
 {
     uint8_t Number = addr & ENDPOINT_EPNUM_MASK;
 
@@ -128,7 +128,7 @@ bool USB::configureEndpoint(uint8_t addr, uint8_t Type, uint16_t Size, uint8_t B
         return false;
 
     uint8_t cfg0 = Type << EPTYPE0 | (addr & ENDPOINT_DIR_IN ? 1<<EPDIR : 0);
-    uint8_t cfg1 = 1<<ALLOC | (Banks > 1 ? 1<<EPBK0 : 0) | Endpoint_BytesToEPSizeMask(Size);
+    uint8_t cfg1 = 1<<ALLOC | (banks > 1 ? 1<<EPBK0 : 0) | Endpoint_BytesToEPSizeMask(Size);
 
     for (uint8_t EPNum = Number; EPNum < ENDPOINT_TOTAL_ENDPOINTS; EPNum++)
     {
@@ -219,17 +219,17 @@ void USB::Device_ClearSetFeature()
     Endpoint_ClearStatusStage();
 }
 
-uint8_t USB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Length)
+uint8_t USB::write_Control_Stream_LE(const void* const Buffer, uint16_t len)
 {
     uint8_t* DataStream = (uint8_t*)Buffer;
     bool LastPacketFull = false;
 
-    if (Length > USB_ControlRequest.wLength)
-        Length = USB_ControlRequest.wLength;
-    else if (!(Length))
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+    if (len > USB_ControlRequest.wLength)
+        len = USB_ControlRequest.wLength;
+    else if (!(len))
+        UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
 
-    while (Length || LastPacketFull)
+    while (len || LastPacketFull)
     {
         uint8_t USB_DeviceState_LCL = state;
 
@@ -246,20 +246,20 @@ uint8_t USB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t
         {
             uint16_t BytesInEndpoint = bytesInEndpoint();
 
-            while (Length && BytesInEndpoint < _control.size)
+            while (len && BytesInEndpoint < _control.size)
             {
                 write8(*DataStream);
                 DataStream++;
-                Length--;
+                len--;
                 BytesInEndpoint++;
             }
 
             LastPacketFull = BytesInEndpoint == _control.size;
-            UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
         }
     }
 
-    while (!(UEINTX & 1<<RXOUTI))
+    while ((UEINTX & 1<<RXOUTI) == 0)
     {
         uint8_t USB_DeviceState_LCL = state;
 
@@ -272,7 +272,7 @@ uint8_t USB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t
     return ENDPOINT_RWCSTREAM_NoError;
 }
 
-uint8_t USB::Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length)
+uint8_t USB::write_Control_PStream_LE(const void* const Buffer, uint16_t Length)
 {
     uint8_t* DataStream = (uint8_t*)Buffer;
     bool LastPacketFull = false;
@@ -280,7 +280,7 @@ uint8_t USB::Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_
     if (Length > USB_ControlRequest.wLength)
         Length = USB_ControlRequest.wLength;
     else if (!(Length))
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+        UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
 
     while (Length || LastPacketFull)
     {
@@ -308,7 +308,7 @@ uint8_t USB::Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_
             }
 
             LastPacketFull = BytesInEndpoint == _control.size;
-            UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
         }
     }
 
@@ -339,6 +339,136 @@ uint8_t USB::Endpoint_BytesToEPSizeMask(const uint16_t Bytes)
     return MaskVal<<EPSIZE0;
 }
 
+bool USB::configureEndpoint(Endpoint &ep)
+{
+    configureEndpoint(ep.addr, ep.type, ep.size, ep.banks);
+}
+
+uint8_t USB::nullStream(uint16_t len, uint16_t * const bytesProcessed)
+{
+    uint8_t errCode = Endpoint_WaitUntilReady();
+    uint16_t bytesInTransfer = 0;
+    
+    if (errCode)
+        return errCode;
+
+    if (bytesProcessed != NULL)
+        len -= *bytesProcessed;
+
+    while (len)
+    {
+        if ((UEINTX & 1<<RWAL) == 0) // read-write not allowed?
+        {
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+            
+            if (bytesProcessed != NULL)
+            {
+                *bytesProcessed += bytesInTransfer;
+                return ENDPOINT_RWSTREAM_IncompleteTransfer;
+            }
+
+            errCode = Endpoint_WaitUntilReady();
+
+            if (errCode)
+                return errCode;
+        }
+        else
+        {
+            write8(0);
+            len--;
+            bytesInTransfer++;
+        }
+    }
+    
+    return ENDPOINT_RWSTREAM_NoError;
+}
+
+uint8_t USB::readStream(void * const buf, uint16_t len, uint16_t * const bytes)
+{
+    uint8_t *dataStream = (uint8_t *)buf;
+    uint16_t bytesInTransfer = 0;
+    uint8_t errorCode = Endpoint_WaitUntilReady();
+
+    if (errorCode)
+        return errorCode;
+
+    if (bytes != NULL)
+    {
+        len -= *bytes;
+        dataStream += *bytes;
+    }
+
+    while (len)
+    {
+        if ((UEINTX & 1<<RWAL) == 0)    // read-write allowed?
+        {
+            UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);    // clear out
+
+            if (bytes != NULL)
+            {
+                *bytes += bytesInTransfer;
+                return ENDPOINT_RWSTREAM_IncompleteTransfer;
+            }
+            
+            errorCode = Endpoint_WaitUntilReady();
+
+            if (errorCode)
+                return errorCode;
+        }
+        else
+        {
+            *dataStream = read8();
+            dataStream += 1;
+            len--;
+            bytesInTransfer++;
+        }
+    }
+
+    return ENDPOINT_RWSTREAM_NoError;
+
+}
+
+uint8_t USB::writeStream(const void * const buf, uint16_t len, uint16_t * const bytes)
+{
+    uint8_t *dataStream = (uint8_t *)buf;
+    uint16_t bytesInTransfer = 0;
+    uint8_t errorCode;
+
+    if (errorCode = Endpoint_WaitUntilReady())
+        return errorCode;
+
+    if (bytes != NULL)
+    {
+        len -= *bytes;
+        dataStream += *bytes;
+    }
+
+    while (len)
+    {
+        if ((UEINTX & 1<<RWAL) == 0)    // read-write allowed?
+        {
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
+            
+            if (bytes != NULL)
+            {
+                *bytes += bytesInTransfer;
+                return ENDPOINT_RWSTREAM_IncompleteTransfer;
+            }
+
+            if (errorCode = Endpoint_WaitUntilReady())
+                return errorCode;
+        }
+        else
+        {
+            write8(*dataStream);
+            *dataStream += 1;
+            len--;
+            bytesInTransfer++;
+        }
+    }
+
+    return ENDPOINT_RWSTREAM_NoError;
+}
 
 
 

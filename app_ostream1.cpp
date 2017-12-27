@@ -7,17 +7,18 @@ inline char nibble(uint8_t n)
 
 int main()
 {
-    USBStream usb;
+    CDC cdc;
+    USBStream os(&cdc);
     
     while (true)
     {
         for (uint32_t i = 0; i < 0xffffffff; i++)
         {
             for (int8_t j = 7; j >= 0; j--)
-                usb.write(nibble(i >> (j << 2) & 0xf));
+                os.write(nibble(i >> (j << 2) & 0xf));
 
-            usb.writeString("\r\n");
-            usb.flush();
+            os.writeString("\r\n");
+            os.flush();
         }
     }
 }

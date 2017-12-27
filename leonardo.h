@@ -87,6 +87,7 @@ static volatile uint8_t
     *p_portb = (volatile uint8_t * const)portb,
     *p_pinc = (volatile uint8_t * const)pinc,
     *p_ddrc = (volatile uint8_t * const)ddrc,
+    *p_portc = (volatile uint8_t * const)portc,
     *p_adcl = (volatile uint8_t * const)adcl,
     *p_adch = (volatile uint8_t * const)adch,
     *p_adcsra = (volatile uint8_t * const)adcsra,

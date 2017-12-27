@@ -20,6 +20,13 @@ public:
     static void *malloc(size_t size) { return ::malloc(size); }
 };
 
+template <typename T, size_t N> struct MyArray
+{
+    T elems[N];
+    constexpr size_t size() const { return N; }
+    T &at(size_t n) const { return const_cast<T&>(elems[n]); }
+};
+
 class Serial
 {
 public:

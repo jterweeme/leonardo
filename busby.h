@@ -3,17 +3,15 @@
 #include <avr/io.h>
 #include <stddef.h>
 
-static constexpr uint8_t ENDPOINT_DIR_MASK = 0x80,
+static constexpr uint8_t
+    ENDPOINT_DIR_MASK = 0x80,
     ENDPOINT_DIR_OUT = 0x00,
     ENDPOINT_DIR_IN = 0x80,
-    PIPE_DIR_MASK = 0x80,
-    PIPE_DIR_OUT = 0x00,
-    PIPE_DIR_IN = 0x80,
-    EP_TYPE_MASK = 0x03,
-    EP_TYPE_CONTROL = 0x00,
-    EP_TYPE_ISOCHRONOUS = 0x01,
-    EP_TYPE_BULK = 0x02,
-    EP_TYPE_INTERRUPT = 0x03,
+    EP_TYPE_MASK = 3,
+    EP_TYPE_CONTROL = 0,
+    EP_TYPE_ISOCHRONOUS = 1,
+    EP_TYPE_BULK = 2,
+    EP_TYPE_INTERRUPT = 3,
     USB_PLL_PSC = 1<<PINDIV,       // for 16MHz; choose 0 for 8MHz
     USB_OPT_REG_DISABLED = 1<<1,
     USB_OPT_REG_ENABLED = 0<<1,
@@ -26,9 +24,9 @@ static constexpr uint8_t ENDPOINT_DIR_MASK = 0x80,
     USB_CONFIG_ATTR_RESERVED = 0x80,
     USB_CONFIG_ATTR_SELFPOWERED = 0x40,
     USB_CONFIG_ATTR_REMOTEWAKEUP = 0x20,
-    ENDPOINT_ATTR_NO_SYNC = 0 << 2,
-    ENDPOINT_ATTR_ASYNC = 1 << 2,
-    ENDPOINT_ATTR_ADAPTIVE = 2 << 2,
+    ENDPOINT_ATTR_NO_SYNC = 0<<2,
+    ENDPOINT_ATTR_ASYNC = 1<<2,
+    ENDPOINT_ATTR_ADAPTIVE = 2<<2,
     ENDPOINT_ATTR_SYNC = 3<<2,
     ENDPOINT_USAGE_DATA = 0<<4,
     ENDPOINT_USAGE_FEEDBACK = 1<<4,
@@ -60,14 +58,14 @@ static constexpr uint8_t ENDPOINT_DIR_MASK = 0x80,
     REQ_GetStatus = 0,
     REQ_ClearFeature = 1,
     REQ_SetFeature = 3,
-    REQ_SetAddress          = 5,
+    REQ_SetAddress = 5,
     REQ_GetDescriptor = 6,
-    REQ_SetDescriptor       = 7,
-    REQ_GetConfiguration    = 8,
-    REQ_SetConfiguration    = 9,
-    REQ_GetInterface        = 10,
-    REQ_SetInterface        = 11,
-    REQ_SynchFrame          = 12,
+    REQ_SetDescriptor = 7,
+    REQ_GetConfiguration = 8,
+    REQ_SetConfiguration = 9,
+    REQ_GetInterface = 10,
+    REQ_SetInterface = 11,
+    REQ_SynchFrame = 12,
     ENDPOINT_READYWAIT_NoError = 0,
     ENDPOINT_READYWAIT_EndpointStalled = 1,
     ENDPOINT_READYWAIT_DeviceDisconnected = 2,
@@ -80,26 +78,15 @@ static constexpr uint8_t ENDPOINT_DIR_MASK = 0x80,
     USB_CSCP_NoDeviceClass = 0,
     USB_CSCP_NoSpecificSubclass = 0,
     USB_CSCP_NoSpecificProtocol = 0,
-    FEATURE_SEL_EndpointHalt       = 0x00,
-    FEATURE_SEL_DeviceRemoteWakeup = 0x01,
-    FEATURE_SEL_TestMode = 0x02,
-    DEVICE_STATE_Unattached  = 0,
-    DEVICE_STATE_Powered = 1,
-    DEVICE_STATE_Default = 2,
-    DEVICE_STATE_Addressed = 3,
-    DEVICE_STATE_Configured = 4,
-    DEVICE_STATE_Suspended = 5,
-    USB_MODE_None   = 0,
-    USB_MODE_Device = 1,
-    USB_MODE_Host   = 2,
-    USB_MODE_UID    = 3,
-    DTYPE_Device          = 0x01,
-    DTYPE_Configuration   = 0x02,
-    DTYPE_String          = 0x03,
-    DTYPE_Interface       = 0x04,
-    DTYPE_Endpoint        = 0x05,
-    DTYPE_DeviceQualifier = 0x06,
-    DTYPE_Other           = 0x07,
+    USB_CSCP_NoDeviceSubclass = 0,
+    USB_CSCP_NoDeviceProtocol = 0,
+    DTYPE_Device          = 1,
+    DTYPE_Configuration   = 2,
+    DTYPE_String          = 3,
+    DTYPE_Interface       = 4,
+    DTYPE_Endpoint        = 5,
+    DTYPE_DeviceQualifier = 6,
+    DTYPE_Other           = 7,
     DTYPE_InterfacePower = 0x08,
     DTYPE_InterfaceAssociation = 0x0B,
     DTYPE_CSInterface = 0x24,
@@ -202,6 +189,7 @@ struct Endpoint
     const uint8_t banks;
 
     void select() { UENUM = addr & ENDPOINT_EPNUM_MASK; }
+    void reset() { UERST = 1<<(addr & ENDPOINT_EPNUM_MASK); UERST = 0; }
 
     Endpoint(uint8_t addr2, uint16_t size2, uint8_t type2, uint8_t banks2) :
         addr(addr2), size(size2), type(type2), banks(banks2) { }
@@ -210,6 +198,21 @@ struct Endpoint
 class USB
 {
 protected:
+    static const uint8_t
+        FEATURE_SEL_EndpointHalt       = 0x00,
+        FEATURE_SEL_DeviceRemoteWakeup = 0x01,
+        FEATURE_SEL_TestMode = 0x02,
+        DEVICE_STATE_Unattached  = 0,
+        DEVICE_STATE_Powered = 1,
+        DEVICE_STATE_Default = 2,
+        DEVICE_STATE_Addressed = 3,
+        DEVICE_STATE_Configured = 4,
+        DEVICE_STATE_Suspended = 5,
+        USB_MODE_None   = 0,
+        USB_MODE_Device = 1,
+        USB_MODE_Host   = 2,
+        USB_MODE_UID    = 3;
+protected:
     USB_Request_Header_t USB_ControlRequest;
     volatile bool USB_IsInitialized;
     volatile uint8_t state;
@@ -217,23 +220,27 @@ protected:
     bool USB_Device_CurrentlySelfPowered;
     bool USB_Device_RemoteWakeupEnabled;
     Endpoint _control;
-    uint8_t Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16_t Length);
-    uint8_t Endpoint_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length);
+    uint8_t write_Control_Stream_LE(const void * const buf, uint16_t len);
+    uint8_t write_Control_PStream_LE(const void * const buf, uint16_t len);
+    uint8_t writeStream(const void * const buf, uint16_t len, uint16_t * const bytes);
+    uint8_t readStream(void * const buf, uint16_t len, uint16_t * const bytes);
+    uint8_t nullStream(uint16_t len, uint16_t * const bytesProcessed);
     static constexpr uint8_t USB_Options = USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL;
     uint8_t Endpoint_WaitUntilReady();
     uint8_t getEndpointDirection();
     uint8_t getCurrentEndpoint() { return UENUM & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
     void selectEndpoint(uint8_t addr) { UENUM = addr & ENDPOINT_EPNUM_MASK; }
-    inline uint8_t read8() { return UEDATX; }
+    inline uint8_t read8() const { return UEDATX; }
     uint32_t read32();
     inline void write8(uint8_t dat) { UEDATX = dat; }
-    inline void write16(uint8_t dat) { UEDATX = dat & 0xff; UEDATX = dat >> 8; }
+    inline void write16(uint16_t dat) { UEDATX = dat & 0xff; UEDATX = dat >> 8; }
     void write32(uint32_t dat);
     inline uint16_t bytesInEndpoint() { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
     void Device_ClearSetFeature();
     void Device_GetSerialString(uint16_t *UnicodeString);
     void Endpoint_ClearStatusStage();
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
+    bool configureEndpoint(Endpoint &ep);
     uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes);
 public:
     static USB *instance;

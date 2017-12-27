@@ -23,7 +23,7 @@ uint32_t millis2()
     return g_millis;
 }
 
-void hexDump(uint8_t *point, ostream &serial)
+void hexDump(uint8_t *point, ostream &os)
 {
     for (uint16_t i = 0; i < 512; i += 16)
     {
@@ -31,18 +31,18 @@ void hexDump(uint8_t *point, ostream &serial)
         {
             char wbuf[10];  // write buffer
             snprintf(wbuf, 10, "%02x ", point[i + j]);
-            serial.write(wbuf);
+            os.write(wbuf);
         }
 
         for (uint8_t j = 0; j < 16; j++)
         {
             if (isprint(point[i + j]))
-                serial.write(point[i + j]);
+                os.write(point[i + j]);
             else
-                serial.write('.');
+                os.write('.');
         }
 
-        serial.write("\r\n");
+        os.write("\r\n");
     }   
 }
 
@@ -56,12 +56,13 @@ int main()
     sd.init(SPI_HALF_SPEED);
     uint8_t buf[512];
     sd.readBlock(0, buf);
-    USBStream serial;
+    CDC cdc;
+    USBStream cout(&cdc);
 
 
     while (true)
     {
-        hexDump(buf, serial);
+        hexDump(buf, cout);
 
         for (volatile uint32_t i = 0; i < 0xfffff; i++)
             ;

@@ -7,7 +7,8 @@
 
 int main()
 {
-    USBStream usb;
+    CDC cdc;
+    USBStream usb(&cdc);
     PS2Mouse mouse;
     mouse.write(0xff);
     mouse.read();
