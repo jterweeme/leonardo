@@ -329,6 +329,8 @@ uint8_t const SD_CARD_TYPE_SDHC = 3;
 
 class Sd2Card
 {
+private:
+    uint32_t _ticks = 0;
 public:
     Sd2Card(Pin *cs) : _cs(cs) { }
     uint32_t cardSize(void);
@@ -350,6 +352,7 @@ public:
     uint8_t writeData(const uint8_t* src);
     uint8_t writeStart(uint32_t blockNumber, uint32_t eraseCount);
     uint8_t writeStop();
+    void tick() { _ticks++; }
 private:
     Pin * const _cs;
     uint32_t block_;

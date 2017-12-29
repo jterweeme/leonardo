@@ -1,8 +1,6 @@
 #include "zd2card.h"
 #include <avr/io.h>
 
-extern uint32_t millis2();
-
 static void spiSend(uint8_t b)
 {
     SPDR = b;
@@ -113,7 +111,7 @@ uint8_t Sd2Card::init(uint8_t sckRateID)
 {
     errorCode_ = inBlock_ = partialBlockRead_ = type_ = 0;
     // 16-bit init start time allows over a minute
-    uint16_t t0 = (uint16_t)millis2();
+    uint16_t t0 = (uint16_t)_ticks;
     uint32_t arg;
     _cs->direction(OUTPUT);
     _cs->set();
@@ -136,34 +134,44 @@ uint8_t Sd2Card::init(uint8_t sckRateID)
     // command to go idle in SPI mode
     while ((status_ = cardCommand(CMD0, 0)) != R1_IDLE_STATE)
     {
-        if (((uint16_t)millis2() - t0) > SD_INIT_TIMEOUT)
+        if (((uint16_t)_ticks - t0) > SD_INIT_TIMEOUT)
         {
             error(SD_CARD_ERROR_CMD0);
             goto fail;
         }
     }
-  // check SD version
-  if ((cardCommand(CMD8, 0x1AA) & R1_ILLEGAL_COMMAND)) {
-    type(SD_CARD_TYPE_SD1);
-  } else {
-    // only need last byte of r7 response
-    for (uint8_t i = 0; i < 4; i++) status_ = spiRec();
-    if (status_ != 0XAA) {
-      error(SD_CARD_ERROR_CMD8);
-      goto fail;
-    }
-    type(SD_CARD_TYPE_SD2);
-  }
-  // initialize card and send host supports SDHC if SD2
-  arg = type() == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
 
-  while ((status_ = cardAcmd(ACMD41, arg)) != R1_READY_STATE) {
-    // check for timeout
-    if (((uint16_t)millis2() - t0) > SD_INIT_TIMEOUT) {
+    // check SD version
+    if ((cardCommand(CMD8, 0x1AA) & R1_ILLEGAL_COMMAND))
+    {
+        type(SD_CARD_TYPE_SD1);
+    }
+    else
+    {
+        // only need last byte of r7 response
+        for (uint8_t i = 0; i < 4; i++)
+            status_ = spiRec();
+
+        if (status_ != 0XAA)
+        {
+            error(SD_CARD_ERROR_CMD8);
+            goto fail;
+        }
+
+        type(SD_CARD_TYPE_SD2);
+    }
+
+    // initialize card and send host supports SDHC if SD2
+    arg = type() == SD_CARD_TYPE_SD2 ? 0X40000000 : 0;
+
+    while ((status_ = cardAcmd(ACMD41, arg)) != R1_READY_STATE)
+    {
+        // check for timeout
+        if (((uint16_t)_ticks - t0) > SD_INIT_TIMEOUT) {
       error(SD_CARD_ERROR_ACMD41);
       goto fail;
+        }
     }
-  }
   // if SD2 read OCR register to check for SDHC card
   if (type() == SD_CARD_TYPE_SD2) {
     if (cardCommand(CMD58, 0)) {
@@ -328,33 +336,39 @@ uint8_t Sd2Card::setSckRate(uint8_t sckRateID)
 // wait for card to go not busy
 uint8_t Sd2Card::waitNotBusy(uint16_t timeoutMillis)
 {
-  uint16_t t0 = millis2();
-  do {
-    if (spiRec() == 0XFF) return true;
-  }
-  while (((uint16_t)millis2() - t0) < timeoutMillis);
-  return false;
+    uint16_t t0 = (uint16_t)_ticks;
+
+    do
+    {
+        if (spiRec() == 0XFF)
+        return true;
+    }
+    while (((uint16_t)_ticks - t0) < timeoutMillis);
+    return false;
 }
 
 /** Wait for start block token */
 uint8_t Sd2Card::waitStartBlock()
 {
-  uint16_t t0 = millis2();
-  while ((status_ = spiRec()) == 0XFF) {
-    if (((uint16_t)millis2() - t0) > SD_READ_TIMEOUT) {
-      error(SD_CARD_ERROR_READ_TIMEOUT);
-      goto fail;
+    uint16_t t0 = (uint16_t)_ticks;
+    while ((status_ = spiRec()) == 0XFF)
+    {
+        if (((uint16_t)_ticks - t0) > SD_READ_TIMEOUT)
+        {
+            error(SD_CARD_ERROR_READ_TIMEOUT);
+            goto fail;
+        }
     }
-  }
-  if (status_ != DATA_START_BLOCK) {
-    error(SD_CARD_ERROR_READ);
-    goto fail;
-  }
-  return true;
 
- fail:
-  chipSelectHigh();
-  return false;
+    if (status_ != DATA_START_BLOCK)
+    {
+        error(SD_CARD_ERROR_READ);
+        goto fail;
+    }
+    return true;
+fail:
+    chipSelectHigh();
+    return false;
 }
 //------------------------------------------------------------------------------
 /**

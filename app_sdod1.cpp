@@ -2,6 +2,7 @@
 makes a hexdump of an SD card, so doesn't use the
 FAT code
 
+D9: CS
 */
 
 #include "zd2card.h"
@@ -11,16 +12,11 @@ FAT code
 #include "board.h"
 #include "stream.h"
 
-uint32_t g_millis = 0;
+Sd2Card *g_sd;
 
 ISR(TIMER0_OVF_vect)
 {
-    g_millis++;
-}
-
-uint32_t millis2()
-{
-    return g_millis;
+    g_sd->tick();
 }
 
 void hexDump(uint8_t *point, ostream &os)
@@ -53,6 +49,7 @@ int main()
     sei();
     Board board;
     Sd2Card sd(&board.pin9);
+    g_sd = &sd;
     sd.init(SPI_HALF_SPEED);
     uint8_t buf[512];
     sd.readBlock(0, buf);
@@ -63,6 +60,7 @@ int main()
     while (true)
     {
         hexDump(buf, cout);
+        cout.flush();
 
         for (volatile uint32_t i = 0; i < 0xfffff; i++)
             ;

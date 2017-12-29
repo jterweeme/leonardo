@@ -45,7 +45,7 @@ app_usbkb4.elf: app_usbkb4.o usbkb2.o busby2.o
 app_usbloop1.elf: app_usbloop1.o cdc.o busby.o misc.o
 app_usbloop2.elf: app_usbloop2.o
 app_usbsd1.elf: app_usbsd1.o usbsd.o busby.o misc.o
-app_usbsd2.elf: app_usbsd2.o
+app_usbsd2.elf: app_usbsd2.o busby.o misc.o
 app_vga1.elf: app_vga1.o vga.o
 app_vgacalc1.elf: app_vgacalc1.o vga.o keyboard.o misc.o calc.o
 

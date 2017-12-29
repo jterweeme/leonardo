@@ -227,6 +227,7 @@ protected:
     uint8_t nullStream(uint16_t len, uint16_t * const bytesProcessed);
     static constexpr uint8_t USB_Options = USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL;
     uint8_t Endpoint_WaitUntilReady();
+    uint8_t waitUntilReady() { return Endpoint_WaitUntilReady(); }
     uint8_t getEndpointDirection();
     uint8_t getCurrentEndpoint() { return UENUM & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
     void selectEndpoint(uint8_t addr) { UENUM = addr & ENDPOINT_EPNUM_MASK; }
@@ -235,6 +236,7 @@ protected:
     inline void write8(uint8_t dat) { UEDATX = dat; }
     inline void write16(uint16_t dat) { UEDATX = dat & 0xff; UEDATX = dat >> 8; }
     void write32(uint32_t dat);
+    void write32be(uint32_t dat);
     inline uint16_t bytesInEndpoint() { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
     void Device_ClearSetFeature();
     void Device_GetSerialString(uint16_t *UnicodeString);

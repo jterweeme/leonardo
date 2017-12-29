@@ -174,7 +174,7 @@ Serial *Serial::instance;
 
 void Serial::init() const
 {
-    *p_ubrr1 = 51;    // 9600baud @16MHz
+    *p_ubrr1 = 103;    // 9600baud @16MHz
     *p_ucsr1b = 1<<txen1;
 }
 

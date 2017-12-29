@@ -33,6 +33,14 @@ void USB::write32(uint32_t Data)
     UEDATX = Data >> 24;
 }
 
+void USB::write32be(uint32_t dat)
+{
+    UEDATX = dat >> 24;
+    UEDATX = dat >> 16;
+    UEDATX = dat >> 8;
+    UEDATX = dat & 0xff;
+}
+
 void USB::Device_GetSerialString(uint16_t *UnicodeString)
 {
     uint_reg_t CurrentGlobalInt = SREG;
