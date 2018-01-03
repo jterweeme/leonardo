@@ -256,7 +256,7 @@ void TFT::writeCmdData(uint16_t cmd, uint16_t data) const
 void TFT::reset()
 {
     // control pins
-    DDRF |= 1<<0 | 1<<1 | 1<<4 | 1<<5 | 1<<6 | 1<<7;
+    DDRF |= 1<<1 | 1<<4 | 1<<5 | 1<<6 | 1<<7;
 
     // data pins
     DDRB |= 1<<4 | 1<<5;

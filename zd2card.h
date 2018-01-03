@@ -38,18 +38,16 @@ uint8_t const ACMD23 = 0X17;
     activates the card's initialization process */
 uint8_t const ACMD41 = 0X29;
 
-uint8_t const R1_READY_STATE = 0X00;
+uint8_t const R1_READY_STATE = 0x00;
 /** status for card in the idle state */
-uint8_t const R1_IDLE_STATE = 0X01;
+uint8_t const R1_IDLE_STATE = 0x01;
 /** status bit for illegal command */
-uint8_t const R1_ILLEGAL_COMMAND = 0X04;
+uint8_t const R1_ILLEGAL_COMMAND = 0x04;
 /** start data token for read or write single block*/
-uint8_t const DATA_START_BLOCK = 0XFE;
-/** stop token for write multiple blocks*/
-uint8_t const STOP_TRAN_TOKEN = 0XFD;
-/** start data token for write multiple blocks*/
-uint8_t const WRITE_MULTIPLE_TOKEN = 0XFC;
-/** mask for data response tokens after a write block operation */
+uint8_t const DATA_START_BLOCK = 0xFE;
+uint8_t const STOP_TRAN_TOKEN = 0xFD; // stop token for write multiple blocks
+uint8_t const WRITE_MULTIPLE_TOKEN = 0XFC; // start data token for write multiple blocks
+// mask for data response tokens after a write block operation
 uint8_t const DATA_RES_MASK = 0X1F;
 /** write data accepted token */
 uint8_t const DATA_RES_ACCEPTED = 0X05;
@@ -223,58 +221,23 @@ uint8_t const SPI_QUARTER_SPEED = 2;
 // SPI pin definitions
 //
 #ifndef SOFTWARE_SPI
-// hardware pin defs
-/**
- * SD Chip Select pin
- *
- * Warning if this pin is redefined the hardware SS will pin will be enabled
- * as an output by init().  An avr processor will not function as an SPI
- * master unless SS is set to output mode.
- */
-/** The default chip select pin for the SD card is SS. */
-
-uint8_t const SS_PIN = 53;
-uint8_t const MOSI_PIN = 51;
 uint8_t const MISO_PIN = 50;
 uint8_t const SCK_PIN = 52;
 
 
-uint8_t const  SD_CHIP_SELECT_PIN = SS_PIN;
-// The following three pins must not be redefined for hardware SPI.
-/** SPI Master Out Slave In pin */
-uint8_t const  SPI_MOSI_PIN = MOSI_PIN;
-/** SPI Master In Slave Out pin */
 uint8_t const  SPI_MISO_PIN = MISO_PIN;
-/** SPI Clock pin */
 uint8_t const  SPI_SCK_PIN = SCK_PIN;
-/** optimize loops for hardware SPI */
 #define OPTIMIZE_HARDWARE_SPI
 
 #else  // SOFTWARE_SPI
-// define software SPI pins so Mega can use unmodified GPS Shield
-/** SPI chip select pin */
-uint8_t const SD_CHIP_SELECT_PIN = 10;
-/** SPI Master Out Slave In pin */
-uint8_t const SPI_MOSI_PIN = 11;
-/** SPI Master In Slave Out pin */
 uint8_t const SPI_MISO_PIN = 12;
-/** SPI Clock pin */
 uint8_t const SPI_SCK_PIN = 13;
 #endif  // SOFTWARE_SPI
-//------------------------------------------------------------------------------
-/** Protect block zero from write if nonzero */
 #define SD_PROTECT_BLOCK_ZERO 1
-/** init timeout ms */
 uint16_t const SD_INIT_TIMEOUT = 2000;
-/** erase timeout ms */
 uint16_t const SD_ERASE_TIMEOUT = 10000;
-/** read timeout ms */
 uint16_t const SD_READ_TIMEOUT = 300;
-/** write time out ms */
 uint16_t const SD_WRITE_TIMEOUT = 600;
-//------------------------------------------------------------------------------
-// SD card errors
-/** timeout error for command CMD0 */
 uint8_t const SD_CARD_ERROR_CMD0 = 0X1;
 /** CMD8 was not accepted - not a valid SD card*/
 uint8_t const SD_CARD_ERROR_CMD8 = 0X2;
@@ -309,23 +272,19 @@ uint8_t const SD_CARD_ERROR_STOP_TRAN = 0X10;
 /** card returned an error token as a response to a write operation */
 uint8_t const SD_CARD_ERROR_WRITE = 0X11;
 /** attempt to write protected block zero */
-uint8_t const SD_CARD_ERROR_WRITE_BLOCK_ZERO = 0X12;
+uint8_t constexpr SD_CARD_ERROR_WRITE_BLOCK_ZERO = 0X12;
 /** card did not go ready for a multiple block write */
-uint8_t const SD_CARD_ERROR_WRITE_MULTIPLE = 0X13;
+uint8_t constexpr SD_CARD_ERROR_WRITE_MULTIPLE = 0X13;
 /** card returned an error to a CMD13 status check after a write */
-uint8_t const SD_CARD_ERROR_WRITE_PROGRAMMING = 0X14;
+uint8_t constexpr SD_CARD_ERROR_WRITE_PROGRAMMING = 0X14;
 /** timeout occurred during write programming */
-uint8_t const SD_CARD_ERROR_WRITE_TIMEOUT = 0X15;
-/** incorrect rate selected */
-uint8_t const SD_CARD_ERROR_SCK_RATE = 0X16;
-//------------------------------------------------------------------------------
-// card types
-/** Standard capacity V1 SD card */
-uint8_t const SD_CARD_TYPE_SD1 = 1;
-/** Standard capacity V2 SD card */
-uint8_t const SD_CARD_TYPE_SD2 = 2;
-/** High Capacity SD card */
-uint8_t const SD_CARD_TYPE_SDHC = 3;
+uint8_t constexpr SD_CARD_ERROR_WRITE_TIMEOUT = 0X15;
+
+static uint8_t constexpr
+    SD_CARD_ERROR_SCK_RATE = 0x16,  // incorrect rate selected
+    SD_CARD_TYPE_SD1 = 1,
+    SD_CARD_TYPE_SD2 = 2,
+    SD_CARD_TYPE_SDHC = 3;
 
 class Sd2Card
 {

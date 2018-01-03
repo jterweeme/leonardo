@@ -5,11 +5,9 @@ PS-CLK: SDA/PD1/INT1
 
 #include "stream.h"
 #include <avr/interrupt.h>
-#include <avr/pgmspace.h>
-
-#define F_CPU 16000000UL
-#include <util/delay.h>
 #include "keyboard.h"
+
+#include "misc.h"
 
 PS2Keyboard *g_kb;
 
@@ -18,7 +16,7 @@ ISR(TIMER0_OVF_vect)
     g_kb->timeTick();
 }
 
-ISR(INT1_vect)
+ISR(INT0_vect)
 {
     g_kb->isr();
 }
@@ -30,19 +28,19 @@ inline char nibble(uint8_t n)
 
 int main()
 {
-    CDC cdc;
-    USBStream usb(&cdc);
-    usb.writeString("Keyboard Test:\r\n");
-    usb.flush();
     sei();
     TCCR0A = 0;
     TCCR0B = 1<<CS01 | 1<<CS00;     // clk/64
     TCNT0 = 0;
     TIMSK0 = 1<<TOIE0;              // timer0 overflow generates interrupt
-    EICRA |= 1<<ISC11;  // ext int 1 falling edge
-    EIMSK |= 1<<INT1;   // enable int1
-    PS2Keyboard keyboard;
+    EICRA |= 1<<ISC00 | 1<<ISC01;  // ext int 0 falling edge
+    EIMSK |= 1<<INT0;   // enable int0
+    Board b;
+    PS2Keyboard keyboard(&b.pin8);
     g_kb = &keyboard;
+    CDC cdc;
+    USBStream os(&cdc);
+    os.writeString("Keyboard Test:\r\n");
 
     while (true)
     {
@@ -50,10 +48,10 @@ int main()
 
         if (x > 0)
         {
-            usb.write(nibble(x >> 4));
-            usb.write(nibble(x & 0xf));
-            usb.writeString("\r\n");
-            usb.flush();
+            os.write(nibble(x >> 4));
+            os.write(nibble(x & 0xf));
+            os.writeString("\r\n");
+            os.flush();
         }
     }
 

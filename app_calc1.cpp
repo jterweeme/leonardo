@@ -1,11 +1,19 @@
 /*
 TFT calculator
 
-data 0 = D8 (PB4)
-data 1 = D9 (PB5)
-data 2 = D2 (PD1)
-
-
+LCD data 0 = D8 (PB4)
+LCD data 1 = D9 (PB5)
+LCD data 2 = D2 (PD1)
+LCD data 3 = D3 (PD0)
+LCD data 4 = D4 (PD4)
+LCD data 5 = D5 (PC6)
+LCD data 6 = D6 (PD7)
+LCD data 7 = D7 (PE6)
+LCD RD     = A0 (PF7)
+LCD WR     = A1 (PF6)
+LCD RS     = A2 (PF5)
+LCD CS     = A3 (PF4)
+LCD RST    = A4 (PF1)
 */
 
 #include "st7783.h"
@@ -39,7 +47,8 @@ public:
 class GUI
 {
 public:
-    static const uint8_t ID_BTN1 = 101,
+    static const uint8_t
+        ID_BTN1 = 101,
         ID_BTN2 = 102,
         ID_BTN3 = 103,
         ID_BTN4 = 104,
@@ -172,8 +181,6 @@ int main()
     GUI gui(&tft);
     gui.init();
     gui.draw();
-    Serial s;
-    s.init();
     TouchScreen ts;
     OutputLine ol(&tft);
     Calculator calc(&ol);
@@ -181,17 +188,21 @@ int main()
     Mul mul;
     Div div;
     calc.reset();
+#if 0
     CDC cdc;
     USBStream cout(&cdc);
+#else
+    Serial s;
+    s.init();
+    UARTStream cout(&s);
+    cout.writeString("main()\r\n");
+#endif
     uint8_t prev_id = 0;
     uint8_t id;
-    *p_ddrc |= 1<<7;
 
     while (true)
     {
-        *p_portc |= 1<<7;
         TSPoint p = ts.getPoint(analog);
-        *p_portc &= ~(1<<7);
 
         if (p.z > 200)
         {

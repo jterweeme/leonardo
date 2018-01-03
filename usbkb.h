@@ -46,39 +46,56 @@ static constexpr uint8_t
     HID_KEYBOARD_SC_W = 0x1A,
     HID_KEYBOARD_SC_X = 0x1B,
     HID_KEYBOARD_SC_Y = 0x1C,
-    HID_KEYBOARD_SC_Z = 0x1D;
+    HID_KEYBOARD_SC_Z = 0x1D,
+    HID_KEYBOARD_SC_ENTER                           =  0x28,
+    HID_KEYBOARD_SC_ESCAPE                          =  0x29,
+    HID_KEYBOARD_SC_BACKSPACE                       =  0x2A,
+    HID_KEYBOARD_SC_TAB                             =  0x2B,
+    HID_KEYBOARD_SC_SPACE                           =  0x2C,
+    HID_KEYBOARD_SC_MINUS_AND_UNDERSCORE            =  0x2D,
+    HID_KEYBOARD_SC_EQUAL_AND_PLUS                  =  0x2E,
+    HID_KEYBOARD_SC_OPENING_BRACKET_AND_OPENING_BRACE = 0x2F,
+    HID_KEYBOARD_SC_CLOSING_BRACKET_AND_CLOSING_BRACE = 0x30,
+    HID_KEYBOARD_SC_BACKSLASH_AND_PIPE              =  0x31,
+    HID_KEYBOARD_SC_F1 = 0x3A,
+    HID_KEYBOARD_SC_F2 = 0x3B,
+    HID_KEYBOARD_SC_F3 = 0x3C,
+    HID_KEYBOARD_SC_F4 = 0x3D,
+    HID_KEYBOARD_SC_F5 = 0x3E,
+    HID_KEYBOARD_SC_F6 = 0x3F,
+    HID_KEYBOARD_SC_F7 = 0x40,
+    HID_KEYBOARD_SC_F8 = 0x41,
+    HID_KEYBOARD_SC_F9 = 0x42,
+    HID_KEYBOARD_SC_F10 = 0x43,
+    HID_KEYBOARD_SC_F11 = 0x44,
+    HID_KEYBOARD_SC_F12 =  0x45,
+    HID_KEYBOARD_SC_PRINT_SCREEN    =  0x46,
+    HID_KEYBOARD_SC_SCROLL_LOCK     =  0x47,
+    HID_KEYBOARD_SC_PAUSE           =  0x48,
+    HID_KEYBOARD_SC_INSERT          =  0x49,
+    HID_KEYBOARD_SC_HOME            =  0x4A,
+    HID_KEYBOARD_SC_PAGE_UP         =  0x4B,
+    HID_KEYBOARD_SC_DELETE          =  0x4C,
+    HID_KEYBOARD_SC_END             =  0x4D,
+    HID_KEYBOARD_SC_PAGE_DOWN       =  0x4E,
+    HID_KEYBOARD_SC_RIGHT_ARROW     =  0x4F,
+    HID_KEYBOARD_SC_LEFT_ARROW      =  0x50,
+    HID_KEYBOARD_SC_DOWN_ARROW      =  0x51,
+    HID_KEYBOARD_SC_UP_ARROW        =  0x52,
+    HID_KEYBOARD_MODIFIER_LEFTCTRL = 1<<0,
+    HID_KEYBOARD_MODIFIER_LEFTSHIFT = 1<<1,
+    HID_KEYBOARD_MODIFIER_LEFTALT    = 1<<2,
+    HID_KEYBOARD_MODIFIER_LEFTGUI    = 1<<3,
+    HID_KEYBOARD_MODIFIER_RIGHTCTRL  = 1<<4,
+    HID_KEYBOARD_MODIFIER_RIGHTSHIFT = 1<<5,
+    HID_KEYBOARD_MODIFIER_RIGHTALT   = 1<<6,
+    HID_KEYBOARD_MODIFIER_RIGHTGUI   = 1<<7;
 
-struct USB_KeyboardReport_Data_t
+struct KBReport
 {
     uint8_t modifier;
     uint8_t reserved;
     uint8_t keyCode[6];
-}
-__attribute__ ((packed));
-
-struct USB_CDC_Descriptor_FunctionalUnion_t
-{
-    DescHeader Header;
-    uint8_t Subtype;
-    uint8_t MasterInterfaceNumber;
-    uint8_t SlaveInterfaceNumber;
-}
-__attribute__ ((packed));
-
-struct USB_CDC_Descriptor_FunctionalACM_t
-{
-    DescHeader Header;
-    uint8_t Subtype;
-    uint8_t Capabilities;
-}
-__attribute__ ((packed));
-
-
-struct USB_CDC_Descriptor_FunctionalHeader_t
-{
-    DescHeader Header;
-    uint8_t Subtype;
-    uint16_t CDCSpecification;
 }
 __attribute__ ((packed));
 
@@ -101,11 +118,8 @@ private:
     void Device_ProcessControlRequest();
     uint16_t getDescriptor(uint16_t value, uint8_t wIndex, const void **descAddr);
 public:
-    void sendReport(USB_KeyboardReport_Data_t &report);
+    void sendReport(KBReport &report);
     USBKB();
-    void gen();
-    void com();
-    void usbTask();
 };
 
 #endif

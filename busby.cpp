@@ -43,7 +43,7 @@ void USB::write32be(uint32_t dat)
 
 void USB::Device_GetSerialString(uint16_t *UnicodeString)
 {
-    uint_reg_t CurrentGlobalInt = SREG;
+    uint8_t currentGlobalInt = SREG;
     cli();
     uint8_t SigReadAddress = INTERNAL_SERIAL_START_ADDRESS;
 
@@ -65,11 +65,11 @@ void USB::Device_GetSerialString(uint16_t *UnicodeString)
     }
 
     GCC_MEMORY_BARRIER();
-    SREG = CurrentGlobalInt;
+    SREG = currentGlobalInt;
     GCC_MEMORY_BARRIER();
 }
 
-uint8_t USB::Endpoint_WaitUntilReady()
+uint8_t USB::waitUntilReady()
 {
     uint16_t TimeoutMSRem = USB_STREAM_TIMEOUT_MS;
     uint16_t PreviousFrameNumber = UDFNUM;
@@ -108,9 +108,9 @@ uint8_t USB::Endpoint_WaitUntilReady()
     }
 }
 
-void USB::Endpoint_ClearStatusStage()
+void USB::clearStatusStage()
 {
-    if (USB_ControlRequest.bmRequestType & REQDIR_DEVICETOHOST)
+    if (_ctrlReq.bmRequestType & REQDIR_DEVICETOHOST)
     {
         while ((UEINTX & 1<<RXOUTI) == 0)
             if (state == DEVICE_STATE_Unattached)
@@ -182,19 +182,19 @@ USB::USB() :
 
 void USB::Device_ClearSetFeature()
 {
-    switch (USB_ControlRequest.bmRequestType & CONTROL_REQTYPE_RECIPIENT)
+    switch (_ctrlReq.bmRequestType & CONTROL_REQTYPE_RECIPIENT)
     {
     case REQREC_DEVICE:
-        if ((uint8_t)USB_ControlRequest.wValue == FEATURE_SEL_DeviceRemoteWakeup)
-            USB_Device_RemoteWakeupEnabled = USB_ControlRequest.bRequest == REQ_SetFeature;
+        if ((uint8_t)_ctrlReq.wValue == FEATURE_SEL_DeviceRemoteWakeup)
+            USB_Device_RemoteWakeupEnabled = _ctrlReq.bRequest == REQ_SetFeature;
         else
             return;
 
         break;
     case REQREC_ENDPOINT:
-        if ((uint8_t)USB_ControlRequest.wValue == FEATURE_SEL_EndpointHalt)
+        if ((uint8_t)_ctrlReq.wValue == FEATURE_SEL_EndpointHalt)
         {
-            uint8_t EndpointIndex = ((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
+            uint8_t EndpointIndex = ((uint8_t)_ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
 
             if (EndpointIndex == ENDPOINT_CONTROLEP)
                 return;
@@ -203,7 +203,7 @@ void USB::Device_ClearSetFeature()
 
             if (UECONX & 1<<EPEN)
             {
-                if (USB_ControlRequest.bRequest == REQ_SetFeature)
+                if (_ctrlReq.bRequest == REQ_SetFeature)
                 {
                     UECONX |= 1<<STALLRQ;
                 }
@@ -224,7 +224,7 @@ void USB::Device_ClearSetFeature()
 
     selectEndpoint(ENDPOINT_CONTROLEP);
     UEINTX &= ~(1<<RXSTPI);
-    Endpoint_ClearStatusStage();
+    clearStatusStage();
 }
 
 uint8_t USB::write_Control_Stream_LE(const void* const Buffer, uint16_t len)
@@ -232,9 +232,9 @@ uint8_t USB::write_Control_Stream_LE(const void* const Buffer, uint16_t len)
     uint8_t* DataStream = (uint8_t*)Buffer;
     bool LastPacketFull = false;
 
-    if (len > USB_ControlRequest.wLength)
-        len = USB_ControlRequest.wLength;
-    else if (!(len))
+    if (len > _ctrlReq.wLength)
+        len = _ctrlReq.wLength;
+    else if (!len)
         UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
 
     while (len || LastPacketFull)
@@ -285,9 +285,9 @@ uint8_t USB::write_Control_PStream_LE(const void* const Buffer, uint16_t Length)
     uint8_t* DataStream = (uint8_t*)Buffer;
     bool LastPacketFull = false;
 
-    if (Length > USB_ControlRequest.wLength)
-        Length = USB_ControlRequest.wLength;
-    else if (!(Length))
+    if (Length > _ctrlReq.wLength)
+        Length = _ctrlReq.wLength;
+    else if (!Length)
         UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
 
     while (Length || LastPacketFull)
@@ -354,7 +354,7 @@ bool USB::configureEndpoint(Endpoint &ep)
 
 uint8_t USB::nullStream(uint16_t len, uint16_t * const bytesProcessed)
 {
-    uint8_t errCode = Endpoint_WaitUntilReady();
+    uint8_t errCode = waitUntilReady();
     uint16_t bytesInTransfer = 0;
     
     if (errCode)
@@ -375,7 +375,7 @@ uint8_t USB::nullStream(uint16_t len, uint16_t * const bytesProcessed)
                 return ENDPOINT_RWSTREAM_IncompleteTransfer;
             }
 
-            errCode = Endpoint_WaitUntilReady();
+            errCode = waitUntilReady();
 
             if (errCode)
                 return errCode;
@@ -395,7 +395,7 @@ uint8_t USB::readStream(void * const buf, uint16_t len, uint16_t * const bytes)
 {
     uint8_t *dataStream = (uint8_t *)buf;
     uint16_t bytesInTransfer = 0;
-    uint8_t errorCode = Endpoint_WaitUntilReady();
+    uint8_t errorCode = waitUntilReady();
 
     if (errorCode)
         return errorCode;
@@ -418,7 +418,7 @@ uint8_t USB::readStream(void * const buf, uint16_t len, uint16_t * const bytes)
                 return ENDPOINT_RWSTREAM_IncompleteTransfer;
             }
             
-            errorCode = Endpoint_WaitUntilReady();
+            errorCode = waitUntilReady();
 
             if (errorCode)
                 return errorCode;
@@ -436,13 +436,96 @@ uint8_t USB::readStream(void * const buf, uint16_t len, uint16_t * const bytes)
 
 }
 
+void USB::com()
+{
+    uint8_t prevSelectedEndp = getCurrentEndpoint();
+    _control.select();
+    UEIENX &= ~(1<<RXSTPE);
+    sei();
+    Device_ProcessControlRequest();
+    _control.select();
+    UEIENX |= 1<<RXSTPE;
+    selectEndpoint(prevSelectedEndp);
+}
+
+ISR(USB_COM_vect)
+{
+    USB::instance->com();
+}
+
+ISR(USB_GEN_vect)
+{
+    USB::instance->gen();
+}
+
+void USB::gen()
+{   
+    if (UDINT & 1<<SOFI && UDIEN & 1<<SOFE)
+        UDINT &= ~(1<<SOFI);
+
+    if (USBINT & 1<<VBUSTI && USBCON & 1<<VBUSTE)
+    {
+        USBINT &= ~(1<<VBUSTI);
+
+        if (USBSTA & 1<<VBUS)
+        {
+            PLLCSR = USB_PLL_PSC;
+            PLLCSR = USB_PLL_PSC | 1<<PLLE;
+            while (!(PLLCSR & 1<<PLOCK));
+            state = DEVICE_STATE_Powered;
+        }
+        else
+        {
+            PLLCSR = 0;
+            state = DEVICE_STATE_Unattached;
+        }
+    }
+
+    if (UDINT & 1<<SUSPI && UDIEN & 1<<SUSPE)
+    {
+        UDIEN &= ~(1<<SUSPE);   // disable int suspe
+        UDIEN |= 1<<WAKEUPE;    // enable int wakeup
+        USBCON |= 1<<FRZCLK;
+        PLLCSR = 0;
+        state = DEVICE_STATE_Suspended;
+    }
+
+    if (UDINT & 1<<WAKEUPI && UDIEN & 1<<WAKEUPE)
+    {
+        PLLCSR = USB_PLL_PSC;
+        PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
+        while (!(PLLCSR & 1<<PLOCK));   // PLL is ready?
+        USBCON &= ~(1<<FRZCLK);
+        UDINT &= ~(1<<WAKEUPI);
+        UDIEN &= ~(1<<WAKEUPI);
+        UDIEN |= 1<<SUSPE;
+
+        if (USB_Device_ConfigurationNumber)
+            state = DEVICE_STATE_Configured;
+        else
+            state = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
+    }
+
+    if (UDINT & 1<<EORSTI && UDIEN & 1<<EORSTE)
+    {
+        UDINT &= ~(1<<EORSTI);      // clear INT EORSTI
+        state = DEVICE_STATE_Default;
+        USB_Device_ConfigurationNumber = 0;
+        UDINT &= ~(1<<SUSPI);       // clear INT SUSPI
+        UDIEN &= ~(1<<SUSPE);       // disable INT SUSPE
+        UDIEN |= 1<<WAKEUPE;
+        configureEndpoint(_control.addr, _control.type, _control.size, 1);
+        UEIENX |= 1<<RXSTPE;
+    }
+}
+
 uint8_t USB::writeStream(const void * const buf, uint16_t len, uint16_t * const bytes)
 {
     uint8_t *dataStream = (uint8_t *)buf;
     uint16_t bytesInTransfer = 0;
     uint8_t errorCode;
 
-    if (errorCode = Endpoint_WaitUntilReady())
+    if (errorCode = waitUntilReady())
         return errorCode;
 
     if (bytes != NULL)
@@ -463,13 +546,55 @@ uint8_t USB::writeStream(const void * const buf, uint16_t len, uint16_t * const 
                 return ENDPOINT_RWSTREAM_IncompleteTransfer;
             }
 
-            if (errorCode = Endpoint_WaitUntilReady())
+            if (errorCode = waitUntilReady())
                 return errorCode;
         }
         else
         {
             write8(*dataStream);
             *dataStream += 1;
+            len--;
+            bytesInTransfer++;
+        }
+    }
+
+    return ENDPOINT_RWSTREAM_NoError;
+}
+
+uint8_t USB::writeStream2(const void * const buf, uint16_t len, uint16_t * const bytes)
+{
+    uint8_t *dataStream = (uint8_t *)buf;
+    uint16_t bytesInTransfer = 0;
+    uint8_t errorCode;
+
+    if (errorCode = waitUntilReady())
+        return errorCode;
+
+    if (bytes != NULL)
+    {
+        len -= *bytes;
+        dataStream += *bytes;
+    }
+
+    while (len)
+    {
+        if ((UEINTX & 1<<RWAL) == 0)    // read-write allowed?
+        {
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // endpoint clear in
+            
+            if (bytes != NULL)
+            {
+                *bytes += bytesInTransfer;
+                return ENDPOINT_RWSTREAM_IncompleteTransfer;
+            }
+
+            if (errorCode = waitUntilReady())
+                return errorCode;
+        }
+        else
+        {
+            write8(*dataStream);
+            dataStream += 1;
             len--;
             bytesInTransfer++;
         }

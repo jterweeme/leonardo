@@ -1,5 +1,9 @@
+/*
+PS2 CLK: SDA
+*/
+
 #include "keyboard.h"
-#include <avr/interrupt.h>
+#include <avr/io.h>
 
 void MyBitset::addBit(uint8_t val)
 {
@@ -9,17 +13,17 @@ void MyBitset::addBit(uint8_t val)
     _bitcount++;
 }
 
-PS2Keyboard::PS2Keyboard()
+PS2Keyboard::PS2Keyboard(Pin *dat) : _dat(dat)
 {
-    DDRB &= ~(1<<DDB4);
-    PORTB |= 1<<PORTB4;
-    DDRD &= ~(1<<DDD1);
-    PORTD |= 1<<PORTD1;
+    _dat->direction(INPUT);
+    _dat->set();
+    DDRD &= ~(1<<DDD1 | 1<<DDD0);
+    PORTD |= 1<<1 | 1<<0;
 }
 
 void PS2Keyboard::isr()
 {
-    uint8_t val = PINB & 1<<4;
+    bool val = _dat->read();
 
     if (_timeTicks - _prevTicks > 10)
         _bitset.reset();

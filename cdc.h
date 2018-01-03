@@ -47,14 +47,12 @@ private:
     bool configureEndpoints();
     void EVENT_USB_Device_ControlRequest();
     void Device_ProcessControlRequest();
-    uint16_t getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddress);
+    uint16_t getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddr);
 public:
     int16_t receive();
     uint8_t sendByte(uint8_t data);
     CDC();
     uint8_t flush();
-    void gen();
-    void com();
 };
 
 

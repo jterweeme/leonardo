@@ -2,7 +2,7 @@
 #define _USKB_H_
 #include "keyboard.h"
 
-static const uint8_t PS2_KEYMAP_SIZE = 136;
+static constexpr uint8_t PS2_KEYMAP_SIZE = 136;
 
 struct PS2Keymap_t
 {
@@ -15,7 +15,7 @@ struct PS2Keymap_t
 class USKeyboard : public PS2Keyboard
 {
 private:
-    static const uint8_t BREAK = 1, MODIFIER = 2, SHIFT_L = 4,
+    static constexpr uint8_t BREAK = 1, MODIFIER = 2, SHIFT_L = 4,
         SHIFT_R = 8, ALTGR = 0x10, CTRL = 0x20, PS2_TAB = 9,
         PS2_ENTER = 13, PS2_LINEFEED = 10, PS2_BACKSPACE = 127,
         PS2_ESC = 27, F1 = 0, F2 = 0, F3 = 0, F4 = 0, F5 = 0,
@@ -33,7 +33,7 @@ public:
     int read();
     char get_iso8859_code();
 
-    static const uint8_t N1 = 0x16, N2 = 0x1e, N3 = 0x26, N4 = 0x25, N5 = 0x2e,
+    static constexpr uint8_t N1 = 0x16, N2 = 0x1e, N3 = 0x26, N4 = 0x25, N5 = 0x2e,
         N6 = 0x36, N7 = 0x3d, N8 = 0x3e, N9 = 0x46, N0 = 0x45, NUM1 = 0x69,
         NUM2 = 0x72, NUM3 = 0x7a, PLUS = 0x79, MINUS = 0x7b, SLASH = 0x4a,
         ENTER = 0x5a, ESC = 0x76, NUMLOCK = 0x77, STAR = 0x7c;

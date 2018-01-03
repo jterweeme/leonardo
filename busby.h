@@ -96,7 +96,7 @@ static constexpr uint8_t
     FIXED_NUM_CONFIGURATIONS = 1,
     NO_DESCRIPTOR = 0;
 
-struct USB_Request_Header_t
+struct USBRequest
 {
     uint8_t bmRequestType;
     uint8_t bRequest;
@@ -106,11 +106,7 @@ struct USB_Request_Header_t
 }
 __attribute__ ((packed));
 
-
 #define GCC_MEMORY_BARRIER()                  __asm__ __volatile__("" ::: "memory");
-
-
-typedef uint8_t uint_reg_t;
 
 static constexpr uint8_t USB_CONFIG_POWER_MA(uint8_t mA) { return mA >> 1; }
 
@@ -124,32 +120,38 @@ __attribute__ ((packed));
 static constexpr size_t USB_STRING_LEN(size_t uniChars)
 { return sizeof(DescHeader) + (uniChars << 1); }
 
+struct SigDesc
+{
+    DescHeader header;
+    uint16_t unicodeString[INTERNAL_SERIAL_LENGTH_BITS / 4];
+};
+
 struct DescDev
 {
     DescHeader header;
     uint16_t USBSpecification;
-    uint8_t  Class;
-    uint8_t  SubClass;
-    uint8_t  Protocol;
-    uint8_t  Endpoint0Size;
+    uint8_t Class;
+    uint8_t SubClass;
+    uint8_t Protocol;
+    uint8_t Endpoint0Size;
     uint16_t VendorID;
     uint16_t ProductID;
     uint16_t ReleaseNumber;
-    uint8_t  ManufacturerStrIndex;
-    uint8_t  ProductStrIndex;
-    uint8_t  SerialNumStrIndex;
-    uint8_t  NumberOfConfigurations;
+    uint8_t ManufacturerStrIndex;
+    uint8_t ProductStrIndex;
+    uint8_t SerialNumStrIndex;
+    uint8_t NumberOfConfigurations;
 } __attribute__ ((packed));
 
 struct DescConf
 {
     DescHeader header;
-    uint16_t TotalConfigurationSize;
-    uint8_t TotalInterfaces;
-    uint8_t ConfigurationNumber;
-    uint8_t ConfigurationStrIndex;
-    uint8_t ConfigAttributes;
-    uint8_t MaxPowerConsumption;
+    uint16_t totalConfigurationSize;
+    uint8_t totalInterfaces;
+    uint8_t configurationNumber;
+    uint8_t configurationStrIndex;
+    uint8_t configAttributes;
+    uint8_t maxPowerConsumption;
 }
 __attribute__ ((packed));
 
@@ -167,17 +169,17 @@ struct DescIface
 
 struct DescEndpoint
 {
-    DescHeader Header;
-    uint8_t EndpointAddress;
-    uint8_t Attributes;
-    uint16_t EndpointSize;
-    uint8_t PollingIntervalMS;
+    DescHeader header;
+    uint8_t endpointAddr;
+    uint8_t attributes;
+    uint16_t endpointSize;
+    uint8_t pollingIntervalMS;
 }
 __attribute__ ((packed));
 
 template <size_t S> struct USB_Descriptor_String_t
 {
-    DescHeader Header;
+    DescHeader header;
     wchar_t UnicodeString[S];
 };
 
@@ -202,7 +204,7 @@ protected:
         FEATURE_SEL_EndpointHalt       = 0x00,
         FEATURE_SEL_DeviceRemoteWakeup = 0x01,
         FEATURE_SEL_TestMode = 0x02,
-        DEVICE_STATE_Unattached  = 0,
+        DEVICE_STATE_Unattached = 0,
         DEVICE_STATE_Powered = 1,
         DEVICE_STATE_Default = 2,
         DEVICE_STATE_Addressed = 3,
@@ -213,8 +215,7 @@ protected:
         USB_MODE_Host   = 2,
         USB_MODE_UID    = 3;
 protected:
-    USB_Request_Header_t USB_ControlRequest;
-    volatile bool USB_IsInitialized;
+    USBRequest _ctrlReq;
     volatile uint8_t state;
     uint8_t USB_Device_ConfigurationNumber;
     bool USB_Device_CurrentlySelfPowered;
@@ -223,11 +224,11 @@ protected:
     uint8_t write_Control_Stream_LE(const void * const buf, uint16_t len);
     uint8_t write_Control_PStream_LE(const void * const buf, uint16_t len);
     uint8_t writeStream(const void * const buf, uint16_t len, uint16_t * const bytes);
+    uint8_t writeStream2(const void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t readStream(void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t nullStream(uint16_t len, uint16_t * const bytesProcessed);
     static constexpr uint8_t USB_Options = USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL;
-    uint8_t Endpoint_WaitUntilReady();
-    uint8_t waitUntilReady() { return Endpoint_WaitUntilReady(); }
+    uint8_t waitUntilReady();
     uint8_t getEndpointDirection();
     uint8_t getCurrentEndpoint() { return UENUM & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
     void selectEndpoint(uint8_t addr) { UENUM = addr & ENDPOINT_EPNUM_MASK; }
@@ -240,15 +241,16 @@ protected:
     inline uint16_t bytesInEndpoint() { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
     void Device_ClearSetFeature();
     void Device_GetSerialString(uint16_t *UnicodeString);
-    void Endpoint_ClearStatusStage();
+    void clearStatusStage();
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     bool configureEndpoint(Endpoint &ep);
     uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes);
+    virtual void Device_ProcessControlRequest() { }
 public:
     static USB *instance;
     USB();
-    virtual void gen() { }
-    virtual void com() { }
+    void gen();
+    void com();
 };
 
 #endif

@@ -1,56 +1,25 @@
 #define F_CPU 16000000UL
-#define F_USB 16000000UL
 
 #include <avr/io.h>
 #include <avr/power.h>
 #include <avr/interrupt.h>
 #include <stdbool.h>
 #include <string.h>
-
-#ifndef __USBCONTROLLER_H__
-#define __USBCONTROLLER_H__
-
-#ifndef __USBMODE_H__
-#define __USBMODE_H__
-
-#ifndef __LUFA_COMMON_H__
-#define __LUFA_COMMON_H__
-
-#define __INCLUDE_FROM_COMMON_H
-
-#include <stdint.h>
-#include <stddef.h>
-
-
-#if defined(__GNUC__) || defined(__DOXYGEN__)
-#define GCC_FORCE_POINTER_ACCESS(StructPtr)   __asm__ __volatile__("" : "=b" (StructPtr) : "0" (StructPtr))
-
-#define GCC_MEMORY_BARRIER()                  __asm__ __volatile__("" ::: "memory");
-#else
-#define GCC_FORCE_POINTER_ACCESS(StructPtr)
-#define GCC_MEMORY_BARRIER()
-#define GCC_IS_COMPILE_CONST(x)               0
-#endif
-
-#if (__GNUC__ >= 3) || defined(__DOXYGEN__)
-#define ATTR_WARN_UNUSED_RESULT      __attribute__ ((warn_unused_result))
-#define ATTR_NON_NULL_PTR_ARG(...)   __attribute__ ((nonnull (__VA_ARGS__)))
-#endif
-
-
-#define ATTR_PACKED                      __attribute__ ((packed))
-
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 #include <avr/boot.h>
 #include <math.h>
 #include <util/delay.h>
-#endif
 
 
 
 
-#endif
+
+
+#define ATTR_PACKED                      __attribute__ ((packed))
+
+
+
 
 
 
@@ -83,21 +52,6 @@ enum USB_Device_States_t
 
 
 
-void EVENT_USB_UIDChange(void);
-void EVENT_USB_Host_HostError(const uint8_t ErrorCode);
-void EVENT_USB_Host_DeviceAttached(void);
-void EVENT_USB_Host_DeviceUnattached(void);
-
-void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
-			                                            const uint8_t SubErrorCode);
-
-void EVENT_USB_Host_DeviceEnumerationComplete(void);
-
-
-void EVENT_USB_Host_StartOfFrame(void);
-
-void EVENT_USB_Device_ControlRequest(void);
-void EVENT_USB_Device_StartOfFrame(void);
 
 
 #define NO_DESCRIPTOR    0
@@ -114,7 +68,6 @@ void EVENT_USB_Device_StartOfFrame(void);
 #define ENDPOINT_ATTR_SYNC                (3 << 2)
 #define ENDPOINT_USAGE_DATA               (0 << 4)
 #define ENDPOINT_USAGE_FEEDBACK           (1 << 4)
-#define ENDPOINT_USAGE_IMPLICIT_FEEDBACK  (2 << 4)
 
 enum USB_DescriptorTypes_t
 {
@@ -144,17 +97,19 @@ USB_CSCP_IADDeviceSubclass      = 0x02,
 USB_CSCP_IADDeviceProtocol      = 0x01,
 };
 
-typedef struct
+struct USB_Descriptor_Header_t
 {
-uint8_t Size;
-uint8_t Type;
-} ATTR_PACKED USB_Descriptor_Header_t;
+    uint8_t Size;
+    uint8_t Type;
+}
+__attribute__ ((packed)) ;
 			
-typedef struct
+struct USB_StdDescriptor_Header_t
 {
-uint8_t bLength; /**< Size of the descriptor, in bytes. */
-uint8_t bDescriptorType;
-} ATTR_PACKED USB_StdDescriptor_Header_t;
+    uint8_t bLength; /**< Size of the descriptor, in bytes. */
+    uint8_t bDescriptorType;
+}
+__attribute__ ((packed));
 
 typedef struct
 {
@@ -268,13 +223,13 @@ typedef struct
 
 typedef struct
 {
-USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
-uint8_t FirstInterfaceIndex; /**< Index of the first associated interface. */
-uint8_t TotalInterfaces; /**< Total number of associated interfaces. */
-uint8_t Class; /**< Interface class ID. */
-uint8_t SubClass; /**< Interface subclass ID. */
-uint8_t Protocol; /**< Interface protocol ID. */
-uint8_t IADStrIndex;
+    USB_Descriptor_Header_t Header; /**< Descriptor header, including type and size. */
+    uint8_t FirstInterfaceIndex; /**< Index of the first associated interface. */
+    uint8_t TotalInterfaces; /**< Total number of associated interfaces. */
+    uint8_t Class; /**< Interface class ID. */
+    uint8_t SubClass; /**< Interface subclass ID. */
+    uint8_t Protocol; /**< Interface protocol ID. */
+    uint8_t IADStrIndex;
 } ATTR_PACKED USB_Descriptor_Interface_Association_t;
 
 typedef struct
@@ -330,50 +285,6 @@ enum USB_Interrupts_t
     USB_INT_SOFI    = 5,
     USB_INT_RXSTPI  = 6,
 };
-
-static inline bool USB_INT_IsEnabled(const uint8_t Interrupt)
-{
-    switch (Interrupt)
-    {
-        case USB_INT_VBUSTI:
-            return (USBCON & (1 << VBUSTE));
-        case USB_INT_WAKEUPI:
-            return (UDIEN  & (1 << WAKEUPE));
-        case USB_INT_SUSPI:
-            return (UDIEN  & (1 << SUSPE));
-        case USB_INT_EORSTI:
-            return (UDIEN  & (1 << EORSTE));
-        case USB_INT_SOFI:
-            return (UDIEN  & (1 << SOFE));
-        case USB_INT_RXSTPI:
-            return (UEIENX & (1 << RXSTPE));
-        default:
-            return false;
-    }
-}
-
-static inline bool USB_INT_HasOccurred(const uint8_t Interrupt)
-{
-    switch (Interrupt)
-    {
-					case USB_INT_VBUSTI:
-						return (USBINT & (1 << VBUSTI));
-					case USB_INT_WAKEUPI:
-						return (UDINT  & (1 << WAKEUPI));
-					case USB_INT_SUSPI:
-						return (UDINT  & (1 << SUSPI));
-					case USB_INT_EORSTI:
-						return (UDINT  & (1 << EORSTI));
-					case USB_INT_SOFI:
-						return (UDINT  & (1 << SOFI));
-					case USB_INT_RXSTPI:
-						return (UEINTX & (1 << RXSTPI));
-					default:
-						return false;
-				}
-			}
-
-
 
 typedef struct
 {
@@ -439,20 +350,9 @@ static inline void Endpoint_ResetEndpoint(const uint8_t Address)
     UERST = 0;
 }
 
-static inline bool Endpoint_IsReadWriteAllowed(void)
-{   
-    return ((UEINTX & (1 << RWAL)) ? true : false);
-}   
-
-static inline uint8_t Endpoint_GetEndpointInterrupts(void)
-{
-    return UEINT;
-}
-
 static inline bool Endpoint_HasEndpointInterrupted(const uint8_t Address)
 {
-    return ((Endpoint_GetEndpointInterrupts() &
-        (1 << (Address & ENDPOINT_EPNUM_MASK))) ? true : false);
+    return ((UEINT & (1<<(Address & ENDPOINT_EPNUM_MASK))) ? true : false);
 }
 
 static inline bool Endpoint_IsINReady(void)
@@ -506,7 +406,7 @@ static inline void USB_Device_EnableDeviceAddress(const uint8_t Address)
 
 static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
 {
-    GCC_MEMORY_BARRIER();
+    __asm__ __volatile__("" ::: "memory");
     uint8_t CurrentGlobalInt = SREG;
     cli();
 
@@ -530,9 +430,9 @@ static inline void USB_Device_GetSerialString(uint16_t* const UnicodeString)
             ('A' - 10) + SerialByte : '0' + SerialByte;
     }
 
-    GCC_MEMORY_BARRIER();
+    __asm__ __volatile__("" ::: "memory");
     SREG = CurrentGlobalInt;
-    GCC_MEMORY_BARRIER();
+    __asm__ __volatile__("" ::: "memory");
 }
 
 #define CONTROL_REQTYPE_DIRECTION  0x80
@@ -608,37 +508,6 @@ enum Endpoint_ControlStream_RW_ErrorCodes_t
 #define USB_STREAM_TIMEOUT_MS       100
 #endif
 
-static inline bool USB_PLL_IsReady(void)
-{
-    return ((PLLCSR & (1 << PLOCK)) ? true : false);
-}
-
-
-#endif
-
-
-#ifndef _HID_CLASS_COMMON_H_
-#define _HID_CLASS_COMMON_H_
-
-
-
-#if !defined(HID_STATETABLE_STACK_DEPTH) || defined(__DOXYGEN__)
-#define HID_STATETABLE_STACK_DEPTH    2
-#endif
-
-#if !defined(HID_USAGE_STACK_DEPTH) || defined(__DOXYGEN__)
-#define HID_USAGE_STACK_DEPTH         8
-#endif
-
-#if !defined(HID_MAX_COLLECTIONS) || defined(__DOXYGEN__)
-#define HID_MAX_COLLECTIONS           10
-#endif
-
-#if !defined(HID_MAX_REPORTITEMS) || defined(__DOXYGEN__)
-#define HID_MAX_REPORTITEMS           20
-#endif
-
-#define HID_MAX_REPORT_IDS            10
 
 enum HID_Parse_ErrorCodes_t
 {
@@ -708,10 +577,10 @@ typedef struct
 typedef struct
 {   
     uint8_t TotalReportItems; /**< Total rt items stored in the \c ReportItems array. */
-    HID_ReportItem_t     ReportItems[HID_MAX_REPORTITEMS];
-    HID_CollectionPath_t CollectionPaths[HID_MAX_COLLECTIONS];
+    HID_ReportItem_t     ReportItems[20];
+    HID_CollectionPath_t CollectionPaths[10];
     uint8_t              TotalDeviceReports;
-    HID_ReportSizeInfo_t ReportIDSizes[HID_MAX_REPORT_IDS];
+    HID_ReportSizeInfo_t ReportIDSizes[10];
     uint16_t             LargestReportSizeBits;
     bool                 UsingReportIDs;
 } HID_ReportInfo_t;
@@ -743,32 +612,32 @@ static const uint8_t
     HID_KEYBOARD_SC_ERROR_ROLLOVER                  =  0x01,
     HID_KEYBOARD_SC_POST_FAIL                       =  0x02,
     HID_KEYBOARD_SC_ERROR_UNDEFINED                 =  0x03,
-    HID_KEYBOARD_SC_A                               =  0x04,
-    HID_KEYBOARD_SC_B                               =  0x05,
-    HID_KEYBOARD_SC_C                               =  0x06,
-    HID_KEYBOARD_SC_D                               =  0x07,
-    HID_KEYBOARD_SC_E                               =  0x08,
-    HID_KEYBOARD_SC_F                               =  0x09,
-    HID_KEYBOARD_SC_G                               =  0x0A,
-    HID_KEYBOARD_SC_H                               =  0x0B,
-    HID_KEYBOARD_SC_I                               =  0x0C,
-    HID_KEYBOARD_SC_J                               =  0x0D,
-    HID_KEYBOARD_SC_K                               =  0x0E,
-    HID_KEYBOARD_SC_L                               =  0x0F,
-    HID_KEYBOARD_SC_M                               =  0x10,
-    HID_KEYBOARD_SC_N                               =  0x11,
-    HID_KEYBOARD_SC_O                               =  0x12,
-    HID_KEYBOARD_SC_P                               =  0x13,
-    HID_KEYBOARD_SC_Q                               =  0x14,
-    HID_KEYBOARD_SC_R                               =  0x15,
-    HID_KEYBOARD_SC_S                               =  0x16,
-    HID_KEYBOARD_SC_T                               =  0x17,
-    HID_KEYBOARD_SC_U                               =  0x18,
-    HID_KEYBOARD_SC_V                               =  0x19,
-    HID_KEYBOARD_SC_W                               =  0x1A,
-    HID_KEYBOARD_SC_X                               =  0x1B,
-    HID_KEYBOARD_SC_Y                               =  0x1C,
-    HID_KEYBOARD_SC_Z                               =  0x1D,
+    HID_KEYBOARD_SC_A =  0x04,
+    HID_KEYBOARD_SC_B =  0x05,
+    HID_KEYBOARD_SC_C =  0x06,
+    HID_KEYBOARD_SC_D =  0x07,
+    HID_KEYBOARD_SC_E =  0x08,
+    HID_KEYBOARD_SC_F =  0x09,
+    HID_KEYBOARD_SC_G =  0x0A,
+    HID_KEYBOARD_SC_H =  0x0B,
+    HID_KEYBOARD_SC_I =  0x0C,
+    HID_KEYBOARD_SC_J =  0x0D,
+    HID_KEYBOARD_SC_K =  0x0E,
+    HID_KEYBOARD_SC_L =  0x0F,
+    HID_KEYBOARD_SC_M =  0x10,
+    HID_KEYBOARD_SC_N =  0x11,
+    HID_KEYBOARD_SC_O =  0x12,
+    HID_KEYBOARD_SC_P =  0x13,
+    HID_KEYBOARD_SC_Q =  0x14,
+    HID_KEYBOARD_SC_R =  0x15,
+    HID_KEYBOARD_SC_S =  0x16,
+    HID_KEYBOARD_SC_T =  0x17,
+    HID_KEYBOARD_SC_U =  0x18,
+    HID_KEYBOARD_SC_V =  0x19,
+    HID_KEYBOARD_SC_W =  0x1A,
+    HID_KEYBOARD_SC_X =  0x1B,
+    HID_KEYBOARD_SC_Y =  0x1C,
+    HID_KEYBOARD_SC_Z =  0x1D,
     HID_KEYBOARD_SC_1_AND_EXCLAMATION               =  0x1E,
     HID_KEYBOARD_SC_2_AND_AT                        =  0x1F,
     HID_KEYBOARD_SC_3_AND_HASHMARK                  =  0x20,
@@ -974,40 +843,24 @@ static const uint8_t
     HID_KEYBOARD_SC_MEDIA_SLEEP                     =  0xF8,
     HID_KEYBOARD_SC_MEDIA_LOCK                      =  0xF9,
     HID_KEYBOARD_SC_MEDIA_RELOAD                    =  0xFA,
-    HID_KEYBOARD_SC_MEDIA_CALCULATOR                =  0xFB;
-
-enum HID_Descriptor_ClassSubclassProtocol_t
-{
+    HID_KEYBOARD_SC_MEDIA_CALCULATOR                =  0xFB,
     HID_CSCP_HIDClass             = 0x03,
     HID_CSCP_NonBootSubclass      = 0x00,
     HID_CSCP_BootSubclass         = 0x01,
     HID_CSCP_NonBootProtocol      = 0x00,
     HID_CSCP_KeyboardBootProtocol = 0x01,
     HID_CSCP_MouseBootProtocol    = 0x02,
-};
-
-enum HID_ClassRequests_t
-{
     HID_REQ_GetReport       = 0x01,
     HID_REQ_GetIdle         = 0x02,
     HID_REQ_GetProtocol     = 0x03,
     HID_REQ_SetReport       = 0x09,
     HID_REQ_SetIdle         = 0x0A,
     HID_REQ_SetProtocol     = 0x0B,
-};
-
-enum HID_DescriptorTypes_t
-{
     HID_DTYPE_HID = 0x21,
     HID_DTYPE_Report = 0x22,
-};
-
-enum HID_ReportItemTypes_t
-{
-HID_REPORT_ITEM_In      = 0,
-HID_REPORT_ITEM_Out     = 1,
-HID_REPORT_ITEM_Feature = 2,
-};
+    HID_REPORT_ITEM_In      = 0,
+    HID_REPORT_ITEM_Out     = 1,
+    HID_REPORT_ITEM_Feature = 2;
 
 struct USB_HID_Descriptor_HID_t
 {
@@ -1041,9 +894,6 @@ struct USB_KeyboardReport_Data_t
 
 typedef uint8_t USB_Descriptor_HIDReport_Datatype_t;
 
-
-#endif
-
 typedef struct
 {
     struct
@@ -1063,30 +913,9 @@ typedef struct
     } State;
 } USB_ClassInfo_HID_Device_t;
 
-bool HID_Device_ConfigureEndpoints(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo)
-    ATTR_NON_NULL_PTR_ARG(1);
-
-
-void HID_Device_ProcessControlRequest(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo)
-    ATTR_NON_NULL_PTR_ARG(1);
-
-
-void HID_Device_USBTask(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo)
-    ATTR_NON_NULL_PTR_ARG(1);
-
-bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo,
-                                         uint8_t* const ReportID,
-                                         const uint8_t ReportType,
-                                        void* ReportData,
-                                        uint16_t* const ReportSize) ATTR_NON_NULL_PTR_ARG(1)
-                 ATTR_NON_NULL_PTR_ARG(2) ATTR_NON_NULL_PTR_ARG(4) ATTR_NON_NULL_PTR_ARG(5);
-
-static inline void HID_Device_MillisecondElapsed(USB_ClassInfo_HID_Device_t*
-    const HIDInterfaceInfo)
-{
-    if (HIDInterfaceInfo->State.IdleMSRemaining)
-        HIDInterfaceInfo->State.IdleMSRemaining--;
-}
+bool HID_Device_ConfigureEndpoints(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo);
+void HID_Device_ProcessControlRequest(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo);
+void HID_Device_USBTask(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo);
 
 typedef struct
 {
@@ -1112,16 +941,9 @@ enum StringDescriptors_t
 #define KEYBOARD_IN_EPADDR        (ENDPOINT_DIR_IN  | 1)
 #define KEYBOARD_OUT_EPADDR       (ENDPOINT_DIR_OUT | 2)
 
-uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
-                     const uint16_t wIndex, const void** const DescriptorAddress)
-                                            ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
+uint16_t getDescriptor(const uint16_t wValue,
+                     const uint16_t wIndex, const void** const DescriptorAddress);
 
-void EVENT_USB_Device_ControlRequest(void);
-void EVENT_USB_Device_StartOfFrame(void);
-void CreateKeyboardReport(USB_KeyboardReport_Data_t* const ReportData);
-
-static uint16_t IdleCount = 500;
-static uint16_t IdleMSRemaining = 0;
 
 class USBKB
 {
@@ -1133,7 +955,7 @@ private:
     uint8_t USB_Device_ConfigurationNumber;
     bool USB_Device_CurrentlySelfPowered;
     bool USB_Device_RemoteWakeupEnabled;
-    USB_Request_Header_t USB_ControlRequest;
+    USB_Request_Header_t ctrlReq;
     volatile uint8_t USB_DeviceState;
     uint8_t writeStream(const void * const buf, uint16_t len, uint16_t* const bytes);
     uint8_t Endpoint_Read_Stream_LE (void * const buf, uint16_t len, uint16_t* const bytes);
@@ -1154,22 +976,10 @@ public:
     void com();
     void gen();
     USBKB();
-    void USBTask();
     void hidtask();
 };
 
 USBKB *USBKB::instance;
-
-void USBKB::USBTask()
-{
-    uint8_t PrevEndpoint = Endpoint_GetCurrentEndpoint();
-    Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
-
-    if (UEINTX & 1<<RXSTPI)     // is setup received?
-        USB_Device_ProcessControlRequest();
-
-    Endpoint_SelectEndpoint(PrevEndpoint);
-}
 
 bool USBKB::Endpoint_ConfigureEndpoint(uint8_t Address, uint8_t Type, uint16_t Size, uint8_t Banks)
 {
@@ -1191,37 +1001,37 @@ void USBKB::hidtask()
     static USB_KeyboardReport_Data_t PrevKeyboardReportData;
     USB_KeyboardReport_Data_t        KeyboardReportData;
     bool                             SendReport = false;
+    uint8_t UsedKeyCodes      = 0;
+    memset(&KeyboardReportData, 0, sizeof(USB_KeyboardReport_Data_t));
 
-    CreateKeyboardReport(&KeyboardReportData);
+    if ((PINF & 1<<0) == 0)
+        KeyboardReportData.KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_A;
 
-    if (IdleCount && (!(IdleMSRemaining)))
-    {
-        IdleMSRemaining = IdleCount;
-        SendReport = true;
-    }
-    else
-    {
-        SendReport = memcmp(&PrevKeyboardReportData, &KeyboardReportData,
-            sizeof(USB_KeyboardReport_Data_t)) != 0;
-    }
+    if ((PINF & 1<<1) == 0)
+        KeyboardReportData.KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_B;
+
+    if ((PINF & 1<<4) == 0)
+        KeyboardReportData.KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_C;
+
+    if ((PINF & 1<<5) == 0)
+        KeyboardReportData.KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_D;
+
+    if ((PINF & 1<<6) == 0)
+        KeyboardReportData.KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_E;
+
+    if ((PINF & 1<<7) == 0)
+        KeyboardReportData.KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_F;
 
     Endpoint_SelectEndpoint(KEYBOARD_IN_EPADDR);
-
-    //if (Endpoint_IsReadWriteAllowed() && SendReport)
-    {
-        PrevKeyboardReportData = KeyboardReportData;
-        writeStream(&KeyboardReportData, sizeof(KeyboardReportData), NULL);
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
-    }
-
+    PrevKeyboardReportData = KeyboardReportData;
+    writeStream(&KeyboardReportData, sizeof(KeyboardReportData), NULL);
+    UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
     Endpoint_SelectEndpoint(KEYBOARD_OUT_EPADDR);
 
     if (UEINTX & 1<<RXOUTI)
     {
-        if (Endpoint_IsReadWriteAllowed())
-        {
+        if (UEINTX & 1<<RWAL)
             read8();
-        }
 
         UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
     }
@@ -1265,13 +1075,12 @@ int main(void)
 	while (true)
 	{
         kb.hidtask();
-        kb.USBTask();
 	}
 }
 
 void USBKB::Endpoint_ClearStatusStage()
 {
-    if (USB_ControlRequest.bmRequestType & REQDIR_DEVICETOHOST)
+    if (ctrlReq.bmRequestType & REQDIR_DEVICETOHOST)
     {
         while (!(UEINTX & 1<<RXOUTI))
             if (USB_DeviceState == DEVICE_STATE_Unattached)
@@ -1335,10 +1144,7 @@ bool USBKB::Endpoint_ConfigureEndpoint_Prv(uint8_t Number,
 {
     for (uint8_t EPNum = Number; EPNum < ENDPOINT_TOTAL_ENDPOINTS; EPNum++)
     {
-        uint8_t UECFG0XTemp;
-        uint8_t UECFG1XTemp;
-        uint8_t UEIENXTemp;
-
+        uint8_t UECFG0XTemp, UECFG1XTemp, UEIENXTemp;
         Endpoint_SelectEndpoint(EPNum);
 
         if (EPNum == Number)
@@ -1364,7 +1170,7 @@ bool USBKB::Endpoint_ConfigureEndpoint_Prv(uint8_t Number,
         UECFG1X = UECFG1XTemp;
         UEIENX  = UEIENXTemp;
 
-        if (!(UESTA0X & 1<<CFGOK))
+        if ((UESTA0X & 1<<CFGOK) == 0)
             return false;
     }
 
@@ -1405,41 +1211,40 @@ bool USBKB::Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Ta
 
 void USBKB::USB_Device_GetDescriptor()
 {
-    const void* DescriptorPointer;
-    uint16_t    DescriptorSize;
+    const void *descPtr;
+    uint16_t descSize;
 
-    if (USB_ControlRequest.wValue == ((DTYPE_String << 8) | USE_INTERNAL_SERIAL))
+    if (ctrlReq.wValue == ((DTYPE_String << 8) | USE_INTERNAL_SERIAL))
     {
         USB_Device_GetInternalSerialDescriptor();
         return;
     }
 
-    if ((DescriptorSize = CALLBACK_USB_GetDescriptor(USB_ControlRequest.wValue,
-        USB_ControlRequest.wIndex, &DescriptorPointer)) == NO_DESCRIPTOR)
+    if ((descSize = getDescriptor(ctrlReq.wValue, ctrlReq.wIndex, &descPtr)) == NO_DESCRIPTOR)
     {
         return;
     }
 
     UEINTX &= ~(1<<RXSTPI);
-    Endpoint_Write_Control_PStream_LE(DescriptorPointer, DescriptorSize);
+    Endpoint_Write_Control_PStream_LE(descPtr, descSize);
     UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
 }
 
 void USBKB::Device_ClearSetFeature()
 {
-    switch (USB_ControlRequest.bmRequestType & CONTROL_REQTYPE_RECIPIENT)
+    switch (ctrlReq.bmRequestType & CONTROL_REQTYPE_RECIPIENT)
     {
         case REQREC_DEVICE:
-            if ((uint8_t)USB_ControlRequest.wValue == FEATURE_SEL_DeviceRemoteWakeup)
-                USB_Device_RemoteWakeupEnabled = (USB_ControlRequest.bRequest == REQ_SetFeature);
+            if ((uint8_t)ctrlReq.wValue == FEATURE_SEL_DeviceRemoteWakeup)
+                USB_Device_RemoteWakeupEnabled = (ctrlReq.bRequest == REQ_SetFeature);
             else
                 return;
 
             break;
         case REQREC_ENDPOINT:
-            if ((uint8_t)USB_ControlRequest.wValue == FEATURE_SEL_EndpointHalt)
+            if ((uint8_t)ctrlReq.wValue == FEATURE_SEL_EndpointHalt)
             {
-                uint8_t index = ((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
+                uint8_t index = ((uint8_t)ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
 
                 if (index == ENDPOINT_CONTROLEP || index >= ENDPOINT_TOTAL_ENDPOINTS)
                     return;
@@ -1448,7 +1253,7 @@ void USBKB::Device_ClearSetFeature()
 
                 if (UECONX & 1<<EPEN)
                 {
-                    if (USB_ControlRequest.bRequest == REQ_SetFeature)
+                    if (ctrlReq.bRequest == REQ_SetFeature)
                     {
                         UECONX |= 1<<STALLRQ;   // stall transaction
                     }
@@ -1472,18 +1277,17 @@ void USBKB::Device_ClearSetFeature()
 
 void USBKB::USB_Device_ProcessControlRequest()
 {
-    uint8_t* RequestHeader = (uint8_t*)&USB_ControlRequest;
+    uint8_t* RequestHeader = (uint8_t*)&ctrlReq;
 
     for (uint8_t i = 0; i < sizeof(USB_Request_Header_t); i++)
         *(RequestHeader++) = read8();
 
-    EVENT_USB_Device_ControlRequest();
 
     if (UEINTX & 1<<RXSTPI) // is setup received?
     {
-        uint8_t bmRequestType = USB_ControlRequest.bmRequestType;
+        uint8_t bmRequestType = ctrlReq.bmRequestType;
 
-        switch (USB_ControlRequest.bRequest)
+        switch (ctrlReq.bRequest)
         {
         case REQ_GetStatus:
             if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
@@ -1491,7 +1295,7 @@ void USBKB::USB_Device_ProcessControlRequest()
             {
                 uint8_t CurrentStatus = 0;
 
-                switch (USB_ControlRequest.bmRequestType)
+                switch (ctrlReq.bmRequestType)
                 {
                 case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
                     if (USB_Device_CurrentlySelfPowered)
@@ -1503,7 +1307,7 @@ void USBKB::USB_Device_ProcessControlRequest()
                     break;
                 case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
                 {
-                   uint8_t index = ((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
+                   uint8_t index = ((uint8_t)ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
 
                     if (index >= ENDPOINT_TOTAL_ENDPOINTS)
                         return;
@@ -1536,7 +1340,7 @@ void USBKB::USB_Device_ProcessControlRequest()
         case REQ_SetAddress:
             if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
             {
-                uint8_t devAddr = USB_ControlRequest.wValue & 0x7F;
+                uint8_t devAddr = ctrlReq.wValue & 0x7F;
                 USB_Device_SetDeviceAddress(devAddr);
                 UEINTX &= ~(1<<RXSTPI);
                 Endpoint_ClearStatusStage();
@@ -1565,11 +1369,11 @@ void USBKB::USB_Device_ProcessControlRequest()
         case REQ_SetConfiguration:
             if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
             {
-                if ((uint8_t)USB_ControlRequest.wValue > 1)
+                if ((uint8_t)ctrlReq.wValue > 1)
                     return;
 
                 UEINTX &= ~(1<<RXSTPI);
-                USB_Device_ConfigurationNumber = (uint8_t)USB_ControlRequest.wValue;
+                USB_Device_ConfigurationNumber = (uint8_t)ctrlReq.wValue;
                 Endpoint_ClearStatusStage();
 
                 if (USB_Device_ConfigurationNumber)
@@ -1599,16 +1403,6 @@ void USBKB::USB_Device_ProcessControlRequest()
     }
 }
 
-void EVENT_USB_Device_ControlRequest(void)
-{
-}
-
-void EVENT_USB_Device_StartOfFrame(void)
-{
-    if (IdleMSRemaining)
-        IdleMSRemaining--;
-}
-
 ISR(USB_COM_vect, ISR_BLOCK)
 {
     USBKB::instance->com();
@@ -1633,13 +1427,12 @@ ISR(USB_GEN_vect, ISR_BLOCK)
 
 void USBKB::gen()
 {
-    if (USB_INT_HasOccurred(USB_INT_SOFI) && USB_INT_IsEnabled(USB_INT_SOFI))
+    if (UDINT & 1<<SOFI && UDIEN & 1<<SOFE)
     {
         UDINT &= ~(1<<SOFI);    // clear INT SOFI
-        EVENT_USB_Device_StartOfFrame();
     }
 
-    if (USB_INT_HasOccurred(USB_INT_VBUSTI) && USB_INT_IsEnabled(USB_INT_VBUSTI))
+    if (USBINT & 1<<VBUSTI && USBCON & 1<<VBUSTE)
     {
         USBINT &= ~(1<<VBUSTI);
 
@@ -1648,7 +1441,7 @@ void USBKB::gen()
             PLLCSR = 1<<PINDIV;
             PLLCSR = 1<<PINDIV | 1<<PLLE;
 
-            while (USB_PLL_IsReady() == 0)
+            while ((PLLCSR & 1<<PLOCK) == 0)
                 ;
 
             USB_DeviceState = DEVICE_STATE_Powered;
@@ -1660,7 +1453,7 @@ void USBKB::gen()
         }
     }
 
-    if (USB_INT_HasOccurred(USB_INT_SUSPI) && USB_INT_IsEnabled(USB_INT_SUSPI))
+    if (UDINT & 1<<SUSPI && UDIEN & 1<<SUSPE)
     {
         UDIEN &= ~(1<<SUSPE);
         UDIEN |= 1<<WAKEUPE;
@@ -1673,7 +1466,7 @@ void USBKB::gen()
     {
         PLLCSR = 1<<PINDIV;
         PLLCSR = 1<<PINDIV | 1<<PLLE;
-        while (!(USB_PLL_IsReady()));
+        while ((PLLCSR & 1<<PLOCK) == 0);
         USBCON &= ~(1 << FRZCLK);
         UDINT &= ~(1<<WAKEUPI);     // int clear
         UDIEN &= ~(1<<WAKEUPI);     // int disable
@@ -1699,30 +1492,6 @@ void USBKB::gen()
     }
 }
 
-void CreateKeyboardReport(USB_KeyboardReport_Data_t* const ReportData)
-{
-	uint8_t UsedKeyCodes      = 0;
-	memset(ReportData, 0, sizeof(USB_KeyboardReport_Data_t));
-
-	if ((PINF & 1<<0) == 0)
-	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_A;
-
-	if ((PINF & 1<<1) == 0)
-	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_B;
-
-	if ((PINF & 1<<4) == 0)
-	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_C;
-
-	if ((PINF & 1<<5) == 0)
-	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_D;
-
-	if ((PINF & 1<<6) == 0)
-	    ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_E;
-
-    if ((PINF & 1<<7) == 0)
-        ReportData->KeyCode[UsedKeyCodes++] = HID_KEYBOARD_SC_F;
-}
-
 uint8_t USBKB::writeStream(const void * const Buffer, uint16_t Length,
                             uint16_t* const BytesProcessed)
 {
@@ -1741,10 +1510,9 @@ uint8_t USBKB::writeStream(const void * const Buffer, uint16_t Length,
 
     while (Length)
     {
-        if (!(Endpoint_IsReadWriteAllowed()))
+        if ((UEINTX & 1<<RWAL) == 0)
         {
             UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
-            USBTask();
 
             if (BytesProcessed != NULL)
             {
@@ -1773,17 +1541,19 @@ uint8_t USBKB::Endpoint_Read_Stream_LE(void * const Buffer, uint16_t Length,
     uint8_t* DataStream      = ((uint8_t*)Buffer);
     uint16_t BytesInTransfer = 0;
     uint8_t  ErrorCode;
+
     if ((ErrorCode = Endpoint_WaitUntilReady()))
-      return ErrorCode;
+        return ErrorCode;
 
     if (BytesProcessed != NULL)
     {
         Length -= *BytesProcessed;
         DataStream += *BytesProcessed;
     }
+
     while (Length)
     {
-        if (!(Endpoint_IsReadWriteAllowed()))
+        if ((UEINTX & 1<<RWAL) == 0)
         {
             UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
 
@@ -1794,7 +1564,7 @@ uint8_t USBKB::Endpoint_Read_Stream_LE(void * const Buffer, uint16_t Length,
             }
 
             if ((ErrorCode = Endpoint_WaitUntilReady()))
-              return ErrorCode;
+                return ErrorCode;
         }
         else
         {
@@ -1820,11 +1590,11 @@ uint8_t USBKB::Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Leng
         uint8_t USB_DeviceState_LCL = USB_DeviceState;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-          return ENDPOINT_RWCSTREAM_DeviceDisconnected;
+            return ENDPOINT_RWCSTREAM_DeviceDisconnected;
         else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-          return ENDPOINT_RWCSTREAM_BusSuspended;
+            return ENDPOINT_RWCSTREAM_BusSuspended;
         else if (UEINTX & 1<<RXSTPI)
-          return ENDPOINT_RWCSTREAM_HostAborted;
+            return ENDPOINT_RWCSTREAM_HostAborted;
 
         if (UEINTX & 1<<RXOUTI)
         {
@@ -1844,9 +1614,9 @@ uint8_t USBKB::Endpoint_Read_Control_Stream_LE(void* const Buffer, uint16_t Leng
         uint8_t USB_DeviceState_LCL = USB_DeviceState;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-          return ENDPOINT_RWCSTREAM_DeviceDisconnected;
+            return ENDPOINT_RWCSTREAM_DeviceDisconnected;
         else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-          return ENDPOINT_RWCSTREAM_BusSuspended;
+            return ENDPOINT_RWCSTREAM_BusSuspended;
     }
 
     return ENDPOINT_RWCSTREAM_NoError;
@@ -1857,8 +1627,8 @@ uint8_t USBKB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16
     uint8_t* DataStream     = ((uint8_t*)Buffer);
     bool     LastPacketFull = false;
 
-    if (Length > USB_ControlRequest.wLength)
-        Length = USB_ControlRequest.wLength;
+    if (Length > ctrlReq.wLength)
+        Length = ctrlReq.wLength;
     else if (!(Length))
         UEINTX &= ~(1<<TXINI | 1<<FIFOCON);     // clear IN
 
@@ -1897,11 +1667,11 @@ uint8_t USBKB::Endpoint_Write_Control_Stream_LE(const void* const Buffer, uint16
         uint8_t USB_DeviceState_LCL = USB_DeviceState;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-          return ENDPOINT_RWCSTREAM_DeviceDisconnected;
+            return ENDPOINT_RWCSTREAM_DeviceDisconnected;
         else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-          return ENDPOINT_RWCSTREAM_BusSuspended;
+            return ENDPOINT_RWCSTREAM_BusSuspended;
         else if (UEINTX & 1<<RXSTPI)
-          return ENDPOINT_RWCSTREAM_HostAborted;
+            return ENDPOINT_RWCSTREAM_HostAborted;
     }
 
     return ENDPOINT_RWCSTREAM_NoError;
@@ -1912,8 +1682,8 @@ uint8_t USBKB::Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint
     uint8_t* DataStream     = (uint8_t*)Buffer;
     bool     LastPacketFull = false;
 
-    if (Length > USB_ControlRequest.wLength)
-        Length = USB_ControlRequest.wLength;
+    if (Length > ctrlReq.wLength)
+        Length = ctrlReq.wLength;
     else if (!(Length))
         UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
 
@@ -1922,13 +1692,13 @@ uint8_t USBKB::Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint
         uint8_t USB_DeviceState_LCL = USB_DeviceState;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-          return ENDPOINT_RWCSTREAM_DeviceDisconnected;
+            return ENDPOINT_RWCSTREAM_DeviceDisconnected;
         else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-          return ENDPOINT_RWCSTREAM_BusSuspended;
+            return ENDPOINT_RWCSTREAM_BusSuspended;
         else if (UEINTX & 1<<RXSTPI)
-          return ENDPOINT_RWCSTREAM_HostAborted;
+            return ENDPOINT_RWCSTREAM_HostAborted;
         else if (UEINTX & 1<<RXOUTI)
-          break;
+            break;
 
         if (Endpoint_IsINReady())
         {
@@ -1952,11 +1722,11 @@ uint8_t USBKB::Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint
         uint8_t USB_DeviceState_LCL = USB_DeviceState;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
-          return ENDPOINT_RWCSTREAM_DeviceDisconnected;
+            return ENDPOINT_RWCSTREAM_DeviceDisconnected;
         else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
-          return ENDPOINT_RWCSTREAM_BusSuspended;
+            return ENDPOINT_RWCSTREAM_BusSuspended;
         else if (UEINTX & 1<<RXSTPI)
-          return ENDPOINT_RWCSTREAM_HostAborted;
+            return ENDPOINT_RWCSTREAM_HostAborted;
     }
 
     return ENDPOINT_RWCSTREAM_NoError;
@@ -1966,37 +1736,37 @@ uint8_t USBKB::Endpoint_Write_Control_PStream_LE (const void* const Buffer, uint
 
 const uint8_t PROGMEM KeyboardReport[] =
 {
-    0x04 | 0x00 | 1, 0x01 & 0xFF,
-    0x08 | 0x00 | 1, 0x06 & 0xFF,
-    0x00 | 0xA0 | 1, 0x01 & 0xFF,
-    0x04 | 0x00 | 1, 0x07 & 0xFF,
-    0x08 | 0x10 | 1, 0xE0 & 0xFF,
-    0x08 | 0x20 | 1, 0xE7 & 0xFF,
-    0x04 | 0x10 | 1, 0x00 & 0xFF,
-    0x04 | 0x20 | 1, 0x01 & 0xFF,
-    0x04 | 0x70 | 1, 0x01 & 0xFF,
-    0x04 | 0x90 | 1, 0x08 & 0xFF,
-    0x00 | 0x80 | 1, (0<<0 | 1<<1 | 0<<2) & 0xFF,
-    0x04 | 0x90 | 1, 0x01 & 0xFF,
-    0x04 | 0x70 | 1, 0x08 & 0xFF,
-    0x00 | 0x80 | 1, 1<<0 & 0xFF,
-    0x04 | 0x00 | 1, 0x08 & 0xFF,
-    0x08 | 0x10 | 1, 0x01 & 0xFF,
-    0x08 | 0x20 | 1, 0x05 & 0xFF,
-    0x04 | 0x90 | 1, 0x05 & 0xFF,
-    0x04 | 0x70 | 1, 0x01 & 0xFF,
-    0x00 | 0x90 | 1, (0<<0 | 1<<1 | 0<<2 | 0<<7) & 0xFF,
-    0x04 | 0x90 | 1, 0x01 & 0xFF,
-    0x04 | 0x70 | 1, 0x03 & 0xFF,
-    0x00 | 0x90 | 1, 1<<0 & 0xFF,
-    0x04 | 0x10 | 1, 0x00 & 0xFF,
-    0x04 | 0x20 | 1, 0x65 & 0xFF,
-    0x04 | 0x00 | 1, 0x07 & 0xFF,
-    0x08 | 0x10 | 1, 0x00 & 0xFF,
-    0x08 | 0x20 | 1, 0x65 & 0xFF,
-    0x04 | 0x90 | 1, 0x06 & 0xFF,
-    0x04 | 0x70 | 1, 0x08 & 0xFF,
-    0x00 | 0x80 | 1, (0<<0 | 0<<1 | 0<<2) & 0xFF,
+    0x04 | 0x00 | 1, 0x01,
+    0x08 | 0x00 | 1, 0x06,
+    0x00 | 0xA0 | 1, 0x01,
+    0x04 | 0x00 | 1, 0x07,
+    0x08 | 0x10 | 1, 0xE0,
+    0x08 | 0x20 | 1, 0xE7,
+    0x04 | 0x10 | 1, 0x00,
+    0x04 | 0x20 | 1, 0x01,
+    0x04 | 0x70 | 1, 0x01,
+    0x04 | 0x90 | 1, 0x08,
+    0x00 | 0x80 | 1, 1<<1,
+    0x04 | 0x90 | 1, 0x01,
+    0x04 | 0x70 | 1, 0x08,
+    0x00 | 0x80 | 1, 1<<0,
+    0x04 | 0x00 | 1, 0x08,
+    0x08 | 0x10 | 1, 0x01,
+    0x08 | 0x20 | 1, 0x05,
+    0x04 | 0x90 | 1, 0x05,
+    0x04 | 0x70 | 1, 0x01,
+    0x00 | 0x90 | 1, 1<<1,
+    0x04 | 0x90 | 1, 0x01,
+    0x04 | 0x70 | 1, 0x03,
+    0x00 | 0x90 | 1, 1<<0,
+    0x04 | 0x10 | 1, 0x00,
+    0x04 | 0x20 | 1, 0x65,
+    0x04 | 0x00 | 1, 0x07,
+    0x08 | 0x10 | 1, 0x00,
+    0x08 | 0x20 | 1, 0x65,
+    0x04 | 0x90 | 1, 0x06,
+    0x04 | 0x70 | 1, 0x08,
+    0x00 | 0x80 | 1, 0,
     0x00 | 0xC0 | 0
 };
 
@@ -2112,7 +1882,7 @@ const USB_Descriptor_String_t<23> PROGMEM ProductString =
     L"LUFA USB-RS232 Adapter"
 };
 
-uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
+uint16_t getDescriptor(const uint16_t wValue,
                                     const uint16_t wIndex,
                                     const void** const DescriptorAddress)
 {

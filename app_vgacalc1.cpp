@@ -17,7 +17,8 @@ static Sub sub;
 static Mul mul;
 
 #if 1
-static PS2Keyboard g_kb;
+Board b;
+static PS2Keyboard g_kb(&b.pin8);
 
 ISR(INT1_vect)
 {
