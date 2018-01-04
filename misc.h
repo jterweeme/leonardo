@@ -18,6 +18,10 @@ public:
     static size_t strlen(const char *s);
     static char *itoa(int num, char *str, int base);
     static void *malloc(size_t size) { return ::malloc(size); }
+    static inline bool isUpper(char c) { return c >= 'A' && c <= 'Z'; }
+    static inline bool isLower(char c) { return c >= 'a' && c <= 'z'; }
+    static uint8_t char2digit(char c) { return c - '0'; }
+    static char convertCase(char c);
 };
 
 template <typename T, size_t N> struct MyArray

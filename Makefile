@@ -16,6 +16,7 @@ all: app_calc1.elf \
     app_potmeter1.elf \
     app_ps2kb2.elf \
     app_sdod1.elf \
+    app_sdod2.elf \
     app_tone1.elf \
     app_uartloop1.elf \
     app_usbkb1.elf \
@@ -35,6 +36,7 @@ app_ostream1.elf: app_ostream1.o cdc.o busby.o misc.o
 app_potmeter1.elf: app_potmeter1.o analog.o cdc.o busby.o
 app_ps2kb2.elf: app_ps2kb2.o cdc.o busby.o keyboard.o misc.o leonardo.o
 app_sdod1.elf: app_sdod1.o zd2card.o cdc.o busby.o leonardo.o misc.o
+app_sdod2.elf: app_sdod2.o zd2card.o cdc.o busby.o leonardo.o misc.o
 app_tone1.elf: app_tone1.o
 app_uartloop1.elf: app_uartloop1.o misc.o
 app_usbkb1.elf: app_usbkb1.o usbkb.o busby.o misc.o
@@ -55,6 +57,7 @@ app_ostream1.o: app_ostream1.cpp stream.h
 app_potmeter1.o: app_potmeter1.cpp analog.h
 app_ps2kb2.o: app_ps2kb2.cpp
 app_sdod1.o: app_sdod1.cpp zd2card.h
+app_sdod2.o: app_sdod2.cpp zd2card.h
 app_tone1.o: app_tone1.cpp
 app_uartloop1.o: app_uartloop1.cpp misc.h
 app_usbkb1.o: app_usbkb1.cpp usbkb.h

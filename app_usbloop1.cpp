@@ -7,16 +7,6 @@ prints to USB in opposite case
 #include "cdc.h"
 #include "misc.h"
 
-inline bool isUpper(char c) { return c >= 'A' && c <= 'Z'; }
-inline bool isLower(char c) { return c >= 'a' && c <= 'z'; }
-
-inline char convert(char c)
-{
-    if (isUpper(c)) return c + 32;
-    if (isLower(c)) return c - 32;
-    return c;
-}
-
 int main()
 {
     Serial serial;
@@ -29,7 +19,7 @@ int main()
 
         if (byte != 255)
         {
-            usb.sendByte(convert(byte));
+            usb.sendByte(Utility::convertCase(byte));
             usb.flush();
         }
     }

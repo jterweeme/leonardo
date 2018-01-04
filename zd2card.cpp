@@ -1,13 +1,13 @@
 #include "zd2card.h"
 #include <avr/io.h>
 
-static void spiSend(uint8_t b)
+static inline void spiSend(uint8_t b)
 {
     SPDR = b;
     while (!(SPSR & 1<<SPIF));
 }
 
-static uint8_t spiRec(void)
+static inline uint8_t spiRec(void)
 {
     spiSend(0XFF);
     return SPDR;
@@ -231,7 +231,7 @@ uint8_t Sd2Card::readData(uint32_t block, uint16_t offset, uint16_t count, uint8
     inBlock_ = 1;
   }
 
-#ifdef OPTIMIZE_HARDWARE_SPI
+#if 1
   // start first spi transfer
   SPDR = 0XFF;
 

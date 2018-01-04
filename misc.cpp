@@ -222,6 +222,17 @@ void Utility::reverse(char str[], int length)
     }
 }
 
+char Utility::convertCase(char c)
+{
+    if (isUpper(c))
+        return c + 32;
+
+    if (isLower(c))
+        return c - 32;
+
+    return c;
+}
+
 int Utility::strcmp(const char *a, const char *b)
 {
     for (; *a == *b; a++, b++)

@@ -1,4 +1,5 @@
 #include "usbsd2.h"
+#include <avr/interrupt.h>
 
 int main(void)
 {
@@ -9,7 +10,7 @@ int main(void)
     serial.write("onzin\r\n");
 #endif
     USBSD usbsd;
-    sei();
+    sei();  // dit is nodig!
 
 	for (;;)
 	{
