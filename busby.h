@@ -228,23 +228,23 @@ protected:
     uint8_t readStream(void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t nullStream(uint16_t len, uint16_t * const bytesProcessed);
     static constexpr uint8_t USB_Options = USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL;
-    uint8_t waitUntilReady();
-    uint8_t getEndpointDirection();
+    uint8_t waitUntilReady() const;
+    uint8_t getEndpointDirection() const;
     uint8_t getCurrentEndpoint() { return UENUM & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
-    void selectEndpoint(uint8_t addr) { UENUM = addr & ENDPOINT_EPNUM_MASK; }
+    inline void selectEndpoint(uint8_t addr) const { UENUM = addr & ENDPOINT_EPNUM_MASK; }
     inline uint8_t read8() const { return UEDATX; }
-    uint32_t read32();
-    inline void write8(uint8_t dat) { UEDATX = dat; }
-    inline void write16(uint16_t dat) { UEDATX = dat & 0xff; UEDATX = dat >> 8; }
-    void write32(uint32_t dat);
-    void write32be(uint32_t dat);
-    inline uint16_t bytesInEndpoint() { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
+    uint32_t read32() const;
+    inline void write8(uint8_t dat) const { UEDATX = dat; }
+    inline void write16(uint16_t dat) const { UEDATX = dat & 0xff; UEDATX = dat >> 8; }
+    void write32(uint32_t dat) const;
+    void write32be(uint32_t dat) const;
+    inline uint16_t bytesInEndpoint() const { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
     void Device_ClearSetFeature();
     void Device_GetSerialString(uint16_t *UnicodeString);
-    void clearStatusStage();
+    void clearStatusStage() const;
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     bool configureEndpoint(Endpoint &ep);
-    uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes);
+    uint8_t Endpoint_BytesToEPSizeMask(uint16_t bytes) const;
     virtual void Device_ProcessControlRequest() { }
 public:
     static USB *instance;

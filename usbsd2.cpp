@@ -1,26 +1,10 @@
 #include "usbsd2.h"
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
-
-#define DF_STATUS_SECTORPROTECTION_ON           (1 << 1)
-#define DF_STATUS_READY                         (1 << 7)
-
-#define DATAFLASH_NO_CHIP 0
-#define DATAFLASH_TOTALCHIPS 1
-#define DATAFLASH_PAGE_SIZE 264
-#define DATAFLASH_PAGES 2048
-
-#define DATAFLASH_CHIPCS_DDR                 DDRE
-#define DATAFLASH_CHIPCS_PORT                PORTE
-
-#define ENDPOYNT_TOTAL_ENDPOINTS 7
-
-#define E2P_TYPE_BULK 0x02
+#include <ctype.h>
 
 static constexpr uint8_t
-    ENDPOYNT_DIR_IN = 0x80,
-    ENDPOYNT_DIR_OUT = 0x00,
-    ENDPOYNT_EPNUM_MASK = 0x0f,
+    E2P_TYPE_BULK = 0x02,
     UZE_INTERNAL_SERIAL = 0xdc,
     USB_CONFYG_ATTR_RESERVED = 0x80,
     MS_KOMMAND_DIR_DATA_IN = 1<<7,
@@ -44,20 +28,24 @@ static constexpr uint8_t
     ZCZI_CMD_READ_CAPACITY_10 = 0x25,
     ZCZI_CMD_READ_10 = 0x28,
     ZCZI_CMD_WRITE_10 = 0x2a,
-    ZCZI_CMD_VERIFY_10 = 0x2f;
+    ZCZI_CMD_VERIFY_10 = 0x2f,
+    MS_ZCZI_COMMAND_Pass = 0,
+    MS_ZCZI_COMMAND_Fail = 1,
+    MS_CZCP_SCSITransparentSubclass = 0x06,
+    MS_CZCP_MassStorageClass = 0x08,
+    MS_CZCP_BulkOnlyTransportProtocol = 0x50,
+    STRING_ID_Language     = 0,
+    STRING_ID_Manufacturer = 1,
+    STRING_ID_Product      = 2,
+    MASS_STORAGE_IO_EPSIZE = 64,
+    M2S_REQ_GetMaxLUN = 0xfe,
+    M2S_REQ_MassStorageReset = 0xff,
+    INTERNAL_ZERIAL_START_ADDRESS = 0x0e,
+    INTERNAL_ZERIAL_LENGTH_BITS = 80,
+    MASS_STORAGE_IN_EPADDR = (ENDPOINT_DIR_IN  | 3),
+    MASS_STORAGE_OUT_EPADDR = (ENDPOINT_DIR_OUT | 4),
+    TOTAL_LUNS = 1;
 
-#define MS_ZCZI_COMMAND_Pass 0
-#define MS_ZCZI_COMMAND_Fail 1
-
-#define MS_CZCP_SCSITransparentSubclass 0x06
-#define MS_CZCP_MassStorageClass 0x08
-#define MS_CZCP_BulkOnlyTransportProtocol 0x50
-
-#define M2S_REQ_GetMaxLUN 0xfe
-#define M2S_REQ_MassStorageReset 0xff
-
-#define INTERNAL_ZERIAL_START_ADDRESS 0x0e
-#define INTERNAL_ZERIAL_LENGTH_BITS 80
 
 struct ZCZI_Inquiry_Response_t
 {
@@ -90,22 +78,13 @@ struct ZCZI_Request_Sense_Response_t
 }
 __attribute__ ((packed));
 
-#define MASS_STORAGE_IN_EPADDR         (ENDPOINT_DIR_IN  | 3)
-#define MASS_STORAGE_OUT_EPADDR        (ENDPOINT_DIR_OUT | 4)
-
-typedef struct
+struct MyConf
 {
     DescConf Config;
     DescIface MS_Interface;
     DescEndpoint MS_DataInEndpoint;
     DescEndpoint MS_DataOutEndpoint;
-} MyConf;
-
-static const uint8_t
-    STRING_ID_Language     = 0,
-    STRING_ID_Manufacturer = 1,
-    STRING_ID_Product      = 2,
-    MASS_STORAGE_IO_EPSIZE = 64;
+};
 
 static constexpr uint16_t BLOCKSIZE = 512;
 static constexpr uint32_t LUN_MEDIA_BLOCKS = 990976;
@@ -123,7 +102,7 @@ static inline uint32_t zwapEndian_32(const uint32_t dword)
         dword >> 8 & 0xff00 | dword << 24 & 0xff000000;
 }
 
-#define TOTAL_LUNS                1
+
 #define DISK_READ_ONLY            false
 
 const DescDev PROGMEM DeviceDescriptor =
@@ -287,7 +266,7 @@ static const ZCZI_Inquiry_Response_t InquiryData =
     {'0','.','0','0'},
 };
 
-static ZCZI_Request_Sense_Response_t SenseData =
+static ZCZI_Request_Sense_Response_t senseData =
 {
     0x70,   // response code
     0, // seg no
@@ -309,9 +288,9 @@ bool USBSD::decodeSCSICmd()
 
             if ((cmdBlock.SCSICommandData[1] & (1<<0 | 1<<1)) || cmdBlock.SCSICommandData[2])
             {
-                SenseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
-                SenseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_FIELD_IN_CDB;
-                SenseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
+                senseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
+                senseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_FIELD_IN_CDB;
+                senseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
                 break;
             }
 
@@ -325,8 +304,8 @@ bool USBSD::decodeSCSICmd()
         case ZCZI_CMD_REQUEST_SENSE:
         {
             uint8_t AllocationLength = cmdBlock.SCSICommandData[4];
-            uint8_t BytesTransferred = min((size_t)AllocationLength, sizeof(SenseData));
-            writeStream2(&SenseData, BytesTransferred, NULL);
+            uint8_t BytesTransferred = min((size_t)AllocationLength, sizeof(senseData));
+            writeStream2(&senseData, BytesTransferred, NULL);
             nullStream(AllocationLength - BytesTransferred, NULL);
             UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
             cmdBlock.DataTransferLength -= BytesTransferred;
@@ -348,9 +327,9 @@ bool USBSD::decodeSCSICmd()
 
             if ((cmdBlock.SCSICommandData[1] & 1<<2) == 0)
             {
-                SenseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
-                SenseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_FIELD_IN_CDB;
-                SenseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
+                senseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
+                senseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_FIELD_IN_CDB;
+                senseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
                 break;
             }
 
@@ -366,7 +345,7 @@ bool USBSD::decodeSCSICmd()
         case ZCZI_CMD_MODE_SENSE_6:
             write8(0x00);
             write8(0x00);
-            write8(DISK_READ_ONLY ? 0x80 : 0x00);
+            write8(0x00);
             write8(0x00);
             UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
             cmdBlock.DataTransferLength -= 4;
@@ -380,28 +359,29 @@ bool USBSD::decodeSCSICmd()
             cmdBlock.DataTransferLength = 0;
             break;
         default:
-            SenseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
-            SenseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_COMMAND;
-            SenseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
+            senseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
+            senseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_COMMAND;
+            senseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
             break;
     }
 
     if (success)
     {
-        SenseData.vanalles = ZCZI_SENSE_KEY_GOOD << 4;
-        SenseData.AdditionalSenseCode = ZCZI_ASENSE_NO_ADDITIONAL_INFORMATION;
-        SenseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
+        senseData.vanalles = ZCZI_SENSE_KEY_GOOD << 4;
+        senseData.AdditionalSenseCode = ZCZI_ASENSE_NO_ADDITIONAL_INFORMATION;
+        senseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
         return true;
     }
 
     return false;
 }
 
-bool USBSD::SCSI_Command_ReadWrite_10(const bool IsDataRead)
+bool USBSD::SCSI_Command_ReadWrite_10(bool IsDataRead)
 {
     uint32_t blockAddr;
     uint16_t totalBlocks;
 
+#if 0
     if (IsDataRead == DATA_WRITE && DISK_READ_ONLY)
     {
         SenseData.vanalles = ZCZI_SENSE_KEY_DATA_PROTECT << 4;
@@ -409,77 +389,92 @@ bool USBSD::SCSI_Command_ReadWrite_10(const bool IsDataRead)
         SenseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
         return false;
     }
+#endif
 
     blockAddr = zwapEndian_32(*(uint32_t*)&cmdBlock.SCSICommandData[2]);
     totalBlocks = zwapEndian_16(*(uint16_t*)&cmdBlock.SCSICommandData[7]);
 
     if (blockAddr >= LUN_MEDIA_BLOCKS)
     {
-        SenseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
-        SenseData.AdditionalSenseCode = ZCZI_ASENSE_LOGICAL_BLOCK_ADDRESS_OUT_OF_RANGE;
-        SenseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
+        senseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
+        senseData.AdditionalSenseCode = ZCZI_ASENSE_LOGICAL_BLOCK_ADDRESS_OUT_OF_RANGE;
+        senseData.AdditionalSenseQualifier = ZCZI_ASENSEQ_NO_QUALIFIER;
         return false;
     }
 
     if (IsDataRead == DATA_READ)
-        DataflashManager_ReadBlocks(blockAddr, totalBlocks);
-#if 0
+        _sdReadBlocks(blockAddr, totalBlocks);
     else
-        DataflashManager_WriteBlocks(BlockAddress, totalBlocks);
-#endif
+        _sdWriteBlocks(blockAddr, totalBlocks);
+
     cmdBlock.DataTransferLength -= ((uint32_t)totalBlocks * BLOCKSIZE);
     return true;
 }
 
-void USBSD::DataflashManager_ReadBlocks(const uint32_t start, uint16_t n)
+inline void USBSD::_sdWriteBlock(const uint32_t block)
+{
+    uint8_t buf[512];
+    
+    for (uint16_t byte = 0; byte < BLOCKSIZE; )
+    {
+        if ((UEINTX & 1<<RWAL) == 0)
+        {
+            UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+            
+            if (waitUntilReady())
+                return;
+        }
+
+        for (uint8_t i = 0; i < 16; i++)
+            buf[byte++] = read8();
+    }
+
+    _sd.writeBlock(block, buf);
+}
+
+void USBSD::_sdWriteBlocks(const uint32_t start, const uint16_t n)
 {
     if (waitUntilReady())
         return;
-#if 0
+
+    for (uint16_t i = 0; i < n; i++)
+        _sdWriteBlock(start + i);
+
+    if ((UEINTX & 1<<RWAL) == 0)
+        UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+}
+
+inline void USBSD::_sdReadBlock(const uint32_t block)
+{
     uint8_t buf[512];
+    _sd.readBlock(block, buf);
 
-    for (uint16_t i = 0; i < n; i++)
+    for (uint16_t byte = 0; byte < BLOCKSIZE; )
     {
-        _sd.readBlock(start + i, buf);
-        
-        for (uint16_t j = 0; j < 512; j++)
+        if ((UEINTX & 1<<RWAL) == 0)    //read-write allowed?
         {
-            if ((UEINTX & 1<<RWAL) == 0)
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
 
-            write8(buf[j]);
-        }
-    }
-#else
-    for (uint16_t i = 0; i < n; i++)
-    {
-        uint8_t BytesInBlockDiv16 = 0;
-        uint16_t k = 0;
-
-        while (BytesInBlockDiv16 < (BLOCKSIZE >> 4))
-        {
-            if ((UEINTX & 1<<RWAL) == 0)    //read-write allowed?
-            {
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
-
-                if (waitUntilReady())
-                    return;
-            }
-
-            uint8_t buf[16];
-            _sd.readData(start + i, k * 16, 16, buf);
-            k++;
-
-            for (uint8_t j = 0; j < 16; j++)
-                write8(buf[j]);
-
-            BytesInBlockDiv16++;
-
-            if (IsMassStoreReset)
+            if (waitUntilReady())
                 return;
         }
+
+        for (uint8_t i = 0; i < 16; i++)
+            write8(buf[byte++]);
+
+        if (IsMassStoreReset)
+            return;
     }
-#endif
+}
+
+void USBSD::_sdReadBlocks(const uint32_t start, const uint16_t n)
+{
+    if (waitUntilReady())
+        return;
+
+    for (uint16_t i = 0; i < n; i++)
+        _sdReadBlock(start + i);
+
     if ((UEINTX & 1<<RWAL) == 0)            // buffer full?
         UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // then clear it
 }

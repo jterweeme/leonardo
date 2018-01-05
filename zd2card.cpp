@@ -1,5 +1,6 @@
 #include "zd2card.h"
 #include <avr/io.h>
+#include "misc.h"
 
 static inline void spiSend(uint8_t b)
 {
@@ -390,6 +391,8 @@ fail:
  */
 uint8_t Sd2Card::writeBlock(uint32_t blockNumber, const uint8_t* src)
 {
+    //Serial::instance->write("ZDwriteBlock\r\n");
+
     // use address if not SDHC card
     if (type() != SD_CARD_TYPE_SDHC)
         blockNumber <<= 9;

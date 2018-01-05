@@ -294,7 +294,7 @@ public:
     Sd2Card(Pin *cs) : _cs(cs) { }
     uint32_t cardSize(void);
     uint8_t erase(uint32_t firstBlock, uint32_t lastBlock);
-    uint8_t eraseSingleBlockEnable(void);
+    uint8_t eraseSingleBlockEnable();
     uint8_t errorCode() const {return errorCode_;}
     uint8_t errorData() const {return status_;}
     uint8_t init(uint8_t sckRateID);

@@ -5,35 +5,35 @@
 
 USB *USB::instance;
 
-uint8_t USB::getEndpointDirection()
+uint8_t USB::getEndpointDirection() const
 {
     return UECFG0X & 1<<EPDIR ? ENDPOINT_DIR_IN : ENDPOINT_DIR_OUT;
 }
 
-uint32_t USB::read32()
+uint32_t USB::read32() const
 {
     union
     {
-        uint32_t Value;
-        uint8_t  Bytes[4];
+        uint32_t value;
+        uint8_t Bytes[4];
     } Data;
 
     Data.Bytes[0] = UEDATX;
     Data.Bytes[1] = UEDATX;
     Data.Bytes[2] = UEDATX;
     Data.Bytes[3] = UEDATX;
-    return Data.Value;
+    return Data.value;
 }
 
-void USB::write32(uint32_t Data)
+void USB::write32(uint32_t dat) const
 {
-    UEDATX = Data &  0xFF;
-    UEDATX = Data >> 8;
-    UEDATX = Data >> 16;
-    UEDATX = Data >> 24;
+    UEDATX = dat &  0xFF;
+    UEDATX = dat >> 8;
+    UEDATX = dat >> 16;
+    UEDATX = dat >> 24;
 }
 
-void USB::write32be(uint32_t dat)
+void USB::write32be(uint32_t dat) const
 {
     UEDATX = dat >> 24;
     UEDATX = dat >> 16;
@@ -69,7 +69,7 @@ void USB::Device_GetSerialString(uint16_t *UnicodeString)
     GCC_MEMORY_BARRIER();
 }
 
-uint8_t USB::waitUntilReady()
+uint8_t USB::waitUntilReady() const
 {
     uint16_t TimeoutMSRem = USB_STREAM_TIMEOUT_MS;
     uint16_t PreviousFrameNumber = UDFNUM;
@@ -108,7 +108,7 @@ uint8_t USB::waitUntilReady()
     }
 }
 
-void USB::clearStatusStage()
+void USB::clearStatusStage() const
 {
     if (_ctrlReq.bmRequestType & REQDIR_DEVICETOHOST)
     {
@@ -174,8 +174,7 @@ bool USB::configureEndpoint(uint8_t addr, uint8_t Type, uint16_t Size, uint8_t b
     return true;
 }
 
-USB::USB() :
-    _control(ENDPOINT_CONTROLEP, 8, EP_TYPE_CONTROL, 1)
+USB::USB() : _control(ENDPOINT_CONTROLEP, 8, EP_TYPE_CONTROL, 1)
 {
     instance = this;
 }
@@ -333,18 +332,18 @@ uint8_t USB::write_Control_PStream_LE(const void* const Buffer, uint16_t Length)
     return ENDPOINT_RWCSTREAM_NoError;
 }
 
-uint8_t USB::Endpoint_BytesToEPSizeMask(const uint16_t Bytes)
+uint8_t USB::Endpoint_BytesToEPSizeMask(const uint16_t bytes) const
 {
-    uint8_t  MaskVal    = 0;
+    uint8_t maskVal = 0;
     uint16_t CheckBytes = 8;
 
-    while (CheckBytes < Bytes)
+    while (CheckBytes < bytes)
     {
-        MaskVal++;
+        maskVal++;
         CheckBytes <<= 1;
     }
 
-    return MaskVal<<EPSIZE0;
+    return maskVal<<EPSIZE0;
 }
 
 bool USB::configureEndpoint(Endpoint &ep)

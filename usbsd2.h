@@ -44,7 +44,10 @@ private:
     MS_KommandBlockWrapper_t cmdBlock;
     MS_KommandStatusWrapper_t cmdStatus = { .Signature = M2S_CSW_SIGNATURE };
     bool ReadInCommandBlock();
-    void DataflashManager_ReadBlocks(const uint32_t BlockAddress, uint16_t TotalBlocks);
+    inline void _sdReadBlock(uint32_t block);
+    void _sdReadBlocks(uint32_t start, uint16_t n);
+    inline void _sdWriteBlock(uint32_t block);
+    void _sdWriteBlocks(uint32_t start, uint16_t n);
     bool SCSI_Command_ReadWrite_10(const bool IsDataRead);
 public:
     void ReturnCommandStatus();

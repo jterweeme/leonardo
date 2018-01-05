@@ -3,11 +3,10 @@
 
 int main(void)
 {
-#ifdef DEBUG
+#if 1
     Serial serial;
-    g_serial = &serial;
     serial.init();
-    serial.write("onzin\r\n");
+    serial.write("SD card reader\r\n");
 #endif
     USBSD usbsd;
     sei();  // dit is nodig!

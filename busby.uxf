@@ -22,12 +22,55 @@ _control: Endpoint
     <coordinates>
       <x>510</x>
       <y>230</y>
-      <w>280</w>
+      <w>160</w>
       <h>230</h>
     </coordinates>
     <panel_attributes>*Endpoint*
 --
---</panel_attributes>
++ addr: uint8_t
++ size: uint16_t
++ type: uint8_t
++ banks: uint8_t
+--
++ select(): void
++ reset(): void</panel_attributes>
     <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>660</x>
+      <y>220</y>
+      <w>320</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>300.0;10.0;10.0;80.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>890</x>
+      <y>500</y>
+      <w>370</w>
+      <h>220</h>
+    </coordinates>
+    <panel_attributes>*USBSD*
+--
+--
++ decodeSCSICmd(): bool
++ procCtrlReq(): void</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1060</x>
+      <y>310</y>
+      <w>30</w>
+      <h>210</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;190.0</additional_attributes>
   </element>
 </diagram>
