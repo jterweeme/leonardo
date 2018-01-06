@@ -68,8 +68,8 @@ public:
         ID_EMPTY2 = 117;
 private:
     MyArray<Button, 18> _buttons;
-    OutputLine _ol;
     TFT *_tft;
+    OutputLine _ol;
     uint16_t _prevClr = 0xf;
     uint8_t _prevBtn = 0;
 public:

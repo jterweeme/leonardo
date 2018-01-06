@@ -13,7 +13,7 @@ static constexpr uint32_t
     M2S_CSW_SIGNATURE = 0x53425355,
     M2S_CBW_SIGNATURE = 0x43425355;
 
-typedef struct
+struct MS_KommandBlockWrapper_t
 {
     uint32_t Signature;
     uint32_t Tag;
@@ -23,20 +23,21 @@ typedef struct
     uint8_t SCSICommandLength;
     uint8_t SCSICommandData[16];
 }
-__attribute__ ((packed)) MS_KommandBlockWrapper_t;
+__attribute__ ((packed));
 
-typedef struct
+struct MS_KommandStatusWrapper_t
 {
     uint32_t Signature;
     uint32_t Tag;
     uint32_t DataTransferResidue;
     uint8_t Status;
 }
-__attribute__ ((packed)) MS_KommandStatusWrapper_t;
+__attribute__ ((packed));
 
 class USBSD : public USB
 {
 private:
+    uint32_t _blocks;
     Board _board;
     Sd2Card _sd;
     Endpoint _inpoint;
@@ -53,7 +54,7 @@ public:
     void ReturnCommandStatus();
     void MassStorage_Task();
     bool decodeSCSICmd();
-    void Device_ProcessControlRequest();
+    void procCtrlReq();
     USBSD();
 };
 

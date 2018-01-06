@@ -6,9 +6,9 @@
 #include <stdio.h>
 
 static constexpr uint8_t
-    CDC_DSUBTYPE_CSInterface_Header           = 0x00,
+    CDC_DSUBTYPE_CSInterface_Header = 0x00,
     CDC_DSUBTYPE_CSInterface_CallManagement   = 0x01,
-    CDC_DSUBTYPE_CSInterface_ACM              = 0x02,
+    CDC_DSUBTYPE_CSInterface_ACM = 0x02,
     CDC_DSUBTYPE_CSInterface_DirectLine       = 0x03,
     CDC_DSUBTYPE_CSInterface_TelephoneRinger  = 0x04,
     CDC_DSUBTYPE_CSInterface_TelephoneCall    = 0x05,
@@ -358,7 +358,7 @@ CDC::CDC() :
     _outpoint(CDC_RX_EPADDR, CDC_TXRX_EPSIZE, EP_TYPE_BULK, 0),
     _notif(CDC_NOTIFICATION_EPADDR, CDC_NOTIFICATION_EPSIZE, EP_TYPE_INTERRUPT, 0)
 {
-    USBCON &= ~(1<<OTGPADE);
+    *p_usbcon &= ~(1<<otgpade);
     UHWCON |= 1<<UVREGE;    // enable USB pad regulator
     USBCON &= ~(1<<VBUSTE);     // disable VBUS transition interrupt
     UDIEN = 0;
@@ -387,7 +387,7 @@ CDC::CDC() :
 
     _inpoint.select();
 
-    if (UEINTX & 1<<TXINI)
+    if (*p_ueintx & 1<<TXINI)
         flush();
 
     if (state == DEVICE_STATE_Unattached)
@@ -397,7 +397,7 @@ CDC::CDC() :
     _control.select();
 
     if (UEINTX & 1<<RXSTPI)
-        Device_ProcessControlRequest();
+        procCtrlReq();
 
     selectEndpoint(prevEndpoint);
 }
@@ -462,7 +462,7 @@ void CDC::EVENT_USB_Device_ControlRequest()
     }
 }
 
-void CDC::Device_ProcessControlRequest()
+void CDC::procCtrlReq()
 {
     uint8_t* RequestHeader = (uint8_t*)&_ctrlReq;
 

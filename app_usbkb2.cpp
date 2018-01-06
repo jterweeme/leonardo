@@ -95,6 +95,8 @@ static uint8_t lut(uint8_t x)
     case PS2_ENTER:
         return HID_KEYBOARD_SC_ENTER;
     }
+
+    return 0;
 }
 
 static bool isPS2Modifier(uint8_t ps2scan)

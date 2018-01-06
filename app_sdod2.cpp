@@ -26,13 +26,13 @@ void hexDump(uint8_t *point, ostream &os)
         for (uint8_t j = 0; j < 16; j++)
         {
             char wbuf[10];  // write buffer
-            snprintf(wbuf, 10, "%02x ", point[i + j]);
+            ::snprintf(wbuf, 10, "%02x ", point[i + j]);
             os.write(wbuf);
         }
 
         for (uint8_t j = 0; j < 16; j++)
         {
-            if (isprint(point[i + j]))
+            if (::isprint(point[i + j]))
                 os.write(point[i + j]);
             else
                 os.write('.');
@@ -110,6 +110,7 @@ int main()
     CDC cdc;
     USBStream cout(&cdc);
     Command cmd;
+    uint32_t cardSize = sd.cardSize();
 
     while (true)
     {
@@ -124,17 +125,11 @@ int main()
 
         if (cmd.isCommand())
         {
-#if 0
-            cout.writeString("\r\ndebug bericht\r\n");
-            cout.flush();
-            char buf2[50];
-            snprintf(buf2, 50, "%u\r\n", cmd.number());
-            cout.writeString(buf2);
-            cout.flush();
-#endif
             sd.readBlock(cmd.number(), buf);
             cmd.reset();
-            cout.writeString("\r\n");
+            char buf2[50];
+            ::snprintf(buf2, 50, "%lu\r\n", cardSize);
+            cout.writeString(buf2);
             hexDump(buf, cout);
             cout.flush();
         }

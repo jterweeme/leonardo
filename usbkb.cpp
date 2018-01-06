@@ -266,7 +266,7 @@ void USBKB::sendReport(KBReport &report)
     }
 }
 
-void USBKB::Device_ProcessControlRequest()
+void USBKB::procCtrlReq()
 {
     uint8_t* RequestHeader = (uint8_t*)&_ctrlReq;
 

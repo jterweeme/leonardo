@@ -1,4 +1,4 @@
-#include "usbsd2.h"
+#include "usbsd.h"
 #include <avr/interrupt.h>
 
 int main(void)

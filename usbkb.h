@@ -69,19 +69,19 @@ static constexpr uint8_t
     HID_KEYBOARD_SC_F10 = 0x43,
     HID_KEYBOARD_SC_F11 = 0x44,
     HID_KEYBOARD_SC_F12 =  0x45,
-    HID_KEYBOARD_SC_PRINT_SCREEN    =  0x46,
-    HID_KEYBOARD_SC_SCROLL_LOCK     =  0x47,
-    HID_KEYBOARD_SC_PAUSE           =  0x48,
-    HID_KEYBOARD_SC_INSERT          =  0x49,
-    HID_KEYBOARD_SC_HOME            =  0x4A,
-    HID_KEYBOARD_SC_PAGE_UP         =  0x4B,
-    HID_KEYBOARD_SC_DELETE          =  0x4C,
-    HID_KEYBOARD_SC_END             =  0x4D,
-    HID_KEYBOARD_SC_PAGE_DOWN       =  0x4E,
-    HID_KEYBOARD_SC_RIGHT_ARROW     =  0x4F,
-    HID_KEYBOARD_SC_LEFT_ARROW      =  0x50,
-    HID_KEYBOARD_SC_DOWN_ARROW      =  0x51,
-    HID_KEYBOARD_SC_UP_ARROW        =  0x52,
+    HID_KEYBOARD_SC_PRINT_SCREEN = 0x46,
+    HID_KEYBOARD_SC_SCROLL_LOCK = 0x47,
+    HID_KEYBOARD_SC_PAUSE = 0x48,
+    HID_KEYBOARD_SC_INSERT = 0x49,
+    HID_KEYBOARD_SC_HOME = 0x4A,
+    HID_KEYBOARD_SC_PAGE_UP      = 0x4B,
+    HID_KEYBOARD_SC_DELETE       = 0x4C,
+    HID_KEYBOARD_SC_END          = 0x4D,
+    HID_KEYBOARD_SC_PAGE_DOWN    = 0x4E,
+    HID_KEYBOARD_SC_RIGHT_ARROW  = 0x4F,
+    HID_KEYBOARD_SC_LEFT_ARROW   = 0x50,
+    HID_KEYBOARD_SC_DOWN_ARROW   = 0x51,
+    HID_KEYBOARD_SC_UP_ARROW     = 0x52,
     HID_KEYBOARD_MODIFIER_LEFTCTRL = 1<<0,
     HID_KEYBOARD_MODIFIER_LEFTSHIFT = 1<<1,
     HID_KEYBOARD_MODIFIER_LEFTALT    = 1<<2,
@@ -115,7 +115,7 @@ class USBKB : public USB
 private:
     Endpoint _inpoint;
     Endpoint _outpoint;
-    void Device_ProcessControlRequest();
+    void procCtrlReq();
     uint16_t getDescriptor(uint16_t value, uint8_t wIndex, const void **descAddr);
 public:
     void sendReport(KBReport &report);

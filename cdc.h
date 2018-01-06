@@ -24,10 +24,9 @@ static constexpr uint8_t
     CDC_REQ_SetControlLineState = 0x22,
     CDC_REQ_SendBreak = 0x23,
     CDC_NOTIF_SerialState = 0x20,
-    CDC_LINEENCODING_OneStopBit          = 0,
+    CDC_LINEENCODING_OneStopBit = 0,
     CDC_LINEENCODING_OneAndAHalfStopBits = 1,
-    CDC_LINEENCODING_TwoStopBits         = 2;
-
+    CDC_LINEENCODING_TwoStopBits = 2;
 
 struct CDC_LineEncoding_t
 {
@@ -46,7 +45,7 @@ private:
     CDC_LineEncoding_t _lineEncoding;
     bool configureEndpoints();
     void EVENT_USB_Device_ControlRequest();
-    void Device_ProcessControlRequest();
+    void procCtrlReq();
     uint16_t getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddr);
 public:
     int16_t receive();

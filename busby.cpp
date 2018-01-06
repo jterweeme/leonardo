@@ -27,35 +27,35 @@ uint32_t USB::read32() const
 
 void USB::write32(uint32_t dat) const
 {
-    UEDATX = dat &  0xFF;
-    UEDATX = dat >> 8;
-    UEDATX = dat >> 16;
-    UEDATX = dat >> 24;
+    *p_uedatx = dat &  0xFF;
+    *p_uedatx = dat >> 8;
+    *p_uedatx = dat >> 16;
+    *p_uedatx = dat >> 24;
 }
 
 void USB::write32be(uint32_t dat) const
 {
-    UEDATX = dat >> 24;
-    UEDATX = dat >> 16;
-    UEDATX = dat >> 8;
-    UEDATX = dat & 0xff;
+    *p_uedatx = dat >> 24;
+    *p_uedatx = dat >> 16;
+    *p_uedatx = dat >> 8;
+    *p_uedatx = dat & 0xff;
 }
 
 void USB::Device_GetSerialString(uint16_t *UnicodeString)
 {
     uint8_t currentGlobalInt = SREG;
     cli();
-    uint8_t SigReadAddress = INTERNAL_SERIAL_START_ADDRESS;
+    uint8_t sigReadAddress = INTERNAL_SERIAL_START_ADDRESS;
 
     for (uint8_t SerialCharNum = 0;
         SerialCharNum < INTERNAL_SERIAL_LENGTH_BITS / 4; SerialCharNum++)
     {
-        uint8_t SerialByte = boot_signature_byte_get(SigReadAddress);
+        uint8_t SerialByte = boot_signature_byte_get(sigReadAddress);
 
         if (SerialCharNum & 0x01)
         {
             SerialByte >>= 4;
-            SigReadAddress++;
+            sigReadAddress++;
         }
 
         SerialByte &= 0x0F;
@@ -159,7 +159,7 @@ bool USB::configureEndpoint(uint8_t addr, uint8_t Type, uint16_t Size, uint8_t b
         if (!(UECFG1XTemp & 1<<ALLOC))
           continue;
 
-        UECONX &= ~(1<<EPEN);
+        *p_ueconx &= ~(1<<epen);
         UECFG1X &= ~(1<<ALLOC);
         UECONX |= 1<<EPEN;
         UECFG0X = UECFG0XTemp;
@@ -348,7 +348,7 @@ uint8_t USB::Endpoint_BytesToEPSizeMask(const uint16_t bytes) const
 
 bool USB::configureEndpoint(Endpoint &ep)
 {
-    configureEndpoint(ep.addr, ep.type, ep.size, ep.banks);
+    return configureEndpoint(ep.addr, ep.type, ep.size, ep.banks);
 }
 
 uint8_t USB::nullStream(uint16_t len, uint16_t * const bytesProcessed)
@@ -439,11 +439,11 @@ void USB::com()
 {
     uint8_t prevSelectedEndp = getCurrentEndpoint();
     _control.select();
-    UEIENX &= ~(1<<RXSTPE);
+    *p_ueienx &= ~(1<<rxstpe);
     sei();
-    Device_ProcessControlRequest();
+    procCtrlReq();
     _control.select();
-    UEIENX |= 1<<RXSTPE;
+    *p_ueienx |= 1<<rxstpe;
     selectEndpoint(prevSelectedEndp);
 }
 
@@ -459,18 +459,18 @@ ISR(USB_GEN_vect)
 
 void USB::gen()
 {   
-    if (UDINT & 1<<SOFI && UDIEN & 1<<SOFE)
-        UDINT &= ~(1<<SOFI);
+    if (*p_udint & 1<<sofi && *p_udien & 1<<sofe)
+        *p_udint &= ~(1<<sofi);
 
-    if (USBINT & 1<<VBUSTI && USBCON & 1<<VBUSTE)
+    if (*p_usbint & 1<<vbusti && *p_usbcon & 1<<vbuste)
     {
-        USBINT &= ~(1<<VBUSTI);
+        *p_usbint &= ~(1<<vbusti);
 
-        if (USBSTA & 1<<VBUS)
+        if (*p_usbsta & 1<<vbus)
         {
             PLLCSR = USB_PLL_PSC;
             PLLCSR = USB_PLL_PSC | 1<<PLLE;
-            while (!(PLLCSR & 1<<PLOCK));
+            while ((PLLCSR & 1<<PLOCK) == 0);
             state = DEVICE_STATE_Powered;
         }
         else
@@ -480,10 +480,10 @@ void USB::gen()
         }
     }
 
-    if (UDINT & 1<<SUSPI && UDIEN & 1<<SUSPE)
+    if (*p_udint & 1<<suspi && *p_udien & 1<<suspe)
     {
-        UDIEN &= ~(1<<SUSPE);   // disable int suspe
-        UDIEN |= 1<<WAKEUPE;    // enable int wakeup
+        *p_udien &= ~(1<<suspe);   // disable int suspe
+        *p_udien |= 1<<wakeupe;    // enable int wakeup
         USBCON |= 1<<FRZCLK;
         PLLCSR = 0;
         state = DEVICE_STATE_Suspended;
@@ -495,9 +495,9 @@ void USB::gen()
         PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
         while (!(PLLCSR & 1<<PLOCK));   // PLL is ready?
         USBCON &= ~(1<<FRZCLK);
-        UDINT &= ~(1<<WAKEUPI);
-        UDIEN &= ~(1<<WAKEUPI);
-        UDIEN |= 1<<SUSPE;
+        *p_udint &= ~(1<<WAKEUPI);
+        *p_udien &= ~(1<<WAKEUPI);
+        *p_udien |= 1<<SUSPE;
 
         if (USB_Device_ConfigurationNumber)
             state = DEVICE_STATE_Configured;
@@ -505,14 +505,14 @@ void USB::gen()
             state = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
     }
 
-    if (UDINT & 1<<EORSTI && UDIEN & 1<<EORSTE)
+    if (*p_udint & 1<<EORSTI && *p_udien & 1<<EORSTE)
     {
-        UDINT &= ~(1<<EORSTI);      // clear INT EORSTI
+        *p_udint &= ~(1<<EORSTI);      // clear INT EORSTI
         state = DEVICE_STATE_Default;
         USB_Device_ConfigurationNumber = 0;
-        UDINT &= ~(1<<SUSPI);       // clear INT SUSPI
-        UDIEN &= ~(1<<SUSPE);       // disable INT SUSPE
-        UDIEN |= 1<<WAKEUPE;
+        *p_udint &= ~(1<<SUSPI);       // clear INT SUSPI
+        *p_udien &= ~(1<<SUSPE);       // disable INT SUSPE
+        *p_udien |= 1<<WAKEUPE;
         configureEndpoint(_control.addr, _control.type, _control.size, 1);
         UEIENX |= 1<<RXSTPE;
     }

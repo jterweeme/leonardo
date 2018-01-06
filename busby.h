@@ -2,6 +2,7 @@
 #define _BUSBY_H_
 #include <avr/io.h>
 #include <stddef.h>
+#include "leonardo.h"
 
 static constexpr uint8_t
     ENDPOINT_DIR_MASK = 0x80,
@@ -190,8 +191,8 @@ struct Endpoint
     const uint8_t type;
     const uint8_t banks;
 
-    void select() { UENUM = addr & ENDPOINT_EPNUM_MASK; }
-    void reset() { UERST = 1<<(addr & ENDPOINT_EPNUM_MASK); UERST = 0; }
+    void select() { *p_uenum = addr & ENDPOINT_EPNUM_MASK; }
+    void reset() { *p_uerst = 1<<(addr & ENDPOINT_EPNUM_MASK); *p_uerst = 0; }
 
     Endpoint(uint8_t addr2, uint16_t size2, uint8_t type2, uint8_t banks2) :
         addr(addr2), size(size2), type(type2), banks(banks2) { }
@@ -230,12 +231,15 @@ protected:
     static constexpr uint8_t USB_Options = USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL;
     uint8_t waitUntilReady() const;
     uint8_t getEndpointDirection() const;
-    uint8_t getCurrentEndpoint() { return UENUM & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
-    inline void selectEndpoint(uint8_t addr) const { UENUM = addr & ENDPOINT_EPNUM_MASK; }
-    inline uint8_t read8() const { return UEDATX; }
+
+    inline uint8_t getCurrentEndpoint() const
+    { return *p_uenum & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
+
+    inline void selectEndpoint(uint8_t addr) const { *p_uenum = addr & ENDPOINT_EPNUM_MASK; }
+    inline uint8_t read8() const { return *p_uedatx; }
     uint32_t read32() const;
-    inline void write8(uint8_t dat) const { UEDATX = dat; }
-    inline void write16(uint16_t dat) const { UEDATX = dat & 0xff; UEDATX = dat >> 8; }
+    inline void write8(uint8_t dat) const { *p_uedatx = dat; }
+    inline void write16(uint16_t dat) const { *p_uedatx = dat & 0xff; *p_uedatx = dat >> 8; }
     void write32(uint32_t dat) const;
     void write32be(uint32_t dat) const;
     inline uint16_t bytesInEndpoint() const { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
@@ -245,7 +249,8 @@ protected:
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     bool configureEndpoint(Endpoint &ep);
     uint8_t Endpoint_BytesToEPSizeMask(uint16_t bytes) const;
-    virtual void Device_ProcessControlRequest() { }
+    virtual void procCtrlReq() { }
+    inline void setDevAddr(uint8_t addr) const { *p_udaddr = *p_udaddr & 1<<adden | addr & 0x7f; }
 public:
     static USB *instance;
     USB();
