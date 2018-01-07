@@ -37,10 +37,8 @@ static constexpr uint8_t
 
 const DescDev PROGMEM DeviceDescriptor =
 {
-    {
-        sizeof(DescDev),
-        DTYPE_Device
-    },
+    sizeof(DescDev),
+    DTYPE_Device,
     0x0110,
     CDC_CSCP_CDCClass,
     CDC_CSCP_NoSpecificSubclass,
@@ -125,11 +123,8 @@ __attribute__ ((packed));
 const MyConfiguration PROGMEM ConfigurationDescriptor =
 {
     {
-        {
-            sizeof(DescConf),
-            DTYPE_Configuration
-        },
-
+        sizeof(DescConf),
+        DTYPE_Configuration,
         sizeof(MyConfiguration),
         2,
         1,
@@ -138,10 +133,8 @@ const MyConfiguration PROGMEM ConfigurationDescriptor =
         USB_CONFIG_POWER_MA(100)
     },
     {
-        {
-            sizeof(DescIface),
-            DTYPE_Interface
-        },
+        sizeof(DescIface),
+        DTYPE_Interface,
         0,
         0,
         1,
@@ -176,43 +169,35 @@ const MyConfiguration PROGMEM ConfigurationDescriptor =
         1,
     },
     {
-        {
-            sizeof(DescEndpoint),
-            DTYPE_Endpoint
-        },
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
         CDC_NOTIFICATION_EPADDR,
         EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
         CDC_NOTIFICATION_EPSIZE,
         0xFF
     },
     {
-        {
-            sizeof(DescIface),
-            DTYPE_Interface
-        },
+        sizeof(DescIface),
+        DTYPE_Interface,
         1,
         0,
         2,
         CDC_CSCP_CDCDataClass,
         CDC_CSCP_NoDataSubclass,
         CDC_CSCP_NoDataProtocol,
-        NO_DESCRIPTOR
+        0
     },
     {
-        {
-            sizeof(DescEndpoint),
-            DTYPE_Endpoint
-        },
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
         CDC_RX_EPADDR,
         (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
         CDC_TXRX_EPSIZE,
         0x05
     },
     {
-        {
-            sizeof(DescEndpoint),
-            DTYPE_Endpoint
-        },
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
         CDC_TX_EPADDR,
         (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
         CDC_TXRX_EPSIZE,
@@ -220,68 +205,61 @@ const MyConfiguration PROGMEM ConfigurationDescriptor =
     }
 };
 
-const USB_Descriptor_String_t<2> PROGMEM LanguageString =
+const DescString<2> PROGMEM languageString =
 {
-    {
-        USB_STRING_LEN(1),
-        DTYPE_String
-    },
+    USB_STRING_LEN(1),
+    DTYPE_String,
     (wchar_t)0x0409
 };
 
-const USB_Descriptor_String_t<12> PROGMEM ManufacturerString =
+const DescString<12> PROGMEM manufacturerString =
 {
-    {
-        USB_STRING_LEN(11),
-        DTYPE_String
-    },
+    USB_STRING_LEN(11),
+    DTYPE_String,
     L"Dean Camera"
 };
 
-const USB_Descriptor_String_t<23> PROGMEM ProductString =
+const DescString<23> PROGMEM productString =
 {
-    {
-        USB_STRING_LEN(22),
-        DTYPE_String
-    },
+    USB_STRING_LEN(22),
+    DTYPE_String,
     L"LUFA USB-RS232 Adapter"
 };
 
 uint16_t CDC::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddress)
 {
-    const uint8_t descType = wValue >> 8;
     const uint8_t descNumber = wValue & 0xFF;
     const void* addr = NULL;
-    uint16_t size = NO_DESCRIPTOR;
+    uint16_t size = 0;
 
-    switch (descType)
+    switch (wValue >> 8)
     {
-        case DTYPE_Device:
-            addr = &DeviceDescriptor;
-            size = sizeof(DescDev);
+    case DTYPE_Device:
+        addr = &DeviceDescriptor;
+        size = sizeof(DescDev);
+        break;
+    case DTYPE_Configuration:
+        addr = &ConfigurationDescriptor;
+        size = sizeof(ConfigurationDescriptor);
+        break;
+    case DTYPE_String:
+        switch (descNumber)
+        {
+        case 0x00:
+            addr = &languageString;
+            size = pgm_read_byte(&languageString.size);
             break;
-        case DTYPE_Configuration:
-            addr = &ConfigurationDescriptor;
-            size = sizeof(ConfigurationDescriptor);
+        case 0x01:
+            addr = &manufacturerString;
+            size = pgm_read_byte(&manufacturerString.size);
             break;
-        case DTYPE_String:
-            switch (descNumber)
-            {
-                case 0x00:
-                    addr = &LanguageString;
-                    size = pgm_read_byte(&LanguageString.header.size);
-                    break;
-                case 0x01:
-                    addr = &ManufacturerString;
-                    size = pgm_read_byte(&ManufacturerString.header.size);
-                    break;
-                case 0x02:
-                    addr = &ProductString;
-                    size = pgm_read_byte(&ProductString.header.size);
-                    break;
-            }
+        case 0x02:
+            addr = &productString;
+            size = pgm_read_byte(&productString.size);
+            break;
+        }
 
-            break;
+        break;
     }
 
     *descAddress = addr;
@@ -359,27 +337,27 @@ CDC::CDC() :
     _notif(CDC_NOTIFICATION_EPADDR, CDC_NOTIFICATION_EPSIZE, EP_TYPE_INTERRUPT, 0)
 {
     *p_usbcon &= ~(1<<otgpade);
-    UHWCON |= 1<<UVREGE;    // enable USB pad regulator
-    USBCON &= ~(1<<VBUSTE);     // disable VBUS transition interrupt
-    UDIEN = 0;
-    USBINT = 0;
-    UDINT = 0;
-    USBCON &= ~(1<<USBE);   // disable USB controller clock inputs
-    USBCON |= 1<<USBE;      // enable USB controller clock inputs
-    USBCON &= ~(1<<FRZCLK); // enable clock inputs
+    *p_uhwcon |= 1<<UVREGE;    // enable USB pad regulator
+    *p_usbcon &= ~(1<<VBUSTE);     // disable VBUS transition interrupt
+    *p_udien = 0;
+    *p_usbint = 0;
+    *p_udint = 0;
+    *p_usbcon &= ~(1<<USBE);   // disable USB controller clock inputs
+    *p_usbcon |= 1<<USBE;      // enable USB controller clock inputs
+    *p_usbcon &= ~(1<<FRZCLK); // enable clock inputs
     PLLCSR = 0;
     state = DEVICE_STATE_Unattached;
     USB_Device_ConfigurationNumber  = 0;
     USB_Device_RemoteWakeupEnabled  = false;
     USB_Device_CurrentlySelfPowered = false;
-    UDCON &= ~(1<<LSM);
-    USBCON |= 1<<VBUSTE;    // enable VBUS transition interrupt
+    *p_udcon &= ~(1<<LSM);
+    *p_usbcon |= 1<<VBUSTE;    // enable VBUS transition interrupt
     configureEndpoint(_control.addr, _control.type, _control.size, 1);
-    UDINT &= ~(1<<SUSPI);   // clear suspend interrupt flag
-    UDIEN |= 1<<SUSPE;      // enable SUSPI interrupt
-    UDIEN |= 1<<EORSTE;     // enable EORSTI interrupt
-    UDCON &= ~(1<<DETACH);  // reconnect device
-    USBCON |= 1<<OTGPADE;   // otgpad on
+    *p_udint &= ~(1<<SUSPI);   // clear suspend interrupt flag
+    *p_udien |= 1<<SUSPE;      // enable SUSPI interrupt
+    *p_udien |= 1<<EORSTE;     // enable EORSTI interrupt
+    *p_udcon &= ~(1<<DETACH);  // reconnect device
+    *p_usbcon |= 1<<OTGPADE;   // otgpad on
     sei();
 
     if ((state != DEVICE_STATE_Configured) || !(_lineEncoding.BaudRateBPS))
@@ -485,21 +463,21 @@ void CDC::procCtrlReq()
 
                 switch (_ctrlReq.bmRequestType)
                 {
-                    case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
-                        if (USB_Device_CurrentlySelfPowered)
-                            CurrentStatus |= FEATURE_SELFPOWERED_ENABLED;
+                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
+                    if (USB_Device_CurrentlySelfPowered)
+                        CurrentStatus |= FEATURE_SELFPOWERED_ENABLED;
 
-                        if (USB_Device_RemoteWakeupEnabled)
-                            CurrentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
+                    if (USB_Device_RemoteWakeupEnabled)
+                        CurrentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
 
-                        break;
-                    case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
-                        selectEndpoint((uint8_t)_ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
-                        CurrentStatus = UECONX & 1<<STALLRQ;
-                        selectEndpoint(ENDPOINT_CONTROLEP);
-                        break;
-                    default:
-                        return;
+                    break;
+                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
+                    selectEndpoint((uint8_t)_ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
+                    CurrentStatus = UECONX & 1<<STALLRQ;
+                    selectEndpoint(ENDPOINT_CONTROLEP);
+                    break;
+                default:
+                    return;
                 }
 
                 UEINTX &= ~(1<<RXSTPI);
@@ -542,8 +520,8 @@ void CDC::procCtrlReq()
                 if (_ctrlReq.wValue == (DTYPE_String << 8 | USE_INTERNAL_SERIAL))
                 {
                     SigDesc sigDesc;
-                    sigDesc.header.type = DTYPE_String;
-                    sigDesc.header.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
+                    sigDesc.type = DTYPE_String;
+                    sigDesc.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.unicodeString);
                     UEINTX &= ~(1<<RXSTPI);
                     write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));

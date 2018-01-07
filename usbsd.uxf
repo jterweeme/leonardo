@@ -3,8 +3,8 @@
   <element>
     <type>com.baselet.element.old.element.Class</type>
     <coordinates>
-      <x>900</x>
-      <y>110</y>
+      <x>850</x>
+      <y>150</y>
       <w>260</w>
       <h>150</h>
     </coordinates>
@@ -21,8 +21,8 @@ bg=yellow</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>480</x>
-      <y>0</y>
+      <x>490</x>
+      <y>60</y>
       <w>160</w>
       <h>230</h>
     </coordinates>
@@ -41,37 +41,41 @@ bg=yellow</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>630</x>
-      <y>60</y>
-      <w>290</w>
-      <h>130</h>
+      <x>640</x>
+      <y>120</y>
+      <w>230</w>
+      <h>110</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
-    <additional_attributes>270.0;110.0;10.0;10.0</additional_attributes>
+    <additional_attributes>210.0;90.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>830</x>
-      <y>440</y>
+      <x>780</x>
+      <y>480</y>
       <w>370</w>
       <h>220</h>
     </coordinates>
     <panel_attributes>*USBSD*
 --
+- _sd: Sd2Card
 - _inpoint: Endpoint
 - _outpoint: Endpoint
 --
++ USBSD(): USBSD
++ returnCommandStatus(): void
 + decodeSCSICmd(): bool
 + procCtrlReq(): void
++ msTask(): void
 bg=blue</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>1000</x>
-      <y>250</y>
+      <x>950</x>
+      <y>290</y>
       <w>30</w>
       <h>210</h>
     </coordinates>
@@ -81,13 +85,14 @@ bg=blue</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>510</x>
-      <y>310</y>
-      <w>170</w>
+      <x>430</x>
+      <y>370</y>
+      <w>200</w>
       <h>230</h>
     </coordinates>
     <panel_attributes>*DescEndpoint*
 --
++ header: DescHeader
 --
 bg=yellow</panel_attributes>
     <additional_attributes/>
@@ -95,13 +100,14 @@ bg=yellow</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>250</x>
-      <y>380</y>
+      <x>90</x>
+      <y>440</y>
       <w>210</w>
       <h>180</h>
     </coordinates>
     <panel_attributes>*DescIface*
 --
++header: DescHeader
 --
 bg=yellow</panel_attributes>
     <additional_attributes/>
@@ -109,27 +115,77 @@ bg=yellow</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>630</x>
-      <y>170</y>
-      <w>270</w>
-      <h>290</h>
+      <x>640</x>
+      <y>230</y>
+      <w>210</w>
+      <h>270</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
-    <additional_attributes>250.0;270.0;10.0;10.0</additional_attributes>
+    <additional_attributes>190.0;250.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>470</x>
-      <y>650</y>
-      <w>270</w>
+      <x>310</x>
+      <y>690</y>
+      <w>380</w>
       <h>160</h>
     </coordinates>
     <panel_attributes>*Sd2Card*
 --
 - _cs: Pin
 --
++ readBlock(b: uint32_t, dst: uint8_t *): uint8_t
 bg=pink</panel_attributes>
     <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>640</x>
+      <y>610</y>
+      <w>160</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>140.0;10.0;10.0;80.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>160</x>
+      <y>90</y>
+      <w>230</w>
+      <h>170</h>
+    </coordinates>
+    <panel_attributes>*DescHeader*
+--
++ size: uint8_t
++ type: uint8_t
+--
+bg=yellow</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>340</x>
+      <y>250</y>
+      <w>140</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>120.0;120.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>190</x>
+      <y>250</y>
+      <w>60</w>
+      <h>210</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;190.0;40.0;10.0</additional_attributes>
   </element>
 </diagram>

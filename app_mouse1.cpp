@@ -1,3 +1,10 @@
+/*
+PS2 Mouse
+
+PS2CLK: D3
+PS2DAT: D2
+*/
+
 #include "ps2mouse.h"
 #include "stream.h"
 #include <stdio.h>
@@ -8,7 +15,7 @@
 int main()
 {
     CDC cdc;
-    USBStream usb(&cdc);
+    USBStream cout(&cdc);
     PS2Mouse mouse;
     mouse.write(0xff);
     mouse.read();
@@ -27,8 +34,8 @@ int main()
         uint8_t my = mouse.read();
         char buf[50];
         snprintf(buf, 50, "%u %u\r\n", mx, my);
-        usb.writeString(buf);
-        
+        cout.writeString(buf);
+        cout.flush();
     }
 
     return 0;

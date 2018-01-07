@@ -111,25 +111,17 @@ __attribute__ ((packed));
 
 static constexpr uint8_t USB_CONFIG_POWER_MA(uint8_t mA) { return mA >> 1; }
 
-struct DescHeader
+struct SigDesc
 {
     uint8_t size;
     uint8_t type;
-}
-__attribute__ ((packed));
-
-static constexpr size_t USB_STRING_LEN(size_t uniChars)
-{ return sizeof(DescHeader) + (uniChars << 1); }
-
-struct SigDesc
-{
-    DescHeader header;
     uint16_t unicodeString[INTERNAL_SERIAL_LENGTH_BITS / 4];
 };
 
 struct DescDev
 {
-    DescHeader header;
+    uint8_t size;
+    uint8_t type;
     uint16_t USBSpecification;
     uint8_t Class;
     uint8_t SubClass;
@@ -146,7 +138,8 @@ struct DescDev
 
 struct DescConf
 {
-    DescHeader header;
+    uint8_t size;
+    uint8_t type;
     uint16_t totalConfigurationSize;
     uint8_t totalInterfaces;
     uint8_t configurationNumber;
@@ -156,9 +149,19 @@ struct DescConf
 }
 __attribute__ ((packed));
 
+struct DescHeader
+{
+    uint8_t size;
+    uint8_t type;
+}
+__attribute__ ((packed));
+
+static constexpr size_t USB_STRING_LEN(size_t uniChars) { return 2 + (uniChars << 1); }
+
 struct DescIface
 {
-    DescHeader header;
+    uint8_t size;
+    uint8_t type;
     uint8_t InterfaceNumber;
     uint8_t AlternateSetting;
     uint8_t TotalEndpoints;
@@ -170,7 +173,8 @@ struct DescIface
 
 struct DescEndpoint
 {
-    DescHeader header;
+    uint8_t size;
+    uint8_t type;
     uint8_t endpointAddr;
     uint8_t attributes;
     uint16_t endpointSize;
@@ -178,9 +182,10 @@ struct DescEndpoint
 }
 __attribute__ ((packed));
 
-template <size_t S> struct USB_Descriptor_String_t
+template <size_t S> struct DescString
 {
-    DescHeader header;
+    uint8_t size;
+    uint8_t type;
     wchar_t UnicodeString[S];
 };
 

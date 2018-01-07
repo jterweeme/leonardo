@@ -1,115 +1,136 @@
-#include "busby.h"
+#include "usbmouse.h"
+#include "usbhid.h"
+#include <avr/pgmspace.h>
 
-const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
+static constexpr uint8_t
+    MOUSE_EPADDR = ENDPOINT_DIR_IN | 1,
+    MOUSE_EPSIZE = 8,
+    INTERFACE_ID_Mouse = 0,
+    STRING_ID_Manufacturer = 1,
+    STRING_ID_Product = 2;
+
+const DescDev PROGMEM DeviceDescriptor =
 {
-    {
-        .Size = sizeof(USB_Descriptor_Device_t),
-        .Type = DTYPE_Device
-    },
-    VERSION_BCD(01.10),
-    USB_CSCP_NoDeviceClass,
-    USB_CSCP_NoSpecificSubclass,
-    USB_CSCP_NoSpecificProtocol,
+    sizeof(DescDev),
+    DTYPE_Device,
+    0x0110,
+    0,
+    0,
+    0,
     FIXED_CONTROL_ENDPOINT_SIZE,
-    .VendorID               = 0x03EB,
-    .ProductID              = 0x204B,
-    .ReleaseNumber          = VERSION_BCD(00.01),
-    .ManufacturerStrIndex   = 0x01,
-    .ProductStrIndex        = 0x02,
-    .SerialNumStrIndex      = USE_INTERNAL_SERIAL,
-    .NumberOfConfigurations = FIXED_NUM_CONFIGURATIONS
+    0x03EB,
+    0x204B,
+    0x0001,
+    STRING_ID_Manufacturer,
+    STRING_ID_Product,
+    USE_INTERNAL_SERIAL,
+    FIXED_NUM_CONFIGURATIONS
 };
 
-const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
+const uint8_t PROGMEM mouseReport[] =
 {
-    .Config =
-    {
-        {
-            .Size = sizeof(USB_Descriptor_Configuration_Header_t),
-            .Type = DTYPE_Configuration
-        },
+    GLOBAL | USAGE_PAGE     | 1, 0x01,
+    LOCAL  | USAGE          | 1, 0x02,  // mouse
+    MAIN   | COLLECTION     | 1, 0x01,
+    GLOBAL | USAGE_PAGE     | 1, 0x09,  // pointer
+    LOCAL  | USAGE_MIN      | 1, 0x01,
+    LOCAL  | USAGE_MAX      | 1, 0x03,
+    GLOBAL | LOGICAL_MIN    | 1, 0x00,
+    GLOBAL | LOGICAL_MAX    | 1, 0x01,
+    GLOBAL | REPORT_COUNT   | 1, 0x03,
+    GLOBAL | REPORT_SIZE    | 1, 0x01,
+    MAIN   | HID_INPUT      | 1, 1<<1,
+    GLOBAL | REPORT_COUNT   | 1, 0x01,
+    GLOBAL | REPORT_SIZE    | 1, 0x05,
+    MAIN   | HID_INPUT      | 1, 1<<0,
+    GLOBAL | USAGE_PAGE     | 1, 0x01,
+    LOCAL  | USAGE          | 1, 0x30,
+    LOCAL  | USAGE          | 1, 0x31,
+    GLOBAL | LOGICAL_MIN    | 1, 0,
+    GLOBAL | LOGICAL_MAX    | 1, 1,
+    GLOBAL | PHYSICAL_MIN   | 1, 0,
+    GLOBAL | PHYSICAL_MAX   | 1, 1,
+    GLOBAL | REPORT_COUNT   | 1, 0x02,
+    GLOBAL | REPORT_SIZE    | 1, 0x08,
+    MAIN   | HID_INPUT      | 1, 0,
+    MAIN   | END_COLLECTION | 0
+};
 
-        sizeof(USB_Descriptor_Configuration_t),
+struct MyConf
+{
+    DescConf config;
+    DescIface hidInterface;
+    HIDDesc HID_KeyboardHID;
+    DescEndpoint HID_ReportINEndpoint;
+};
+
+const MyConf PROGMEM myConf =
+{
+    {
+        sizeof(MyConf),
+        DTYPE_Configuration,
+        sizeof(MyConf),
         1,
         1,
-        .ConfigurationStrIndex  = NO_DESCRIPTOR,
-        .ConfigAttributes       = (USB_CONFIG_ATTR_RESERVED | USB_CONFIG_ATTR_SELFPOWERED),
-        .MaxPowerConsumption    = USB_CONFIG_POWER_MA(100)
+        0,
+        USB_CONFIG_ATTR_RESERVED | USB_CONFIG_ATTR_SELFPOWERED,
+        USB_CONFIG_POWER_MA(100)
     },
-
-    .HID_Interface =
     {
-        .Header =
-        {
-            .Size = sizeof(USB_Descriptor_Interface_t),
-            .Type = DTYPE_Interface
-        },
-        .InterfaceNumber        = INTERFACE_ID_Mouse,
-        .AlternateSetting       = 0,
-        .TotalEndpoints         = 1,
-        .Class                  = HID_CSCP_HIDClass,
-        .SubClass               = HID_CSCP_BootSubclass,
-        .Protocol               = HID_CSCP_MouseBootProtocol,
-        .InterfaceStrIndex      = NO_DESCRIPTOR
+        sizeof(DescIface),
+        DTYPE_Interface,
+        INTERFACE_ID_Mouse,
+        0,
+        1,
+        HID_CSCP_HIDClass,
+        HID_CSCP_BootSubclass,
+        HID_CSCP_MouseBootProtocol,
+        0
     },
-
-    .HID_MouseHID =
     {
-        .Header =
         {
-            .Size = sizeof(USB_HID_Descriptor_HID_t),
-            .Type = HID_DTYPE_HID
+            sizeof(HIDDesc),
+            HID_DTYPE_HID
         },
 
-        .HIDSpec                = VERSION_BCD(1,1,1),
-        .CountryCode            = 0x00,
-        .TotalReportDescriptors = 1,
-        .HIDReportType          = HID_DTYPE_Report,
-        .HIDReportLength        = sizeof(MouseReport)
+        0x0111,
+        0x00,
+        1,
+        HID_DTYPE_Report,
+        sizeof(mouseReport)
     },
-
-    .HID_ReportINEndpoint =
     {
-        .Header =
-        {
-            .Size = sizeof(USB_Descriptor_Endpoint_t),
-            .Type = DTYPE_Endpoint
-        },
-
-        .EndpointAddress = MOUSE_EPADDR,
-        .Attributes = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-        .EndpointSize = MOUSE_EPSIZE,
-        .PollingIntervalMS = 0x05
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
+        MOUSE_EPADDR,
+        EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
+        MOUSE_EPSIZE,
+        0x05
     }
-
-
 };
 
-const USB_Descriptor_String_t PROGMEM LanguageString =
+const DescString<2> PROGMEM languageString =
 {
-    .Header                 = {.Size = USB_STRING_LEN(1), .Type = DTYPE_String}
-    //.UnicodeString          = (wchar_t)0x0409
+    USB_STRING_LEN(1),
+    DTYPE_String,
+    (wchar_t)0x0409
 };
 
-const USB_Descriptor_String_t PROGMEM ManufacturerString =
+const DescString<12> PROGMEM manufacturerString =
 {
-    {
-        .Size = USB_STRING_LEN(11), .Type = DTYPE_String
-    },
-    //L"Dean Camera"
+    USB_STRING_LEN(11),
+    DTYPE_String,
+    L"Dean Camera"
 };
 
-const USB_Descriptor_String_t PROGMEM ProductString =
+const DescString<10> PROGMEM productString =
 {
-    {
-        USB_STRING_LEN(22),
-        DTYPE_String
-    },
-    L"LUFA USB-RS232 Adapter"
+    USB_STRING_LEN(9),
+    DTYPE_String,
+    L"USB Mouse"
 };
 
-uint16_t USB::CALLBACK_USB_GetDescriptor(const uint16_t wValue,
-                     const uint8_t wIndex, const void** const DescriptorAddress)
+uint16_t USBMouse::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddr)
 {
     const uint8_t DescriptorType = wValue>>8;
     const uint8_t DescriptorNumber = (wValue & 0xFF);
@@ -120,34 +141,37 @@ uint16_t USB::CALLBACK_USB_GetDescriptor(const uint16_t wValue,
     {
         case DTYPE_Device:
             Address = &DeviceDescriptor;
-            Size = sizeof(USB_Descriptor_Device_t);
+            Size = sizeof(DescDev);
             break;
         case DTYPE_Configuration:
-            Address = &ConfigurationDescriptor;
-            Size = sizeof(USB_Descriptor_Configuration_t);
+            //Address = &ConfigurationDescriptor;
+            Size = sizeof(MyConf);
             break;
         case DTYPE_String:
             switch (DescriptorNumber)
             {
                 case 0x00:
-                    Address = &LanguageString;
-                    Size = pgm_read_byte(&LanguageString.Header.Size);
+                    Address = &languageString;
+                    Size = pgm_read_byte(&languageString.size);
                     break;
                 case 0x01:
-                    Address = &ManufacturerString;
-                    Size = pgm_read_byte(&ManufacturerString.Header.Size);
+                    Address = &manufacturerString;
+                    Size = pgm_read_byte(&manufacturerString.size);
                     break;
                 case 0x02:
-                    Address = &ProductString;
-                    Size = pgm_read_byte(&ProductString.Header.Size);
+                    Address = &productString;
+                    Size = pgm_read_byte(&productString.size);
                     break;
             }
 
             break;
     }
-   *DescriptorAddress = Address;
+    *descAddr = Address;
     return Size;
 }
 
+USBMouse::USBMouse() : _inpoint(0, 0, 0, 1)
+{
+}
 
 

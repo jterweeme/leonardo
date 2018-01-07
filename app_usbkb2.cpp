@@ -2,7 +2,7 @@
 PS2 Keyboard
 
 DATA: D8
-CLK: SDA
+CLK: D3
 */
 
 #include "usbkb.h"

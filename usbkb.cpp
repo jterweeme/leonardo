@@ -17,16 +17,14 @@ static constexpr uint8_t
     STRING_ID_Manufacturer = 1,
     STRING_ID_Product = 2;
 
-const DescDev PROGMEM devDesc =
+static const DescDev PROGMEM devDesc =
 {
-    {
-        sizeof(DescDev),
-        DTYPE_Device
-    },
+    sizeof(DescDev),
+    DTYPE_Device,
     0x0110,
-    USB_CSCP_NoDeviceClass,
-    USB_CSCP_NoSpecificSubclass,
-    USB_CSCP_NoSpecificProtocol,
+    0,
+    0,
+    0,
     8,
     0x03EB,
     0x2042,
@@ -37,17 +35,7 @@ const DescDev PROGMEM devDesc =
     1
 };
 
-struct MyConf
-{
-    DescConf config;
-    DescIface HID_Interface;
-    USB_HID_Descriptor_HID_t HID_KeyboardHID;
-    DescEndpoint HID_ReportINEndpoint;
-    DescEndpoint HID_ReportOUTEndpoint;
-}
-__attribute__ ((packed));
-
-const uint8_t PROGMEM KeyboardReport[] =
+static const uint8_t PROGMEM KeyboardReport[] =
 {
     GLOBAL | USAGE_PAGE     | 1, 0x01,
     LOCAL  | USAGE          | 1, 0x06,
@@ -83,14 +71,21 @@ const uint8_t PROGMEM KeyboardReport[] =
     MAIN   | END_COLLECTION | 0
 };
 
-const MyConf PROGMEM myConf =
+struct MyConf
+{
+    DescConf config;
+    DescIface hidInterface;
+    HIDDesc HID_KeyboardHID;
+    DescEndpoint HID_ReportINEndpoint;
+    DescEndpoint HID_ReportOUTEndpoint;
+}
+__attribute__ ((packed));
+
+static const MyConf PROGMEM myConf =
 {
     {
-        {
-            sizeof(DescConf),
-            DTYPE_Configuration
-        },
-
+        sizeof(DescConf),
+        DTYPE_Configuration,
         sizeof(MyConf),
         1,
         1,
@@ -98,11 +93,9 @@ const MyConf PROGMEM myConf =
         USB_CONFIG_ATTR_RESERVED | USB_CONFIG_ATTR_SELFPOWERED,
         USB_CONFIG_POWER_MA(100)
     },
-    {   // HID_Interface
-        {
-            sizeof(DescIface),
-            DTYPE_Interface
-        },
+    {
+        sizeof(DescIface),
+        DTYPE_Interface,
         INTERFACE_ID_Keyboard,
         0,
         2,
@@ -113,7 +106,7 @@ const MyConf PROGMEM myConf =
     },
     {   // HID_KeyboardHID
         {
-            sizeof(USB_HID_Descriptor_HID_t),
+            sizeof(HIDDesc),
             HID_DTYPE_HID
         },
 
@@ -124,22 +117,16 @@ const MyConf PROGMEM myConf =
         sizeof(KeyboardReport)
     },
     {   // HID_ReportINEndpoint
-        {
-            sizeof(DescEndpoint),
-            DTYPE_Endpoint
-        },
-
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
         ENDPOINT_DIR_IN | 1,
         EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
         8,
         5
     },
     {   // HID_ReportOUTEndpoint
-        {
-            sizeof(DescEndpoint),
-            DTYPE_Endpoint
-        },
-
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
         ENDPOINT_DIR_OUT | 2,
         EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
         8,
@@ -147,30 +134,24 @@ const MyConf PROGMEM myConf =
     }
 };
 
-const USB_Descriptor_String_t<2> PROGMEM languageString =
+static const DescString<2> PROGMEM languageString =
 {
-    {
-        USB_STRING_LEN(1),
-        DTYPE_String
-    },
+    USB_STRING_LEN(1),
+    DTYPE_String,
     (wchar_t)0x0409
 };
 
-const USB_Descriptor_String_t<12> PROGMEM ManufacturerString =
+static const DescString<12> PROGMEM manufacturerString =
 {
-    {
-        USB_STRING_LEN(11),
-        DTYPE_String
-    },
+    USB_STRING_LEN(11),
+    DTYPE_String,
     L"Dean Camera"
 };
 
-const USB_Descriptor_String_t<13> PROGMEM ProductString =
+static const DescString<13> PROGMEM productString =
 {
-    {
-        USB_STRING_LEN(12),
-        DTYPE_String
-    },
+    USB_STRING_LEN(12),
+    DTYPE_String,
     L"USB Keyboard"
 };
 
@@ -178,14 +159,14 @@ USBKB::USBKB() :
     _inpoint(KEYBOARD_IN_EPADDR, KEYBOARD_EPSIZE, EP_TYPE_INTERRUPT, 1),
     _outpoint(KEYBOARD_OUT_EPADDR, KEYBOARD_EPSIZE, EP_TYPE_INTERRUPT, 1)
 {
-    UHWCON |= 1<<UVREGE;    // usb reg on
-    USBCON &= ~(1<<VBUSTE); // disable INT vbuste
-    UDIEN = 0;
-    USBINT = 0;
-    UDINT = 0;
-    USBCON &= ~(1<<USBE);   // disable usb controller
-    USBCON |= 1<<USBE;      // enable usb controller
-    USBCON &= ~(1<<FRZCLK);
+    *p_uhwcon |= 1<<UVREGE;    // usb reg on
+    *p_usbcon &= ~(1<<vbuste); // disable INT vbuste
+    *p_udien = 0;
+    *p_usbint = 0;
+    *p_udint = 0;
+    *p_usbcon &= ~(1<<USBE);   // disable usb controller
+    *p_usbcon |= 1<<USBE;      // enable usb controller
+    *p_usbcon &= ~(1<<FRZCLK);
     PLLCSR = 0;
     state = DEVICE_STATE_Unattached;
     USB_Device_ConfigurationNumber  = 0;
@@ -204,7 +185,6 @@ USBKB::USBKB() :
 
 uint16_t USBKB::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddr)
 {
-    const uint8_t descNumber = wValue & 0xFF;
     const void *addr = NULL;
     uint16_t size = 0;
 
@@ -219,26 +199,26 @@ uint16_t USBKB::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **desc
         size = sizeof(MyConf);
         break;
     case DTYPE_String:
-        switch (descNumber)
+        switch (wValue & 0xff)
         {
         case STRING_ID_Language:
             addr = &languageString;
-            size = pgm_read_byte(&languageString.header.size);
+            size = pgm_read_byte(&languageString.size);
             break;
         case STRING_ID_Manufacturer:
-            addr = &ManufacturerString;
-            size = pgm_read_byte(&ManufacturerString.header.size);
+            addr = &manufacturerString;
+            size = pgm_read_byte(&manufacturerString.size);
             break;
         case STRING_ID_Product:
-            addr = &ProductString;
-            size = pgm_read_byte(&ProductString.header.size);
+            addr = &productString;
+            size = pgm_read_byte(&productString.size);
             break;
         }
 
         break;
     case HID_DTYPE_HID:
         addr = &myConf.HID_KeyboardHID;
-        size = sizeof(USB_HID_Descriptor_HID_t);
+        size = sizeof(HIDDesc);
         break;
     case HID_DTYPE_Report:
         addr = &KeyboardReport;
@@ -254,7 +234,7 @@ void USBKB::sendReport(KBReport &report)
 {
     _inpoint.select();
     writeStream2(&report, sizeof(report), NULL);
-    UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+    *p_ueintx &= ~(1<<TXINI | 1<<FIFOCON);
     _outpoint.select();
 
     if (UEINTX & 1<<RXOUTI)
@@ -342,8 +322,8 @@ void USBKB::procCtrlReq()
                 if (_ctrlReq.wValue == (DTYPE_String << 8 | USE_INTERNAL_SERIAL))
                 {
                     SigDesc sigDesc;
-                    sigDesc.header.type = DTYPE_String;
-                    sigDesc.header.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
+                    sigDesc.type = DTYPE_String;
+                    sigDesc.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.unicodeString);
                     UEINTX &= ~(1<<RXSTPI);
                     write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
@@ -363,32 +343,31 @@ void USBKB::procCtrlReq()
         case REQ_GetConfiguration:
             if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
             {
-                UEINTX &= ~(1<<RXSTPI); // clear setup
+                *p_ueintx &= ~(1<<rxstpi); // clear setup
                 write8(USB_Device_ConfigurationNumber);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
                 clearStatusStage();
             }
 
             break;
-
         case REQ_SetConfiguration:
             if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
             {
                 if ((uint8_t)_ctrlReq.wValue > FIXED_NUM_CONFIGURATIONS)
                     return;
 
-                UEINTX &= ~(1<<RXSTPI);
+                *p_ueintx &= ~(1<<rxstpi);
                 USB_Device_ConfigurationNumber = (uint8_t)_ctrlReq.wValue;
                 clearStatusStage();
 
                 if (USB_Device_ConfigurationNumber)
                     state = DEVICE_STATE_Configured;
                 else
-                    state = UDADDR & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
+                    state = *p_udaddr & 1<<ADDEN ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
 
                 configureEndpoint(_inpoint);
                 configureEndpoint(_outpoint);
-                UDIEN |= 1<<SOFE;
+                *p_udien |= 1<<sofe;
             }
             break;
         default:

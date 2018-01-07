@@ -7,18 +7,18 @@ void PS2Mouse::write(uint8_t data)
 {
     uint8_t parity = 1;
     DDRD &= ~(1<<1);    //data go high
-    PORTD |= 1<<1;
+    PORTD |= 1<<1;      //data
     DDRD &= ~(1<<0);    //clk go high
-    PORTD |= 1<<0;
+    PORTD |= 1<<0;      //clk
     _delay_us(300);
     DDRD |= 1<<0;       //clk
-    PORTD &= ~(1<<0);
+    PORTD &= ~(1<<0);   //clk
     _delay_us(300);
     DDRD |= 1<<1;       //data
-    PORTD &= ~(1<<1);
+    PORTD &= ~(1<<1);   //data
     _delay_us(10);
     DDRD &= ~(1<<0);    //clk
-    PORTD |= 1<<0;
+    PORTD |= 1<<0;      //clk
     
     while (PIND & 1<<0)
         ;

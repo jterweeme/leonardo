@@ -100,13 +100,10 @@ static inline uint32_t zwapEndian_32(const uint32_t dword)
         dword >> 8 & 0xff00 | dword << 24 & 0xff000000;
 }
 
-const DescDev PROGMEM DeviceDescriptor =
+static const DescDev PROGMEM DeviceDescriptor =
 {
-    {
-        sizeof(DescDev),
-        DTYPE_Device
-    },
-
+    sizeof(DescDev),
+    DTYPE_Device,
     0x0110,
     0,
     0,
@@ -127,14 +124,11 @@ volatile bool IsMassStoreReset = false;
 static constexpr bool DATA_READ = true, DATA_WRITE = false;
 static constexpr uint8_t DEVICE_TYPE_BLOCK = 0;
 
-const MyConf PROGMEM myConf =
+static const MyConf PROGMEM myConf =
 {
     {
-        {
-            sizeof(DescConf),
-            DTYPE_Configuration
-        },
-
+        sizeof(DescConf),
+        DTYPE_Configuration,
         sizeof(MyConf),
         1,
         1,
@@ -143,11 +137,8 @@ const MyConf PROGMEM myConf =
         USB_CONFIG_POWER_MA(100)
     },
     {
-        {
-            sizeof(DescIface),
-            DTYPE_Interface
-        },
-
+        sizeof(DescIface),
+        DTYPE_Interface,
         0, // mass storage
         0,
         2,
@@ -157,22 +148,16 @@ const MyConf PROGMEM myConf =
         0
     },
     {
-        {
-            sizeof(DescEndpoint),
-            DTYPE_Endpoint
-        },
-
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
         MASS_STORAGE_IN_EPADDR,
         E2P_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
         MASS_STORAGE_IO_EPSIZE,
         0x05
     },
     {
-        {
-            sizeof(DescEndpoint),
-            DTYPE_Endpoint
-        },
-
+        sizeof(DescEndpoint),
+        DTYPE_Endpoint,
         MASS_STORAGE_OUT_EPADDR,
         E2P_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
         MASS_STORAGE_IO_EPSIZE,
@@ -180,69 +165,63 @@ const MyConf PROGMEM myConf =
     }
 };
 
-const USB_Descriptor_String_t<2> PROGMEM LanguageString =
+static const DescString<2> PROGMEM languageString =
 {
-    {
-        USB_STRING_LEN(1),
-        DTYPE_String
-    },
+    USB_STRING_LEN(1),
+    DTYPE_String,
     (wchar_t)0x0409
 };
 
-const USB_Descriptor_String_t<12> PROGMEM ManufacturerString =
+static const DescString<12> PROGMEM manufacturerString =
 {
-    {
-        USB_STRING_LEN(11),
-        DTYPE_String
-    },
+    USB_STRING_LEN(11),
+    DTYPE_String,
     L"Dean Camera"
 };
 
-const USB_Descriptor_String_t<23> PROGMEM ProductString =
+static const DescString<23> PROGMEM productString =
 {
-    {
-        USB_STRING_LEN(22),
-        DTYPE_String
-    },
+    USB_STRING_LEN(22),
+    DTYPE_String,
     L"LUFA Mass Storage Demo"
 };
 
 static uint16_t getDescriptor(uint16_t wValue, uint16_t wIndex, const void** const descAddr)
 {
     const void *addr = NULL;
-    uint16_t Size = 0;
+    uint16_t size = 0;
 
     switch (wValue >> 8)
     {
     case DTYPE_Device:
         addr = &DeviceDescriptor;
-        Size = sizeof(DescDev);
+        size = sizeof(DescDev);
         break;
     case DTYPE_Configuration:
         addr = &myConf;
-        Size = sizeof(MyConf);
+        size = sizeof(MyConf);
         break;
     case DTYPE_String:
         switch (wValue & 0xff)
         {
         case STRING_ID_Language:
-            addr = &LanguageString;
-            Size = pgm_read_byte(&LanguageString.header.size);
+            addr = &languageString;
+            size = pgm_read_byte(&languageString.size);
             break;
         case STRING_ID_Manufacturer:
-            addr = &ManufacturerString;
-            Size = pgm_read_byte(&ManufacturerString.header.size);
+            addr = &manufacturerString;
+            size = pgm_read_byte(&manufacturerString.size);
             break;
         case STRING_ID_Product:
-            addr = &ProductString;
-            Size = pgm_read_byte(&ProductString.header.size);
+            addr = &productString;
+            size = pgm_read_byte(&productString.size);
             break;
         }
         break;
     }
 
     *descAddr = addr;
-    return Size;
+    return size;
 }
 
 static const ZCZI_Inquiry_Response_t InquiryData =
@@ -664,12 +643,12 @@ void USBSD::procCtrlReq()
                 if (_ctrlReq.wValue == (DTYPE_String << 8 | UZE_INTERNAL_SERIAL))
                 {
                     SigDesc sigDesc;
-                    sigDesc.header.type = DTYPE_String;
-                    sigDesc.header.size = USB_STRING_LEN(INTERNAL_ZERIAL_LENGTH_BITS / 4);
+                    sigDesc.type = DTYPE_String;
+                    sigDesc.size = USB_STRING_LEN(INTERNAL_ZERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.unicodeString);
-                    UEINTX &= ~(1<<RXSTPI);
+                    *p_ueintx &= ~(1<<rxstpi);
                     write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
-                    UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+                    *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
                     return;
                 }
 

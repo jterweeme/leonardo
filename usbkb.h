@@ -4,15 +4,6 @@
 #include "busby.h"
 
 static constexpr uint8_t
-    HID_DTYPE_HID = 0x21,
-    HID_DTYPE_Report = 0x22,
-    MOUSE_EPADDR = ENDPOINT_DIR_IN | 1,
-    MOUSE_EPSIZE = 8,
-    HID_CSCP_BootSubclass = 1,
-    HID_CSCP_KeyboardBootProtocol = 1,
-    HID_CSCP_MouseBootProtocol = 2,
-    HID_CSCP_HIDClass = 3,
-    INTERFACE_ID_Mouse = 0,
     INTERFACE_ID_Keyboard = 0,
     KEYBOARD_EPADDR = ENDPOINT_DIR_IN | 1,
     KEYBOARD_IN_EPADDR = ENDPOINT_DIR_IN | 1,
@@ -47,11 +38,11 @@ static constexpr uint8_t
     HID_KEYBOARD_SC_X = 0x1B,
     HID_KEYBOARD_SC_Y = 0x1C,
     HID_KEYBOARD_SC_Z = 0x1D,
-    HID_KEYBOARD_SC_ENTER                           =  0x28,
-    HID_KEYBOARD_SC_ESCAPE                          =  0x29,
-    HID_KEYBOARD_SC_BACKSPACE                       =  0x2A,
-    HID_KEYBOARD_SC_TAB                             =  0x2B,
-    HID_KEYBOARD_SC_SPACE                           =  0x2C,
+    HID_KEYBOARD_SC_ENTER = 0x28,
+    HID_KEYBOARD_SC_ESCAPE = 0x29,
+    HID_KEYBOARD_SC_BACKSPACE = 0x2A,
+    HID_KEYBOARD_SC_TAB = 0x2B,
+    HID_KEYBOARD_SC_SPACE = 0x2C,
     HID_KEYBOARD_SC_MINUS_AND_UNDERSCORE            =  0x2D,
     HID_KEYBOARD_SC_EQUAL_AND_PLUS                  =  0x2E,
     HID_KEYBOARD_SC_OPENING_BRACKET_AND_OPENING_BRACE = 0x2F,
@@ -74,39 +65,28 @@ static constexpr uint8_t
     HID_KEYBOARD_SC_PAUSE = 0x48,
     HID_KEYBOARD_SC_INSERT = 0x49,
     HID_KEYBOARD_SC_HOME = 0x4A,
-    HID_KEYBOARD_SC_PAGE_UP      = 0x4B,
-    HID_KEYBOARD_SC_DELETE       = 0x4C,
-    HID_KEYBOARD_SC_END          = 0x4D,
-    HID_KEYBOARD_SC_PAGE_DOWN    = 0x4E,
-    HID_KEYBOARD_SC_RIGHT_ARROW  = 0x4F,
-    HID_KEYBOARD_SC_LEFT_ARROW   = 0x50,
-    HID_KEYBOARD_SC_DOWN_ARROW   = 0x51,
-    HID_KEYBOARD_SC_UP_ARROW     = 0x52,
+    HID_KEYBOARD_SC_PAGE_UP = 0x4B,
+    HID_KEYBOARD_SC_DELETE = 0x4C,
+    HID_KEYBOARD_SC_END = 0x4D,
+    HID_KEYBOARD_SC_PAGE_DOWN = 0x4E,
+    HID_KEYBOARD_SC_RIGHT_ARROW = 0x4F,
+    HID_KEYBOARD_SC_LEFT_ARROW = 0x50,
+    HID_KEYBOARD_SC_DOWN_ARROW = 0x51,
+    HID_KEYBOARD_SC_UP_ARROW = 0x52,
     HID_KEYBOARD_MODIFIER_LEFTCTRL = 1<<0,
     HID_KEYBOARD_MODIFIER_LEFTSHIFT = 1<<1,
-    HID_KEYBOARD_MODIFIER_LEFTALT    = 1<<2,
-    HID_KEYBOARD_MODIFIER_LEFTGUI    = 1<<3,
-    HID_KEYBOARD_MODIFIER_RIGHTCTRL  = 1<<4,
+    HID_KEYBOARD_MODIFIER_LEFTALT = 1<<2,
+    HID_KEYBOARD_MODIFIER_LEFTGUI = 1<<3,
+    HID_KEYBOARD_MODIFIER_RIGHTCTRL = 1<<4,
     HID_KEYBOARD_MODIFIER_RIGHTSHIFT = 1<<5,
-    HID_KEYBOARD_MODIFIER_RIGHTALT   = 1<<6,
-    HID_KEYBOARD_MODIFIER_RIGHTGUI   = 1<<7;
+    HID_KEYBOARD_MODIFIER_RIGHTALT = 1<<6,
+    HID_KEYBOARD_MODIFIER_RIGHTGUI = 1<<7;
 
 struct KBReport
 {
     uint8_t modifier;
     uint8_t reserved;
     uint8_t keyCode[6];
-}
-__attribute__ ((packed));
-
-struct USB_HID_Descriptor_HID_t
-{
-    DescHeader Header; /**< Regular descriptor header cd length. */
-    uint16_t HIDSpec; /**< BCD encoded vernd device complies to. */
-    uint8_t CountryCode; /**< Country codce, or zero if universal. */
-    uint8_t TotalReportDescriptors; /**< riptors for the interface. */
-    uint8_t HIDReportType; /**< Tyort, set to \ref HID_DTYPE_Report. */
-    uint16_t HIDReportLength; /**< report descriptor, in bytes. */
 }
 __attribute__ ((packed));
 

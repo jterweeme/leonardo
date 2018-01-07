@@ -1,6 +1,6 @@
 /*
 PS-DAT: D8/PB4
-PS-CLK: SDA/PD1/INT1
+PS-CLK: D3/SCL/PD0/INT0
 */
 
 #include "stream.h"

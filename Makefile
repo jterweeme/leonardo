@@ -25,6 +25,7 @@ all: app_calc1.elf \
     app_usbkb3.elf \
     app_usbkb4.elf \
     app_usbloop1.elf \
+    app_usbmouse1.elf \
     app_usbsd2.elf \
 	app_vga1.elf \
     app_vgacalc1.elf
@@ -46,6 +47,7 @@ app_usbkb2.elf: app_usbkb2.o usbkb.o keyboard.o busby.o misc.o leonardo.o
 app_usbkb3.elf: app_usbkb3.o
 app_usbkb4.elf: app_usbkb4.o usbkb2.o busby2.o
 app_usbloop1.elf: app_usbloop1.o cdc.o busby.o misc.o
+app_usbmouse1.elf: app_usbmouse1.o usbmouse.o
 app_usbsd2.elf: app_usbsd2.o usbsd.o busby.o misc.o zd2card.o leonardo.o
 app_vga1.elf: app_vga1.o vga.o
 app_vgacalc1.elf: app_vgacalc1.o vga.o keyboard.o misc.o calc.o leonardo.o
@@ -68,6 +70,7 @@ app_usbkb2.o: app_usbkb2.cpp
 app_usbkb3.o: app_usbkb3.cpp
 app_usbkb4.o: app_usbkb4.cpp
 app_usbloop1.o: app_usbloop1.cpp
+app_usbmouse1.o: app_usbmouse1.cpp usbmouse.h
 app_usbsd2.o: app_usbsd2.cpp usbsd.h busby.h
 app_vga1.o: app_vga1.cpp vga.h screenFont.h
 app_vgacalc1.o: app_vgacalc1.cpp vga.h screenFont.h keyboard.h calc.h
@@ -82,6 +85,7 @@ ps2mouse.o: ps2mouse.cpp ps2mouse.h
 tft.o: tft.cpp
 usbkb.o: usbkb.cpp usbkb.h
 usbkb2.o: usbkb2.cpp
+usbmouse.o: usbmouse.cpp usbmouse.h
 usbsd.o: usbsd.cpp usbsd.h busby.h
 vga.o: vga.cpp vga.h leonardo.h
 zd2card.o: zd2card.cpp zd2card.h
