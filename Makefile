@@ -45,7 +45,7 @@ app_sdod2.elf: app_sdod2.o zd2card.o cdc.o busby.o leonardo.o misc.o
 app_tone1.elf: app_tone1.o
 app_ts1.elf: app_ts1.o misc.o busby.o cdc.o analog.o
 app_uartloop1.elf: app_uartloop1.o misc.o
-app_usbjoy1.elf: app_usbjoy1.o usbjoy.o busby.o
+app_usbjoy1.elf: app_usbjoy1.o usbjoy.o busby.o analog.o
 app_usbkb1.elf: app_usbkb1.o usbkb.o busby.o misc.o
 app_usbkb2.elf: app_usbkb2.o usbkb.o keyboard.o busby.o misc.o leonardo.o
 app_usbkb3.elf: app_usbkb3.o
@@ -69,7 +69,7 @@ app_sdod1.o: app_sdod1.cpp zd2card.h
 app_sdod2.o: app_sdod2.cpp zd2card.h
 app_tone1.o: app_tone1.cpp
 app_uartloop1.o: app_uartloop1.cpp misc.h
-app_usbjoy1.o: app_usbjoy1.cpp usbjoy.h busby.h usbhid.h
+app_usbjoy1.o: app_usbjoy1.cpp usbjoy.h busby.h usbhid.h analog.h
 app_usbkb1.o: app_usbkb1.cpp usbkb.h usbhid.h busby.h
 app_usbkb2.o: app_usbkb2.cpp usbkb.h usbhid.h busby.h
 app_usbkb3.o: app_usbkb3.cpp

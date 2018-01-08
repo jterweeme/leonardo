@@ -87,8 +87,8 @@ static const MyConf PROGMEM myConf
         sizeof(DescConf),
         DTYPE_Configuration,
         sizeof(MyConf),
-        1,
-        1,
+        1,  // 1 interface
+        1,  // configuration 1
         0,
         USB_CONFIG_ATTR_RESERVED | USB_CONFIG_ATTR_SELFPOWERED,
         USB_CONFIG_POWER_MA(100)
@@ -97,8 +97,8 @@ static const MyConf PROGMEM myConf
         sizeof(DescIface),
         DTYPE_Interface,
         INTERFACE_ID_Joystick,
-        0,
-        2,
+        0,  // alternate settings
+        1,  // 1 endpoint
         HID_CSCP_HIDClass,
         HID_CSCP_BootSubclass,
         HID_CSCP_JoystickBootProtocol,
@@ -108,8 +108,8 @@ static const MyConf PROGMEM myConf
         sizeof(HIDDesc),
         HID_DTYPE_HID,
         0x0111,
-        0,
-        1,
+        0,  // country
+        1,  // 1 report descriptor
         HID_DTYPE_Report,
         sizeof(joystickReport)
     },
@@ -350,6 +350,13 @@ void USBJoy::procCtrlReq()
         UEINTX &= ~(1<<RXSTPI);     // clear setup
         UECONX |= 1<<STALLRQ;
     }
+}
+
+void USBJoy::sendReport(JoyReportData &report)
+{
+    _inpoint.select();
+    writeStream2(&report, sizeof(report), NULL);
+    *p_ueintx &= ~(1<<txini | 1<<fifocon);
 }
 
 
