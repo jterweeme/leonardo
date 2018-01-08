@@ -11,7 +11,7 @@ public:
         ADC2 = 1<<MUX1,
         ADC3 = 1<<MUX0 | 1<<MUX1,
         ADC4 = 1<<MUX2,
-        ADC5 = 1<<MUX1 | 1<<MUX2;
+        ADC5 = 1<<MUX0 | 1<<MUX2;
 
     void init();
     uint16_t read(uint8_t input);

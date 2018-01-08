@@ -149,13 +149,6 @@ struct DescConf
 }
 __attribute__ ((packed));
 
-struct DescHeader
-{
-    uint8_t size;
-    uint8_t type;
-}
-__attribute__ ((packed));
-
 static constexpr size_t USB_STRING_LEN(size_t uniChars) { return 2 + (uniChars << 1); }
 
 struct DescIface
@@ -220,6 +213,9 @@ protected:
         USB_MODE_Device = 1,
         USB_MODE_Host   = 2,
         USB_MODE_UID    = 3;
+private:
+    uint8_t getEndpointDirection() const;
+    uint8_t Endpoint_BytesToEPSizeMask(uint16_t bytes) const;
 protected:
     USBRequest _ctrlReq;
     volatile uint8_t state;
@@ -233,9 +229,7 @@ protected:
     uint8_t writeStream2(const void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t readStream(void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t nullStream(uint16_t len, uint16_t * const bytesProcessed);
-    static constexpr uint8_t USB_Options = USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL;
     uint8_t waitUntilReady() const;
-    uint8_t getEndpointDirection() const;
 
     inline uint8_t getCurrentEndpoint() const
     { return *p_uenum & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
@@ -249,11 +243,10 @@ protected:
     void write32be(uint32_t dat) const;
     inline uint16_t bytesInEndpoint() const { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
     void Device_ClearSetFeature();
-    void Device_GetSerialString(uint16_t *UnicodeString);
+    void Device_GetSerialString(uint16_t *unicodeString);
     void clearStatusStage() const;
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     bool configureEndpoint(Endpoint &ep);
-    uint8_t Endpoint_BytesToEPSizeMask(uint16_t bytes) const;
     virtual void procCtrlReq() { }
     inline void setDevAddr(uint8_t addr) const { *p_udaddr = *p_udaddr & 1<<adden | addr & 0x7f; }
 public:

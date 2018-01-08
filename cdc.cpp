@@ -34,8 +34,7 @@ static constexpr uint8_t
     CDC_PARITY_Mark  = 3,
     CDC_PARITY_Space = 4;
 
-
-const DescDev PROGMEM DeviceDescriptor =
+static const DescDev PROGMEM DeviceDescriptor =
 {
     sizeof(DescDev),
     DTYPE_Device,
@@ -53,79 +52,54 @@ const DescDev PROGMEM DeviceDescriptor =
     FIXED_NUM_CONFIGURATIONS
 };
 
-struct USB_CDC_Descriptor_FunctionalHeader_t
+struct CDC_Header
 {
-    DescHeader Header;
-    uint8_t Subtype;
-    uint16_t CDCSpecification;
+    uint8_t size;
+    uint8_t type;
+    uint8_t subtype;
+    uint16_t cdcSpec;
 }
 __attribute__ ((packed));
 
-struct USB_CDC_StdDescriptor_FunctionalHeader_t
+struct CDC_ACM
 {
-    uint8_t bFunctionLength;
-    uint8_t bDescriptorType;
-    uint8_t bDescriptorSubType;
-    uint16_t bcdCDC;
-}
-__attribute__ ((packed));
-
-struct USB_CDC_Descriptor_FunctionalACM_t
-{
-    DescHeader Header;
+    uint8_t size;
+    uint8_t type;
     uint8_t Subtype;
     uint8_t Capabilities;
 }
 __attribute__ ((packed));
 
-struct USB_CDC_StdDescriptor_FunctionalACM_t
+struct CDC_Union
 {
-    uint8_t bFunctionLength;
-    uint8_t bDescriptorType;
-    uint8_t bDescriptorSubType;
-    uint8_t bmCapabilities;
-}
-__attribute__ ((packed));
-
-struct USB_CDC_Descriptor_FunctionalUnion_t
-{
-    DescHeader Header;
+    uint8_t size;
+    uint8_t type;
     uint8_t Subtype;
     uint8_t MasterInterfaceNumber;
     uint8_t SlaveInterfaceNumber;
 }
 __attribute__ ((packed));
 
-struct USB_CDC_StdDescriptor_FunctionalUnion_t
-{
-    uint8_t bFunctionLength;
-    uint8_t bDescriptorType;
-    uint8_t bDescriptorSubType;
-    uint8_t bMasterInterface;
-    uint8_t bSlaveInterface0;
-}
-__attribute__ ((packed));
-
-struct MyConfiguration
+struct MyConf
 {
     DescConf config;
-    DescIface CDC_CCI_Interface;
-    USB_CDC_Descriptor_FunctionalHeader_t    CDC_Functional_Header;
-    USB_CDC_Descriptor_FunctionalACM_t       CDC_Functional_ACM;
-    USB_CDC_Descriptor_FunctionalUnion_t     CDC_Functional_Union;
-    DescEndpoint CDC_NotificationEndpoint;
-    DescIface CDC_DCI_Interface;
-    DescEndpoint CDC_DataOutEndpoint;
-    DescEndpoint CDC_DataInEndpoint;
+    DescIface cci;
+    CDC_Header cdcHeader;
+    CDC_ACM cdcACM;
+    CDC_Union cdcUnion;
+    DescEndpoint notif;
+    DescIface dci;
+    DescEndpoint outpoint;
+    DescEndpoint inpoint;
 }
 __attribute__ ((packed));
 
-const MyConfiguration PROGMEM ConfigurationDescriptor =
+static const MyConf PROGMEM myConf =
 {
     {
         sizeof(DescConf),
         DTYPE_Configuration,
-        sizeof(MyConfiguration),
+        sizeof(MyConf),
         2,
         1,
         NO_DESCRIPTOR,
@@ -144,26 +118,20 @@ const MyConfiguration PROGMEM ConfigurationDescriptor =
         NO_DESCRIPTOR
     },
     {
-        {
-            sizeof(USB_CDC_Descriptor_FunctionalHeader_t),
-            DTYPE_CSInterface
-        },
+        sizeof(CDC_Header),
+        DTYPE_CSInterface,
         CDC_DSUBTYPE_CSInterface_Header,
         0x0110,
     },
     {
-        {
-            sizeof(USB_CDC_Descriptor_FunctionalACM_t),
-            DTYPE_CSInterface
-        },
+        sizeof(CDC_ACM),
+        DTYPE_CSInterface,
         CDC_DSUBTYPE_CSInterface_ACM,
         0x06,
     },
     {
-        {
-            sizeof(USB_CDC_Descriptor_FunctionalUnion_t),
-            DTYPE_CSInterface
-        },
+        sizeof(CDC_Union),
+        DTYPE_CSInterface,
         CDC_DSUBTYPE_CSInterface_Union,
         0,
         1,
@@ -191,7 +159,7 @@ const MyConfiguration PROGMEM ConfigurationDescriptor =
         sizeof(DescEndpoint),
         DTYPE_Endpoint,
         CDC_RX_EPADDR,
-        (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+        EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
         CDC_TXRX_EPSIZE,
         0x05
     },
@@ -199,27 +167,27 @@ const MyConfiguration PROGMEM ConfigurationDescriptor =
         sizeof(DescEndpoint),
         DTYPE_Endpoint,
         CDC_TX_EPADDR,
-        (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+        EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
         CDC_TXRX_EPSIZE,
         0x05
     }
 };
 
-const DescString<2> PROGMEM languageString =
+static const DescString<2> PROGMEM languageString =
 {
     USB_STRING_LEN(1),
     DTYPE_String,
     (wchar_t)0x0409
 };
 
-const DescString<12> PROGMEM manufacturerString =
+static const DescString<12> PROGMEM manufacturerString =
 {
     USB_STRING_LEN(11),
     DTYPE_String,
     L"Dean Camera"
 };
 
-const DescString<23> PROGMEM productString =
+static const DescString<23> PROGMEM productString =
 {
     USB_STRING_LEN(22),
     DTYPE_String,
@@ -239,8 +207,8 @@ uint16_t CDC::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAd
         size = sizeof(DescDev);
         break;
     case DTYPE_Configuration:
-        addr = &ConfigurationDescriptor;
-        size = sizeof(ConfigurationDescriptor);
+        addr = &myConf;
+        size = sizeof(myConf);
         break;
     case DTYPE_String:
         switch (descNumber)
@@ -390,53 +358,53 @@ void CDC::EVENT_USB_Device_ControlRequest()
 
     switch (_ctrlReq.bRequest)
     {
-        case CDC_REQ_GetLineEncoding:
-            if (_ctrlReq.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
-            {
-                UEINTX &= ~(1<<RXSTPI);
-                while (!(UEINTX & 1<<TXINI));
-                write32(_lineEncoding.BaudRateBPS);
-                write8(_lineEncoding.CharFormat);
-                write8(_lineEncoding.ParityType);
-                write8(_lineEncoding.DataBits);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
-                clearStatusStage();
-            }
-            break;
-        case CDC_REQ_SetLineEncoding:
-            if (_ctrlReq.bmRequestType ==
-                    (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
-            {
-                UEINTX &= ~(1<<RXSTPI);
+    case CDC_REQ_GetLineEncoding:
+        if (_ctrlReq.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
+        {
+            UEINTX &= ~(1<<RXSTPI);
+            while (!(UEINTX & 1<<TXINI));
+            write32(_lineEncoding.BaudRateBPS);
+            write8(_lineEncoding.CharFormat);
+            write8(_lineEncoding.ParityType);
+            write8(_lineEncoding.DataBits);
+            UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+            clearStatusStage();
+        }
+        break;
+    case CDC_REQ_SetLineEncoding:
+        if (_ctrlReq.bmRequestType ==
+                (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
+        {
+            UEINTX &= ~(1<<RXSTPI);
 
-                while (!(UEINTX & 1<<RXOUTI))
-                    if (state == DEVICE_STATE_Unattached)
-                        return;
+            while (!(UEINTX & 1<<RXOUTI))
+                if (state == DEVICE_STATE_Unattached)
+                    return;
 
-                _lineEncoding.BaudRateBPS = read32();
-                _lineEncoding.CharFormat = read8();
-                _lineEncoding.ParityType = read8();
-                _lineEncoding.DataBits = read8();
-                UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
-                clearStatusStage();
-            }
+            _lineEncoding.BaudRateBPS = read32();
+            _lineEncoding.CharFormat = read8();
+            _lineEncoding.ParityType = read8();
+            _lineEncoding.DataBits = read8();
+            UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+            clearStatusStage();
+        }
 
-            break;
-        case CDC_REQ_SetControlLineState:
-            if (_ctrlReq.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
-            {
-                UEINTX &= ~(1<<RXSTPI);
-                clearStatusStage();
-            }
-            break;
-        case CDC_REQ_SendBreak:
-            if (_ctrlReq.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
-            {
-                UEINTX &= ~(1<<RXSTPI);
-                clearStatusStage();
-            }
+        break;
+    case CDC_REQ_SetControlLineState:
+        if (_ctrlReq.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
+        {
+            UEINTX &= ~(1<<RXSTPI);
+            clearStatusStage();
+        }
+        break;
+    case CDC_REQ_SendBreak:
+        if (_ctrlReq.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
+        {
+            UEINTX &= ~(1<<RXSTPI);
+            clearStatusStage();
+        }
 
-            break;
+        break;
     }
 }
 

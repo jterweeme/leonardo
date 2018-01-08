@@ -1,17 +1,60 @@
-#include "usbmouse.h"
-#include "usbhid.h"
+#include "usbjoy.h"
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 
 static constexpr uint8_t
-    MOUSE_EPADDR = ENDPOINT_DIR_IN | 1,
-    MOUSE_EPSIZE = 8,
-    INTERFACE_ID_Mouse = 0,
+    INTERFACE_ID_Joystick = 0,
     STRING_ID_Language = 0,
     STRING_ID_Manufacturer = 1,
     STRING_ID_Product = 2;
 
-const DescDev PROGMEM DeviceDescriptor =
+
+static const uint8_t PROGMEM joystickReport[] =
+{
+#if 0
+    GLOBAL | USAGE_PAGE | 1, 0x01,
+    LOCAL  | USAGE      | 1, 0x04,
+    MAIN   | COLLECTION | 1, 0x01,
+    GLOBAL | USAGE_PAGE | 1, 0x09,
+    LOCAL  | USAGE_MIN  | 1, 0x01,
+    LOCAL  | USAGE_MAX  | 1, 0x06,
+    GLOBAL | LOGICAL_MIN | 1, 0x00,
+    GLOBAL | LOGICAL_MAX | 1, 0x01,
+    GLOBAL | REPORT_COUNT | 1, 0x06,
+    GLOBAL | REPORT_SIZE | 1, 0x01,
+#else
+    0x04 | 0x00 | 0x01, ((0x01) & 0xFF),
+    0x08 | 0x00 | 0x01, ((0x04) & 0xFF),
+    0x00 | 0xA0 | 0x01, ((0x01) & 0xFF),
+    0x08 | 0x00 | 0x01, ((0x01) & 0xFF),
+    0x00 | 0xA0 | 0x01, ((0x00) & 0xFF),
+    0x08 | 0x00 | 0x01, ((0x30) & 0xFF),
+    0x08 | 0x00 | 0x01, ((0x31) & 0xFF),
+    0x08 | 0x00 | 0x01, ((0x32) & 0xFF),
+    0x04 | 0x10 | 0x01, ((-100) & 0xFF),
+    0x04 | 0x20 | 0x01, 100,
+    0x04 | 0x30 | 0x01, -1 & 0xff,
+    0x04 | 0x40 | 0x01, ((1) & 0xFF),
+    0x04 | 0x90 | 0x01, ((0x03) & 0xFF),
+    0x04 | 0x70 | 0x01, ((0x08) & 0xFF),
+    0x00 | 0x80 | 0x01, (((0 << 0) | (1 << 1) | (0 << 2)) & 0xFF),
+    0x00 | 0xC0 | 0x00,
+    0x04 | 0x00 | 0x01, 0x09,
+    0x08 | 0x10 | 0x01, 0x01,
+    0x08 | 0x20 | 0x01, 0x02,
+    0x04 | 0x10 | 0x01, 0x00,
+    0x04 | 0x20 | 0x01, 0x01,
+    0x04 | 0x70 | 0x01, 0x01,
+    0x04 | 0x90 | 0x01, 0x02,
+    0x00 | 0x80 | 0x01, (((0 << 0) | (1 << 1) | (0 << 2)) & 0xFF),
+    0x04 | 0x70 | 0x01, ((0x06) & 0xFF),
+    0x04 | 0x90 | 0x01, ((0x01) & 0xFF),
+    0x00 | 0x80 | 0x01, (((1<<0)) & 0xFF),
+    0x00 | 0xC0 | 0x00
+#endif
+};
+
+static const DescDev PROGMEM devDesc =
 {
     sizeof(DescDev),
     DTYPE_Device,
@@ -19,92 +62,33 @@ const DescDev PROGMEM DeviceDescriptor =
     0,
     0,
     0,
-    FIXED_CONTROL_ENDPOINT_SIZE,
-    0x03EB,
-    0x2041,
+    8,
+    0x03eb,
+    0x2042,
     0x0001,
     STRING_ID_Manufacturer,
     STRING_ID_Product,
     0,
-    FIXED_NUM_CONFIGURATIONS
-};
-
-const uint8_t PROGMEM mouseReport[] =
-{
-#if 0
-    GLOBAL | USAGE_PAGE     | 1, 0x01,
-    LOCAL  | USAGE          | 1, 0x02,  // mouse
-    MAIN   | COLLECTION     | 1, 0x01,
-    GLOBAL | USAGE_PAGE     | 1, 0x09,  // pointer
-    LOCAL  | USAGE_MIN      | 1, 0x01,
-    LOCAL  | USAGE_MAX      | 1, 0x03,
-    GLOBAL | LOGICAL_MIN    | 1, 0x00,
-    GLOBAL | LOGICAL_MAX    | 1, 0x01,
-    GLOBAL | REPORT_COUNT   | 1, 0x03,
-    GLOBAL | REPORT_SIZE    | 1, 0x01,
-    MAIN   | HID_INPUT      | 1, 1<<1,
-    GLOBAL | REPORT_COUNT   | 1, 0x01,
-    GLOBAL | REPORT_SIZE    | 1, 0x05,
-    MAIN   | HID_INPUT      | 1, 1<<0,
-    GLOBAL | USAGE_PAGE     | 1, 0x01,
-    LOCAL  | USAGE          | 1, 0x30,
-    LOCAL  | USAGE          | 1, 0x31,
-    GLOBAL | LOGICAL_MIN    | 1, 0,
-    GLOBAL | LOGICAL_MAX    | 1, 1,
-    GLOBAL | PHYSICAL_MIN   | 1, 0,
-    GLOBAL | PHYSICAL_MAX   | 1, 1,
-    GLOBAL | REPORT_COUNT   | 1, 0x02,
-    GLOBAL | REPORT_SIZE    | 1, 0x08,
-    MAIN   | HID_INPUT      | 1, 0,
-    MAIN   | END_COLLECTION | 0
-#else
-    (0x04 | 0x00 | 0x01), ((0x01) & 0xFF),
-    (0x08 | 0x00 | 0x01), ((0x02) & 0xFF),
-    (0x00 | 0xA0 | 0x01), ((0x01) & 0xFF),
-    (0x08 | 0x00 | 0x01), ((0x01) & 0xFF),
-    (0x00 | 0xA0 | 0x01), ((0x00) & 0xFF),
-    (0x04 | 0x00 | 0x01), ((0x09) & 0xFF),
-    (0x08 | 0x10 | 0x01), ((0x01) & 0xFF),
-    (0x08 | 0x20 | 0x01), ((0x03) & 0xFF),
-    (0x04 | 0x10 | 0x01), ((0x00) & 0xFF),
-    (0x04 | 0x20 | 0x01), ((0x01) & 0xFF),
-    (0x04 | 0x90 | 0x01), ((0x03) & 0xFF),
-    (0x04 | 0x70 | 0x01), ((0x01) & 0xFF),
-    (0x00 | 0x80 | 0x01), (((0 << 0) | (1 << 1) | (0 << 2)) & 0xFF),
-    (0x04 | 0x90 | 0x01), ((0x01) & 0xFF),
-    (0x04 | 0x70 | 0x01), ((0x05) & 0xFF),
-    (0x00 | 0x80 | 0x01), (((1 << 0)) & 0xFF),
-    (0x04 | 0x00 | 0x01), ((0x01) & 0xFF),
-    (0x08 | 0x00 | 0x01), ((0x30) & 0xFF),
-    (0x08 | 0x00 | 0x01), ((0x31) & 0xFF),
-    (0x04 | 0x10 | 0x01), ((-1) & 0xFF),
-    (0x04 | 0x20 | 0x01), ((1) & 0xFF),
-    (0x04 | 0x30 | 0x01), ((-1) & 0xFF),
-    (0x04 | 0x40 | 0x01), ((1) & 0xFF),
-    (0x04 | 0x90 | 0x01), ((0x02) & 0xFF),
-    (0x04 | 0x70 | 0x01), ((0x08) & 0xFF),
-    (0x00 | 0x80 | 0x01), (((0<<0) | (1<<1) | (1<<2)) & 0xFF),
-    (0x00 | 0xC0 | 0x00),
-    (0x00 | 0xC0 | 0x00)
-#endif
+    1
 };
 
 struct MyConf
 {
     DescConf config;
     DescIface hidInterface;
-    HIDDesc mouseHID;
+    HIDDesc hidJoy;
     DescEndpoint inpoint;
-};
+}
+__attribute__ ((packed));
 
-const MyConf PROGMEM myConf =
+static const MyConf PROGMEM myConf
 {
     {
-        sizeof(MyConf),
+        sizeof(DescConf),
         DTYPE_Configuration,
         sizeof(MyConf),
-        1,      // 1 interface
-        1,      // configuration number = 1
+        1,
+        1,
         0,
         USB_CONFIG_ATTR_RESERVED | USB_CONFIG_ATTR_SELFPOWERED,
         USB_CONFIG_POWER_MA(100)
@@ -112,102 +96,34 @@ const MyConf PROGMEM myConf =
     {
         sizeof(DescIface),
         DTYPE_Interface,
-        INTERFACE_ID_Mouse,
-        0,      // alternate settings
-        1,      // 1 endpoint
+        INTERFACE_ID_Joystick,
+        0,
+        2,
         HID_CSCP_HIDClass,
         HID_CSCP_BootSubclass,
-        HID_CSCP_MouseBootProtocol,
+        HID_CSCP_JoystickBootProtocol,
         0
     },
     {
         sizeof(HIDDesc),
         HID_DTYPE_HID,
         0x0111,
-        0x00,
-        1,      // 1 report descriptor
+        0,
+        1,
         HID_DTYPE_Report,
-        sizeof(mouseReport)
+        sizeof(joystickReport)
     },
     {
         sizeof(DescEndpoint),
         DTYPE_Endpoint,
-        MOUSE_EPADDR,
+        ENDPOINT_DIR_IN | 1,
         EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA,
-        MOUSE_EPSIZE,
-        0x05
+        8,
+        5
     }
 };
 
-const DescString<2> PROGMEM languageString =
-{
-    USB_STRING_LEN(1),
-    DTYPE_String,
-    (wchar_t)0x0409
-};
-
-const DescString<12> PROGMEM manufacturerString =
-{
-    USB_STRING_LEN(11),
-    DTYPE_String,
-    L"Dean Camera"
-};
-
-const DescString<10> PROGMEM productString =
-{
-    USB_STRING_LEN(9),
-    DTYPE_String,
-    L"USB Mouse"
-};
-
-uint16_t USBMouse::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddr)
-{
-    const void *addr = NULL;
-    uint16_t size = 0;
-
-    switch (wValue >> 8)
-    {
-    case DTYPE_Device:
-        addr = &DeviceDescriptor;
-        size = sizeof(DescDev);
-        break;
-    case DTYPE_Configuration:
-        addr = &myConf;
-        size = sizeof(MyConf);
-        break;
-    case DTYPE_String:
-        switch (wValue & 0xff)
-        {
-        case STRING_ID_Language:
-            addr = &languageString;
-            size = pgm_read_byte(&languageString.size);
-            break;
-        case STRING_ID_Manufacturer:
-            addr = &manufacturerString;
-            size = pgm_read_byte(&manufacturerString.size);
-            break;
-        case STRING_ID_Product:
-            addr = &productString;
-            size = pgm_read_byte(&productString.size);
-            break;
-        }
-
-        break;
-    case HID_DTYPE_HID:
-        addr = &myConf.mouseHID;
-        size = sizeof(HIDDesc);
-        break;
-    case HID_DTYPE_Report:
-        addr = &mouseReport;
-        size = sizeof(mouseReport);
-        break;
-    }
-
-    *descAddr = addr;
-    return size;
-}
-
-USBMouse::USBMouse() : _inpoint(ENDPOINT_DIR_IN | 1, 8, EP_TYPE_INTERRUPT, 1)
+USBJoy::USBJoy() : _inpoint(ENDPOINT_DIR_IN | 1, 8, EP_TYPE_INTERRUPT, 1)
 {
     *p_uhwcon |= 1<<UVREGE;    // usb reg on
     *p_usbcon &= ~(1<<vbuste); // disable INT vbuste
@@ -233,14 +149,82 @@ USBMouse::USBMouse() : _inpoint(ENDPOINT_DIR_IN | 1, 8, EP_TYPE_INTERRUPT, 1)
     sei();
 }
 
-void USBMouse::procCtrlReq()
+static const DescString<2> PROGMEM languageString =
+{
+    USB_STRING_LEN(1),
+    DTYPE_String,
+    (wchar_t)0x0409
+};
+
+static const DescString<12> PROGMEM manufacturerString =
+{
+    USB_STRING_LEN(11),
+    DTYPE_String,
+    L"Dean Camera"
+};
+
+static const DescString<13> PROGMEM productString =
+{
+    USB_STRING_LEN(12),
+    DTYPE_String,
+    L"USB Joystick"
+};
+
+uint16_t USBJoy::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **descAddr)
+{
+    const void *addr = NULL;
+    uint16_t size = 0;
+
+    switch (wValue >> 8)
+    {
+    case DTYPE_Device:
+        addr = &devDesc;
+        size = sizeof(DescDev);
+        break;
+    case DTYPE_Configuration:
+        addr = &myConf;
+        size = sizeof(MyConf);
+        break;
+    case DTYPE_String:
+        switch (wValue & 0xff)
+        {
+        case STRING_ID_Language:
+            addr = &languageString;
+            size = pgm_read_byte(&languageString.size);
+            break;
+        case STRING_ID_Manufacturer:
+            addr = &manufacturerString;
+            size = pgm_read_byte(&manufacturerString.size);
+            break;
+        case STRING_ID_Product:
+            addr = &productString;
+            size = pgm_read_byte(&productString.size);
+            break;
+        }
+
+        break;
+    case HID_DTYPE_HID:
+        addr = &myConf.hidJoy;
+        size = sizeof(HIDDesc);
+        break;
+    case HID_DTYPE_Report:
+        addr = &joystickReport;
+        size = sizeof(joystickReport);
+        break;
+    }
+
+    *descAddr = addr;
+    return size;
+}
+
+void USBJoy::procCtrlReq()
 {
     uint8_t* RequestHeader = (uint8_t*)&_ctrlReq;
 
     for (uint8_t i = 0; i < sizeof(USBRequest); i++)
         *(RequestHeader++) = read8();
 
-    if (*p_ueintx & 1<<rxstpi) // is setup received?
+    if (UEINTX & 1<<RXSTPI) // is setup received?
     {
         uint8_t bmRequestType = _ctrlReq.bmRequestType;
 
@@ -270,6 +254,7 @@ void USBMouse::procCtrlReq()
                 default:
                     return;
                 }
+
                 UEINTX &= ~(1<<RXSTPI);
                 write16(CurrentStatus);
                 UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
@@ -366,15 +351,5 @@ void USBMouse::procCtrlReq()
         UECONX |= 1<<STALLRQ;
     }
 }
-
-void USBMouse::sendReport(MouseReportData &mouseReport)
-{
-    if (*p_ueintx & 1<<rwal)
-    {
-        writeStream2(&mouseReport, sizeof(mouseReport), NULL);
-        *p_ueintx &= ~(1<<txini | 1<<fifocon);
-    }
-}
-
 
 

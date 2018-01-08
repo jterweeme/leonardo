@@ -12,7 +12,7 @@ int main()
 
     while (true)
     {
-        uint16_t value = analog.read(Analog::ADC0);
+        uint16_t value = analog.read(Analog::ADC4);
         char buf[50];
         snprintf(buf, 50, "%u\r\n", value);
         s.writeString(buf);

@@ -7,6 +7,7 @@ static const uint8_t
     HID_CSCP_BootSubclass = 1,
     HID_CSCP_KeyboardBootProtocol = 1,
     HID_CSCP_MouseBootProtocol = 2,
+    HID_CSCP_JoystickBootProtocol = 3,
     HID_CSCP_HIDClass = 3,
     MAIN = 0,
     GLOBAL = 4,
@@ -29,7 +30,8 @@ static const uint8_t
 
 struct HIDDesc
 {
-    DescHeader Header;
+    uint8_t size;
+    uint8_t type;
     uint16_t HIDSpec; /**< BCD encoded vernd device complies to. */
     uint8_t CountryCode; /**< Country codce, or zero if universal. */
     uint8_t TotalReportDescriptors; /**< riptors for the interface. */

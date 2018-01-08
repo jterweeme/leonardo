@@ -3,7 +3,7 @@
   <element>
     <type>com.baselet.element.old.element.Class</type>
     <coordinates>
-      <x>850</x>
+      <x>740</x>
       <y>150</y>
       <w>260</w>
       <h>150</h>
@@ -15,13 +15,14 @@
 # _control: Endpoint
 --
 # _waitUntilReady(): uint8_t
+- getEndpointDirection(): uint8_t
 bg=yellow</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>490</x>
+      <x>380</x>
       <y>60</y>
       <w>160</w>
       <h>230</h>
@@ -41,7 +42,7 @@ bg=yellow</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>640</x>
+      <x>530</x>
       <y>120</y>
       <w>230</w>
       <h>110</h>
@@ -52,7 +53,7 @@ bg=yellow</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>780</x>
+      <x>670</x>
       <y>480</y>
       <w>370</w>
       <h>220</h>
@@ -74,7 +75,7 @@ bg=blue</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>950</x>
+      <x>840</x>
       <y>290</y>
       <w>30</w>
       <h>210</h>
@@ -85,14 +86,15 @@ bg=blue</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>430</x>
-      <y>370</y>
+      <x>100</x>
+      <y>100</y>
       <w>200</w>
       <h>230</h>
     </coordinates>
     <panel_attributes>*DescEndpoint*
 --
-+ header: DescHeader
++ size: uint8_t
++ type: uint8_t
 --
 bg=yellow</panel_attributes>
     <additional_attributes/>
@@ -100,14 +102,15 @@ bg=yellow</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>90</x>
+      <x>190</x>
       <y>440</y>
       <w>210</w>
       <h>180</h>
     </coordinates>
     <panel_attributes>*DescIface*
 --
-+header: DescHeader
++ size: uint8_t
++ type: uint8_t
 --
 bg=yellow</panel_attributes>
     <additional_attributes/>
@@ -115,7 +118,7 @@ bg=yellow</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>640</x>
+      <x>530</x>
       <y>230</y>
       <w>210</w>
       <h>270</h>
@@ -126,7 +129,7 @@ bg=yellow</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>310</x>
+      <x>200</x>
       <y>690</y>
       <w>380</w>
       <h>160</h>
@@ -142,7 +145,7 @@ bg=pink</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>640</x>
+      <x>530</x>
       <y>610</y>
       <w>160</w>
       <h>100</h>
@@ -151,17 +154,40 @@ bg=pink</panel_attributes>
     <additional_attributes>140.0;10.0;10.0;80.0</additional_attributes>
   </element>
   <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>290</x>
+      <y>290</y>
+      <w>400</w>
+      <h>250</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-</panel_attributes>
+    <additional_attributes>10.0;10.0;380.0;230.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>390</x>
+      <y>510</y>
+      <w>300</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;80.0</additional_attributes>
+  </element>
+  <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>160</x>
-      <y>90</y>
-      <w>230</w>
-      <h>170</h>
+      <x>1120</x>
+      <y>310</y>
+      <w>200</w>
+      <h>140</h>
     </coordinates>
-    <panel_attributes>*DescHeader*
+    <panel_attributes>*DescDev*
 --
 + size: uint8_t
 + type: uint8_t
++ spec: uint16_t
 --
 bg=yellow</panel_attributes>
     <additional_attributes/>
@@ -169,23 +195,26 @@ bg=yellow</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>340</x>
-      <y>250</y>
-      <w>140</w>
-      <h>140</h>
+      <x>1030</x>
+      <y>440</y>
+      <w>190</w>
+      <h>120</h>
     </coordinates>
-    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
-    <additional_attributes>120.0;120.0;10.0;10.0</additional_attributes>
+    <panel_attributes>lt=&lt;-</panel_attributes>
+    <additional_attributes>170.0;10.0;10.0;100.0</additional_attributes>
   </element>
   <element>
-    <id>Relation</id>
+    <id>UMLClass</id>
     <coordinates>
-      <x>190</x>
-      <y>250</y>
-      <w>60</w>
-      <h>210</h>
+      <x>1060</x>
+      <y>50</y>
+      <w>290</w>
+      <h>150</h>
     </coordinates>
-    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
-    <additional_attributes>10.0;190.0;40.0;10.0</additional_attributes>
+    <panel_attributes>*DescConf*
+--
+--
+bg=yellow</panel_attributes>
+    <additional_attributes/>
   </element>
 </diagram>

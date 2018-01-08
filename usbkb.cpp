@@ -104,19 +104,16 @@ static const MyConf PROGMEM myConf =
         HID_CSCP_KeyboardBootProtocol,
         0
     },
-    {   // HID_KeyboardHID
-        {
-            sizeof(HIDDesc),
-            HID_DTYPE_HID
-        },
-
+    {
+        sizeof(HIDDesc),
+        HID_DTYPE_HID,
         0x0111,
         0,
         1,
         HID_DTYPE_Report,
         sizeof(KeyboardReport)
     },
-    {   // HID_ReportINEndpoint
+    {
         sizeof(DescEndpoint),
         DTYPE_Endpoint,
         ENDPOINT_DIR_IN | 1,
@@ -124,7 +121,7 @@ static const MyConf PROGMEM myConf =
         8,
         5
     },
-    {   // HID_ReportOUTEndpoint
+    {
         sizeof(DescEndpoint),
         DTYPE_Endpoint,
         ENDPOINT_DIR_OUT | 2,
@@ -234,7 +231,7 @@ void USBKB::sendReport(KBReport &report)
 {
     _inpoint.select();
     writeStream2(&report, sizeof(report), NULL);
-    *p_ueintx &= ~(1<<TXINI | 1<<FIFOCON);
+    *p_ueintx &= ~(1<<txini | 1<<fifocon);
     _outpoint.select();
 
     if (UEINTX & 1<<RXOUTI)
