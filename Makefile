@@ -1,5 +1,5 @@
 CC = avr-g++ --std=c++11 -mmcu=atmega32u4
-CMD = $(CC) -O2 -c -Wall -Wno-unused-variable -Wno-parentheses
+CMD = $(CC) -O2 -c -Wall
 APP = app_vgacalc1.elf
 
 %.o: %.cpp
@@ -8,7 +8,8 @@ APP = app_vgacalc1.elf
 %.elf: %.o
 	$(CC) -o $@ $^
 
-all: app_calc1.elf \
+all: app_aditbox.elf \
+    app_calc1.elf \
     app_calc2.elf \
     app_hellousb1.elf \
     app_mouse1.elf \
@@ -29,10 +30,12 @@ all: app_calc1.elf \
     app_usbloop1.elf \
     app_usbmouse1.elf \
     app_usbsd2.elf \
+    app_usbsound1.elf \
 	app_vga1.elf \
     app_vgacalc1.elf
 
-app_calc1.elf: app_calc1.o calc.o tft.o misc.o button.o analog.o cdc.o busby.o
+app_aditbox.elf: app_aditbox.o tft.o misc.o widget.o analog.o
+app_calc1.elf: app_calc1.o calc.o tft.o misc.o widget.o analog.o cdc.o busby.o
 app_calc2.elf: app_calc2.o calc.o cdc.o busby.o
 app_hellousb1.elf: app_hellousb1.o cdc.o busby.o misc.o
 app_mouse1.elf: app_mouse1.o ps2mouse.o cdc.o busby.o misc.o
@@ -53,11 +56,13 @@ app_usbkb4.elf: app_usbkb4.o usbkb2.o busby2.o
 app_usbloop1.elf: app_usbloop1.o cdc.o busby.o misc.o
 app_usbmouse1.elf: app_usbmouse1.o usbmouse.o busby.o
 app_usbsd2.elf: app_usbsd2.o usbsd.o busby.o misc.o zd2card.o leonardo.o
+app_usbsound1.elf: app_usbsound1.o busby.o
 app_vga1.elf: app_vga1.o vga.o
 app_vgacalc1.elf: app_vgacalc1.o vga.o keyboard.o misc.o calc.o leonardo.o
 
 analog.o: analog.cpp analog.h
-app_calc1.o: app_calc1.cpp button.h analog.h glcdfont.h
+app_aditbox.o: app_aditbox.cpp tft.h
+app_calc1.o: app_calc1.cpp widget.h analog.h glcdfont.h
 app_calc2.o: app_calc2.cpp stream.h
 app_hellousb1.o: app_hellousb1.cpp
 app_mouse1.o: app_mouse1.cpp ps2mouse.h stream.h
@@ -77,10 +82,11 @@ app_usbkb4.o: app_usbkb4.cpp
 app_usbloop1.o: app_usbloop1.cpp
 app_usbmouse1.o: app_usbmouse1.cpp usbmouse.h
 app_usbsd2.o: app_usbsd2.cpp usbsd.h busby.h
+app_usbsound1.o: app_usbsound1.cpp busby.h
 app_vga1.o: app_vga1.cpp vga.h screenFont.h
 app_vgacalc1.o: app_vgacalc1.cpp vga.h screenFont.h keyboard.h calc.h
 busby.o: busby.cpp busby.h
-button.o: button.cpp button.h
+widget.o: widget.cpp widget.h
 calc.o: calc.cpp calc.h
 cdc.o: cdc.cpp cdc.h busby.h
 keyboard.o: keyboard.cpp keyboard.h

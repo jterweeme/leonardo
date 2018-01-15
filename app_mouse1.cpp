@@ -33,7 +33,7 @@ int main()
         uint8_t mx = mouse.read();
         uint8_t my = mouse.read();
         char buf[50];
-        snprintf(buf, 50, "%u %u\r\n", mx, my);
+        snprintf(buf, 50, "%u %u %u\r\n", mx, my, mstat);
         cout.writeString(buf);
         cout.flush();
     }

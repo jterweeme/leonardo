@@ -448,9 +448,9 @@ void CDC::procCtrlReq()
                     return;
                 }
 
-                UEINTX &= ~(1<<RXSTPI);
+                *p_ueintx &= ~(1<<rxstpi);
                 write16(CurrentStatus);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+                *p_ueintx &= ~(1<<txini | 1<<fifocon);
                 clearStatusStage();
             }
 
@@ -468,11 +468,11 @@ void CDC::procCtrlReq()
             if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
             {
                 uint8_t DeviceAddress = _ctrlReq.wValue & 0x7F;
-                UDADDR = UDADDR & 1<<ADDEN | DeviceAddress & 0x7F;
-                UEINTX &= ~(1<<RXSTPI);
+                *p_udaddr = (*p_udaddr & 1<<adden) | (DeviceAddress & 0x7F);
+                *p_ueintx &= ~(1<<rxstpi);
                 clearStatusStage();
-                while (!(UEINTX & 1<<TXINI));
-                UDADDR |= 1<<ADDEN; // enable dev addr
+                while ((*p_ueintx & 1<<txini) == 0);
+                *p_udaddr |= 1<<adden; // enable dev addr
                 state = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
             }
 

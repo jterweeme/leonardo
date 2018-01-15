@@ -1,6 +1,9 @@
+/*
+Adapted from LUFA code by Dean Camera
+*/
+
 #include "usbsd.h"
 #include <avr/pgmspace.h>
-#include <avr/interrupt.h>
 #include <ctype.h>
 
 static constexpr uint8_t
@@ -89,17 +92,6 @@ static constexpr uint16_t BLOCKSIZE = 512;
 
 template <class T> const T& min(const T& a, const T& b) { return !(b < a) ? a : b; }
 
-static inline uint16_t zwapEndian_16(uint16_t word)
-{
-    return word >> 8 | word << 8;
-}
-
-static inline uint32_t zwapEndian_32(const uint32_t dword)
-{
-    return dword >> 24 & 0xff | dword << 8 & 0xff0000 |
-        dword >> 8 & 0xff00 | dword << 24 & 0xff000000;
-}
-
 static const DescDev PROGMEM DeviceDescriptor =
 {
     sizeof(DescDev),
@@ -186,7 +178,7 @@ static const DescString<23> PROGMEM productString =
     L"LUFA Mass Storage Demo"
 };
 
-static uint16_t getDescriptor(uint16_t wValue, uint16_t wIndex, const void** const descAddr)
+static uint16_t getDescriptor(uint16_t wValue, uint16_t wIndex, const void **const descAddr)
 {
     const void *addr = NULL;
     uint16_t size = 0;
@@ -252,14 +244,14 @@ bool USBSD::decodeSCSICmd()
 {
     bool success = false;
 
-    switch (cmdBlock.SCSICommandData[0])
+    switch (cmdBlock.cmdData[0])
     {
     case ZCZI_CMD_INQUIRY:
     {
-        uint16_t allocLen = zwapEndian_16(*(uint16_t*)&cmdBlock.SCSICommandData[3]);
+        uint16_t allocLen = cmdBlock.cmdData[3] << 8 | cmdBlock.cmdData[4];
         uint16_t BytesTransferred = min(allocLen, sizeof(InquiryData));
 
-        if ((cmdBlock.SCSICommandData[1] & (1<<0 | 1<<1)) || cmdBlock.SCSICommandData[2])
+        if ((cmdBlock.cmdData[1] & (1<<0 | 1<<1)) || cmdBlock.cmdData[2])
         {
             senseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
             senseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_FIELD_IN_CDB;
@@ -269,18 +261,18 @@ bool USBSD::decodeSCSICmd()
 
         writeStream2(&InquiryData, BytesTransferred, NULL);
         nullStream(allocLen - BytesTransferred, NULL);
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+        *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
         cmdBlock.DataTransferLength -= BytesTransferred;
         success = true;
     }
         break;
     case ZCZI_CMD_REQUEST_SENSE:
     {
-        uint8_t AllocationLength = cmdBlock.SCSICommandData[4];
+        uint8_t AllocationLength = cmdBlock.cmdData[4];
         uint8_t BytesTransferred = min((size_t)AllocationLength, sizeof(senseData));
         writeStream2(&senseData, BytesTransferred, NULL);
         nullStream(AllocationLength - BytesTransferred, NULL);
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+        *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
         cmdBlock.DataTransferLength -= BytesTransferred;
         success = true;
     }
@@ -298,7 +290,7 @@ bool USBSD::decodeSCSICmd()
         break;
     case ZCZI_CMD_SEND_DIAGNOSTIC:
 
-        if ((cmdBlock.SCSICommandData[1] & 1<<2) == 0)
+        if ((cmdBlock.cmdData[1] & 1<<2) == 0)
         {
             senseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
             senseData.AdditionalSenseCode = ZCZI_ASENSE_INVALID_FIELD_IN_CDB;
@@ -320,7 +312,7 @@ bool USBSD::decodeSCSICmd()
         write8(0x00);
         write8(0x00);
         write8(0x00);
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+        *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
         cmdBlock.DataTransferLength -= 4;
         success = true;
         break;
@@ -351,8 +343,11 @@ bool USBSD::decodeSCSICmd()
 
 bool USBSD::SCSI_Command_ReadWrite_10(bool IsDataRead)
 {
-    uint32_t blockAddr = zwapEndian_32(*(uint32_t*)&cmdBlock.SCSICommandData[2]);
-    uint32_t totalBlocks = zwapEndian_16(*(uint16_t*)&cmdBlock.SCSICommandData[7]);
+    uint32_t blockAddr = (uint32_t)cmdBlock.cmdData[2] << 24 |
+                (uint32_t)cmdBlock.cmdData[3] << 16 |
+                (uint32_t)cmdBlock.cmdData[4] << 8 | (uint32_t)cmdBlock.cmdData[5];
+
+    uint32_t totalBlocks = cmdBlock.cmdData[7] << 8 | cmdBlock.cmdData[8];
 
     if (blockAddr >= _blocks)
     {
@@ -379,7 +374,7 @@ inline void USBSD::_sdWriteBlock(const uint32_t block)
     {
         if ((*p_ueintx & 1<<rwal) == 0)
         {
-            UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+            *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
             
             if (waitUntilReady())
                 return;
@@ -446,11 +441,11 @@ void USBSD::MassStorage_Task()
 
     if (ReadInCommandBlock())
     {
-        if (cmdBlock.Flags & MS_KOMMAND_DIR_DATA_IN)
+        if (cmdBlock.flags & MS_KOMMAND_DIR_DATA_IN)
             selectEndpoint(MASS_STORAGE_IN_EPADDR);
 
 		cmdStatus.Status = decodeSCSICmd() ? MS_ZCZI_COMMAND_Pass : MS_ZCZI_COMMAND_Fail;
-		cmdStatus.Tag = cmdBlock.Tag;
+		cmdStatus.Tag = cmdBlock.tag;
 		cmdStatus.DataTransferResidue = cmdBlock.DataTransferLength;
 
 		if ((cmdStatus.Status == MS_ZCZI_COMMAND_Fail) && cmdStatus.DataTransferResidue)
@@ -464,11 +459,11 @@ void USBSD::MassStorage_Task()
         _outpoint.reset();
         _inpoint.reset();
         selectEndpoint(MASS_STORAGE_OUT_EPADDR);
-        UECONX |= 1<<STALLRQC;  // clear stall
-        UECONX |= 1<<RSTDT; // reset data toggle
+        *p_ueconx |= 1<<STALLRQC;  // clear stall
+        *p_ueconx |= 1<<RSTDT; // reset data toggle
 		selectEndpoint(MASS_STORAGE_IN_EPADDR);
-        UECONX |= 1<<STALLRQC;  // clear stall
-        UECONX |= 1<<RSTDT; // reset data toggle
+        *p_ueconx |= 1<<STALLRQC;  // clear stall
+        *p_ueconx |= 1<<RSTDT; // reset data toggle
 		IsMassStoreReset = false;
 	}
 }
@@ -478,22 +473,21 @@ bool USBSD::ReadInCommandBlock()
 	uint16_t BytesTransferred;
 	selectEndpoint(MASS_STORAGE_OUT_EPADDR);
 
-	if ((UEINTX & 1<<RXOUTI) == 0)  // is out received?
+	if ((*p_ueintx & 1<<rxouti) == 0)  // is out received?
 	    return false;
 
 	BytesTransferred = 0;
 
-	while (readStream(&cmdBlock, (sizeof(cmdBlock) -
-        sizeof(cmdBlock.SCSICommandData)),
+	while (readStream(&cmdBlock, (sizeof(cmdBlock) - sizeof(cmdBlock.cmdData)),
 	    &BytesTransferred) == ENDPOINT_RWSTREAM_IncompleteTransfer)
 	{
 		if (IsMassStoreReset)
 		    return false;
 	}
 
-	if (cmdBlock.Signature != M2S_CBW_SIGNATURE || cmdBlock.LUN >= TOTAL_LUNS ||
-        cmdBlock.Flags & 0x1F || cmdBlock.SCSICommandLength == 0 ||
-		(cmdBlock.SCSICommandLength > sizeof(cmdBlock.SCSICommandData)))
+	if (cmdBlock.signature != M2S_CBW_SIGNATURE || cmdBlock.LUN >= TOTAL_LUNS ||
+        cmdBlock.flags & 0x1F || cmdBlock.SCSICommandLength == 0 ||
+		(cmdBlock.SCSICommandLength > sizeof(cmdBlock.cmdData)))
 	{
         *p_ueconx |= 1<<STALLRQ;
 		selectEndpoint(MASS_STORAGE_IN_EPADDR);
@@ -503,7 +497,7 @@ bool USBSD::ReadInCommandBlock()
 
 	BytesTransferred = 0;
 
-	while (readStream(&cmdBlock.SCSICommandData, cmdBlock.SCSICommandLength,
+	while (readStream(&cmdBlock.cmdData, cmdBlock.SCSICommandLength,
 	                               &BytesTransferred) == ENDPOINT_RWSTREAM_IncompleteTransfer)
 	{
 		if (IsMassStoreReset)
@@ -538,7 +532,7 @@ void USBSD::ReturnCommandStatus()
 		    return;
 	}
 
-    UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+    *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
 }
 
 void USBSD::procCtrlReq()
@@ -566,9 +560,9 @@ void USBSD::procCtrlReq()
         case M2S_REQ_GetMaxLUN:
             if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
             {
-                UEINTX &= ~(1<<RXSTPI); // clear setup
+                *p_ueintx &= ~(1<<rxstpi); // clear setup
                 write8(TOTAL_LUNS - 1);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
                 clearStatusStage();
             }
             break;
@@ -576,17 +570,17 @@ void USBSD::procCtrlReq()
             if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
                 (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT)))
             {
-                uint8_t CurrentStatus = 0;
+                uint8_t currentStatus = 0;
 
                 switch (bmRequestType)
                 {
                 case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
                 {
                     if (USB_Device_CurrentlySelfPowered)
-                        CurrentStatus |= FEATURE_SELFPOWERED_ENABLED;
+                        currentStatus |= FEATURE_SELFPOWERED_ENABLED;
 
                     if (USB_Device_RemoteWakeupEnabled)
-                        CurrentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
+                        currentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
                 }
                     break;
                 case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
@@ -597,7 +591,7 @@ void USBSD::procCtrlReq()
                         return;
 
                     selectEndpoint(endpointIndex);
-                    CurrentStatus = UECONX & 1<<STALLRQ;
+                    currentStatus = *p_ueconx & 1<<stallrq;
                     _control.select();
                 }
                     break;
@@ -605,9 +599,9 @@ void USBSD::procCtrlReq()
                     return;
                 }
 
-                UEINTX &= ~(1<<RXSTPI); // clear setup
-                write16(CurrentStatus);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+                *p_ueintx &= ~(1<<rxstpi); // clear setup
+                write16(currentStatus);
+                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
                 clearStatusStage();
             }
 
@@ -655,18 +649,18 @@ void USBSD::procCtrlReq()
                 if ((descSize = getDescriptor(_ctrlReq.wValue, _ctrlReq.wIndex, &descPtr)) == 0)
                     return;
 
-                UEINTX &= ~(1<<RXSTPI);     // clear setup
+                *p_ueintx &= ~(1<<rxstpi);     // clear setup
                 write_Control_PStream_LE(descPtr, descSize);
-                UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);    // clear out
+                *p_ueintx &= ~(1<<rxouti | 1<<fifocon);    // clear out
             }
 
             break;
         case REQ_GetConfiguration:
             if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
             {
-                UEINTX &= ~(1<<RXSTPI);     // clear setup
+                *p_ueintx &= ~(1<<rxstpi);     // clear setup
                 write8(USB_Device_ConfigurationNumber);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
                 clearStatusStage();
             }
             break;
@@ -710,8 +704,8 @@ USBSD::USBSD() :
     _sd.init(SPI_FULL_SPEED);
     _blocks = _sd.cardSize();
     *p_usbcon &= ~(1<<otgpade);
-    *p_uhwcon |= 1<<UVREGE;
-    PLLFRQ = (1 << PDIV2);
+    *p_uhwcon |= 1<<uvrege;
+    *p_pllfrq = 1<<pdiv2;
     *p_usbcon &= ~(1<<vbuste);
     *p_udien = 0;
     *p_usbint = 0;
@@ -719,19 +713,19 @@ USBSD::USBSD() :
     *p_usbcon &= ~(1<<usbe);
     *p_usbcon |= 1<<usbe;
     *p_usbcon &= ~(1<<frzclk);
-    PLLCSR = 0; // pll off
+    *p_pllcsr = 0; // pll off
     state = DEVICE_STATE_Unattached;
-    USB_Device_ConfigurationNumber  = 0;
-    USB_Device_RemoteWakeupEnabled  = false;
+    USB_Device_ConfigurationNumber = 0;
+    USB_Device_RemoteWakeupEnabled = false;
     USB_Device_CurrentlySelfPowered = false;
-    UDCON &= ~(1<<LSM); // full speed
-    USBCON |= 1<<VBUSTE;
+    *p_udcon &= ~(1<<lsm); // full speed
+    *p_usbcon |= 1<<vbuste;
     configureEndpoint(0, 0, 8, 1);
-    UDINT &= ~(1<<SUSPI);
-    UDIEN |= 1<<SUSPE;
-    UDIEN |= 1<<EORSTE;
-    UDCON &= ~(1<<DETACH);  // attach
-    USBCON |= 1<<OTGPADE;
+    *p_udint &= ~(1<<suspi);
+    *p_udien |= 1<<suspe;
+    *p_udien |= 1<<eorste;
+    *p_udcon &= ~(1<<detach);  // attach
+    *p_usbcon |= 1<<otgpade;
 }
 
 

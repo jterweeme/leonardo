@@ -25,7 +25,7 @@ LCD RST    = A4 (PF1)
 #include <string.h>
 #include "misc.h"
 #include "analog.h"
-#include "button.h"
+#include "widget.h"
 #include "calc.h"
 #include "board.h"
 #include "stream.h"
@@ -35,7 +35,7 @@ class OutputLine : public Output
 private:
     char _buffer[20] = {0};
     uint8_t _pos = 0;
-    TFT *_tft;
+    TFT * const _tft;
 public:
     OutputLine(TFT *tft) : _tft(tft) { }
     void clear() { _buffer[_pos = 0] = 0; redraw(); }
@@ -68,32 +68,33 @@ public:
         ID_EMPTY2 = 117;
 private:
     MyArray<Button, 18> _buttons;
-    TFT *_tft;
+    TFT * const _tft;
     OutputLine _ol;
     uint16_t _prevClr = 0xf;
-    uint8_t _prevBtn = 0;
+    Button *_prevBtn = 0;
 public:
+    Button *find(TSPoint p) const;
     GUI(TFT *tft) : _tft(tft), _ol(tft) { }
     void init();
-    void lightUp(uint8_t id);
+    void lightUp(Button *button);
     void draw();
-    uint8_t id(TSPoint p) const;
+    //uint8_t id(TSPoint p) const;
 };
 
-void GUI::lightUp(uint8_t id)
+void GUI::lightUp(Button *button)
 {
-    _buttons.at(_prevBtn).fill(_prevClr);
-    _buttons.at(_prevBtn).draw(*_tft);
-
-    for (uint8_t i = 0; i < 18; i++)
+    if (_prevBtn)
     {
-        if (_buttons.at(i).id() == id)
-        {
-            _prevBtn = i;
-            _prevClr = _buttons.at(i).fill();
-            _buttons.at(i).fill(0xfff);
-            _buttons.at(i).draw(*_tft);
-        }
+        _prevBtn->fill(_prevClr);
+        _prevBtn->draw(_tft);
+    }
+
+    if (button)
+    {
+        _prevBtn = button;
+        _prevClr = _prevBtn->fill();
+        button->fill(0xfff);
+        button->draw(_tft);
     }
 }
 
@@ -106,9 +107,19 @@ void OutputLine::redraw()
 void GUI::draw()
 {
     for (size_t i = 0; i < _buttons.size(); i++)
-        _buttons.at(i).draw(*_tft);
+        _buttons.at(i).draw(_tft);
 }
 
+Button *GUI::find(TSPoint p) const
+{
+    for (size_t i = 0; i < _buttons.size(); i++)
+        if (_buttons.at(i).contains(p))
+            return &_buttons.at(i);
+    
+    return 0;
+}
+
+#if 0
 uint8_t GUI::id(TSPoint p) const
 {
     for (size_t i = 0; i < _buttons.size(); i++)
@@ -117,6 +128,7 @@ uint8_t GUI::id(TSPoint p) const
 
     return 0;
 }
+#endif
 
 void OutputLine::push(char c)
 {
@@ -181,40 +193,30 @@ int main()
     GUI gui(&tft);
     gui.init();
     gui.draw();
-    TouchScreen ts;
+    TouchScreen ts(&analog);
     OutputLine ol(&tft);
     Calculator calc(&ol);
     Sub sub;
     Mul mul;
     Div div;
     calc.reset();
-#if 0
-    CDC cdc;
-    USBStream cout(&cdc);
-#else
-    Serial s;
-    s.init();
-    UARTStream cout(&s);
-    cout.writeString("main()\r\n");
-#endif
-    uint8_t prev_id = 0;
+    //uint8_t prev_id = 0;
     uint8_t id;
 
     while (true)
     {
-        TSPoint p = ts.getPoint(analog);
+        TSPoint p = ts.getPoint();
 
         if (p.z > 200)
         {
-            id = gui.id(p);
-            gui.lightUp(id);
+            Button *button = gui.find(p);
+            gui.lightUp(button);
+            id = button ? button->id() : 0;
             _delay_ms(250);
 
             switch (id)
             {
                 case GUI::ID_BTN1:
-                    cout.writeString("button1\r\n");
-                    cout.flush();
                     calc.push(1);
                     break;
                 case GUI::ID_BTN2:

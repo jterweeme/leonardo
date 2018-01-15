@@ -301,7 +301,7 @@ void USBKB::procCtrlReq()
             if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
             {
                 uint8_t devAddr = _ctrlReq.wValue & 0x7F;
-                UDADDR = UDADDR & 1<<ADDEN | devAddr & 0x7F;
+                UDADDR = (UDADDR & 1<<ADDEN) | (devAddr & 0x7F);
                 UEINTX &= ~(1<<RXSTPI);
                 clearStatusStage();
                 while ((UEINTX & 1<<TXINI) == 0);

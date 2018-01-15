@@ -12,14 +12,14 @@ D9: CS
 #include "board.h"
 #include "stream.h"
 
-Sd2Card *g_sd;
+static Sd2Card *g_sd;
 
 ISR(TIMER0_OVF_vect)
 {
     g_sd->tick();
 }
 
-void hexDump(uint8_t *point, ostream &os)
+static void hexDump(uint8_t *point, ostream &os)
 {
     for (uint16_t i = 0; i < 512; i += 16)
     {
@@ -50,12 +50,11 @@ int main()
     Board board;
     Sd2Card sd(&board.pin9);
     g_sd = &sd;
-    sd.init(SPI_HALF_SPEED);
+    sd.init(SPI_FULL_SPEED);
     uint8_t buf[512];
     sd.readBlock(0, buf);
     CDC cdc;
     USBStream cout(&cdc);
-
 
     while (true)
     {

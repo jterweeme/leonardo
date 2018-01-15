@@ -1,6 +1,5 @@
 #include "zd2card.h"
 #include <avr/io.h>
-#include "misc.h"
 
 static uint16_t constexpr
     SD_INIT_TIMEOUT = 2000,
@@ -47,7 +46,6 @@ static inline uint8_t spiRec(void)
     return SPDR;
 }
 
-// send command and return error code.  Return zero for OK
 uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg)
 {
     readEnd();  // end read if in partialBlockRead mode
@@ -68,7 +66,8 @@ uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg)
 
     spiSend(crc);
 
-    for (uint8_t i = 0; ((status_ = spiRec()) & 0X80) && i != 0XFF; i++)    // wait for response
+    // wait for response
+    for (uint8_t i = 0; ((status_ = spiRec()) & 0X80) && i != 0XFF; i++)
         ;
 
     return status_;
@@ -83,21 +82,10 @@ uint32_t Sd2Card::cardSize()
 
     if (csd.v1.csd_ver == 0)
     {
-#if 1
         uint8_t read_bl_len = csd.v1.read_bl_len;
         uint16_t c_size = csd.v1.c_size_high<<10 | csd.v1.c_size_mid<<2 | csd.v1.c_size_low;
         uint8_t c_size_mult = (csd.v1.c_size_mult_high << 1) | csd.v1.c_size_mult_low;
-        return (uint32_t)(c_size + 1) << c_size_mult + read_bl_len - 7;
-#else
-        uint8_t c_size_high = csd.v1.c_size_high;
-        uint8_t c_size_mid = csd.v1.c_size_mid;
-        uint8_t c_size_low = csd.v1.c_size_low;
-        uint16_t size = (c_size_high << 10 | c_size_mid << 2 | c_size_low) + 1;
-        uint8_t c_size_mult_high = csd.v1.c_size_mult_high;
-        uint8_t c_size_mult_low = csd.v1.c_size_mult_low;
-        uint8_t multbits = (c_size_mult_high << 1 | c_size_mult_low) + 2;
-        return (uint32_t)size << multbits;
-#endif
+        return (uint32_t)(c_size + 1) << (c_size_mult + read_bl_len - 7);
     }
 
     if (csd.v2.csd_ver == 1)
@@ -105,7 +93,7 @@ uint32_t Sd2Card::cardSize()
         uint32_t c_size = (uint32_t)csd.v2.c_size_high<<16
             | csd.v2.c_size_mid<<8 | csd.v2.c_size_low;
 
-        return c_size + 1 << 10;
+        return (c_size + 1) << 10;
     }
 
     error(SD_CARD_ERROR_BAD_CSD);

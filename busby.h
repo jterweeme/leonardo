@@ -223,6 +223,7 @@ protected:
     bool USB_Device_CurrentlySelfPowered;
     bool USB_Device_RemoteWakeupEnabled;
     Endpoint _control;
+    uint8_t readControlStreamLE(void * const buf, uint16_t len);
     uint8_t write_Control_Stream_LE(const void * const buf, uint16_t len);
     uint8_t write_Control_PStream_LE(const void * const buf, uint16_t len);
     uint8_t writeStream(const void * const buf, uint16_t len, uint16_t * const bytes);
@@ -232,7 +233,7 @@ protected:
     uint8_t waitUntilReady() const;
 
     inline uint8_t getCurrentEndpoint() const
-    { return *p_uenum & ENDPOINT_EPNUM_MASK | getEndpointDirection(); }
+    { return (*p_uenum & ENDPOINT_EPNUM_MASK) | getEndpointDirection(); }
 
     inline void selectEndpoint(uint8_t addr) const { *p_uenum = addr & ENDPOINT_EPNUM_MASK; }
     inline uint8_t read8() const { return *p_uedatx; }
@@ -248,7 +249,9 @@ protected:
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     bool configureEndpoint(Endpoint &ep);
     virtual void procCtrlReq() { }
-    inline void setDevAddr(uint8_t addr) const { *p_udaddr = *p_udaddr & 1<<adden | addr & 0x7f; }
+
+    inline void setDevAddr(uint8_t addr) const
+    { *p_udaddr = (*p_udaddr & 1<<adden) | (addr & 0x7f); }
 public:
     static USB *instance;
     USB();

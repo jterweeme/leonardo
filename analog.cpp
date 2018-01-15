@@ -40,7 +40,65 @@ uint8_t DFKeypad::read()
     return 0;
 }
 
-TSPoint TouchScreen::getPoint(Analog &analog)
+#if 0
+TSPoint TouchScreen::getPoint()
+{
+    int samples[SAMPLES];
+    uint8_t valid = 1;
+    DDRC &= ~(1<<3);
+    DDRB &= ~(1<<1);
+    DDRB |= 1<<0;
+    DDRC |= 1<<2;
+    PORTB |= 1<<0;
+    PORTC &= ~(1<<2);
+
+    for (uint8_t i = 0; i < SAMPLES; i++)
+        samples[i] = _adc->read(Analog::ADC3);
+
+    if (samples[0] - samples[1] < -4 || samples[0] - samples[1] > 4)
+        valid = 0;
+    else
+        samples[1] = (samples[0] + samples[1]) >> 1; // average 2 samples
+
+    //uint16_t x = 1023 - samples[2/2];
+    uint16_t x = samples[2/2] % 1024;
+    x -= 200;
+    x /= 2.9;
+    DDRB &= ~(1<<0);
+    DDRC &= ~(1<<2);
+    DDRC |= 1<<3;
+    DDRB |= 1<<1;
+    PORTB &= ~(1<<1);
+    PORTC |= 1<<3;
+
+    for (uint8_t i = 0; i < SAMPLES; i++)
+        samples[i] = _adc->read(Analog::ADC2);
+
+    if (samples[0] - samples[1] < -4 || samples[0] - samples[1] > 4)
+        valid = 0;
+    else
+        samples[1] = (samples[0] + samples[1]) >> 1;
+
+    uint16_t y = 1023 - samples[SAMPLES/2];
+    y -= 90;
+    y /= 2.5;
+    DDRB |= 1<<0;       //xp
+    DDRC &= ~(1<<3);    //yp
+    PORTB &= ~(1<<0);   //xp
+    PORTB |= 1<<1;      //ym
+    uint16_t z1 = _adc->read(Analog::ADC2);
+    uint16_t z2 = _adc->read(Analog::ADC3);
+    uint16_t z = 1023 - (z2 - z1);
+
+    if (!valid)
+        z = 0;
+
+    return TSPoint(x, y, z);
+}
+#endif
+
+#if 1
+TSPoint TouchScreen::getPoint()
 {
     int samples[SAMPLES];
     uint8_t valid = 1;
@@ -53,7 +111,7 @@ TSPoint TouchScreen::getPoint(Analog &analog)
     PORTF &= ~(1<<5);   //A2
 
     for (uint8_t i = 0; i < SAMPLES; i++)
-        samples[i] = analog.read(Analog::ADC4);
+        samples[i] = _adc->read(Analog::ADC4);
 
     if (samples[0] - samples[1] < -4 || samples[0] - samples[1] > 4)
         valid = 0;
@@ -72,7 +130,7 @@ TSPoint TouchScreen::getPoint(Analog &analog)
     PORTF |= 1<<5;      //A2
 
     for (uint8_t i = 0; i < SAMPLES; i++)
-        samples[i] = analog.read(Analog::ADC5);
+        samples[i] = _adc->read(Analog::ADC5);
 
     if (samples[0] - samples[1] < -4 || samples[0] - samples[1] > 4)
         valid = 0;
@@ -86,8 +144,8 @@ TSPoint TouchScreen::getPoint(Analog &analog)
     DDRF &= ~(1<<4);    //yp
     PORTB &= ~(1<<4);   //xp
     PORTB |= 1<<5;      //ym
-    uint16_t z1 = analog.read(Analog::ADC5);
-    uint16_t z2 = analog.read(Analog::ADC4);
+    uint16_t z1 = _adc->read(Analog::ADC5);
+    uint16_t z2 = _adc->read(Analog::ADC4);
     uint16_t z = 1023 - (z2 - z1);
 
     if (!valid)
@@ -95,5 +153,5 @@ TSPoint TouchScreen::getPoint(Analog &analog)
 
     return TSPoint(x, y, z);
 }
-
+#endif
 

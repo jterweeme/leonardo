@@ -1000,7 +1000,7 @@ void USBKB::hidtask()
 
     static USB_KeyboardReport_Data_t PrevKeyboardReportData;
     USB_KeyboardReport_Data_t        KeyboardReportData;
-    bool                             SendReport = false;
+    //bool                             SendReport = false;
     uint8_t UsedKeyCodes      = 0;
     memset(&KeyboardReportData, 0, sizeof(USB_KeyboardReport_Data_t));
 

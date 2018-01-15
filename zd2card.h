@@ -1,10 +1,15 @@
+/*
+adapted from SD Arduino library
+credits to SparkFun Electronics
+*/
+
 #ifndef _ZD2CARD_H_
 #define _ZD2CARD_H_
 #include <stdint.h>
 #include "board.h"
 #include <avr/io.h>
 
-static uint8_t constexpr
+static constexpr uint8_t
     R1_READY_STATE = 0x00,
     R1_IDLE_STATE = 0x01, // status for card in the idle state
     R1_ILLEGAL_COMMAND = 0x04,
@@ -159,15 +164,10 @@ typedef struct CSDV2 {
   unsigned crc : 7;
 }csd2_t;
 
-struct Raw16
+union csd_t
 {
-    uint8_t byte[16];
-};
-
-union csd_t {
     csd1_t v1;
     csd2_t v2;
-    Raw16 raw;
 };
 
 class Sd2Card
@@ -193,7 +193,6 @@ private:
     uint8_t waitNotBusy(uint16_t timeoutMillis);
     uint8_t writeData(uint8_t token, const uint8_t* src);
     uint8_t waitStartBlock();
-    uint8_t readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst);
     void partialBlockRead(uint8_t value);
     uint8_t partialBlockRead() const {return partialBlockRead_;}
     uint8_t writeData(const uint8_t* src);
@@ -209,6 +208,7 @@ public:
     Sd2Card(Pin *cs) : _cs(cs) { }
     uint32_t cardSize();
     uint8_t init(uint8_t sckRateID);
+    uint8_t readData(uint32_t block, uint16_t offset, uint16_t count, uint8_t* dst);
     uint8_t readBlock(uint32_t b, uint8_t *dst) { return readData(b, 0, 512, dst); }
     uint8_t setSckRate(uint8_t sckRateID);
     uint8_t type() const {return type_;}

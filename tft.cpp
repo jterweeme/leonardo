@@ -357,9 +357,8 @@ uint16_t TFT::readID() const
 
 void TFT::setRotation(uint8_t r)
 {
-    uint16_t GS, SS, ORG, REV = _lcd_rev;
-    uint8_t val, d[3];
-    uint8_t rotation = r & 3;
+    uint16_t GS, SS, ORG;
+    uint8_t val, rotation = r & 3;
     _width = (rotation & 1) ? HEIGHT : WIDTH;
     _height = (rotation & 1) ? WIDTH : HEIGHT;
 

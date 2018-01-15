@@ -26,10 +26,12 @@ struct TSPoint
 
 class TouchScreen
 {
+    Analog * const _adc;
     uint16_t _threshold = 200;
 public:
     static const uint8_t SAMPLES = 2;
-    TSPoint getPoint(Analog &analog);
+    TouchScreen(Analog *adc) : _adc(adc) { }
+    TSPoint getPoint();
 };
 
 class DFKeypad
