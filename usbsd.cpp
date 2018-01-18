@@ -372,9 +372,9 @@ inline void USBSD::_sdWriteBlock(const uint32_t block)
     
     for (uint16_t byte = 0; byte < BLOCKSIZE; )
     {
-        if ((*p_ueintx & 1<<rwal) == 0)
+        if ((*p_ueintx & 1<<rwal) == 0)     // r/w not allowed?
         {
-            *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
+            *p_ueintx &= ~(1<<rxouti | 1<<fifocon); // clear out
             
             if (waitUntilReady())
                 return;
@@ -395,8 +395,8 @@ void USBSD::_sdWriteBlocks(const uint32_t start, const uint16_t n)
     for (uint16_t i = 0; i < n; i++)
         _sdWriteBlock(start + i);
 
-    if ((UEINTX & 1<<RWAL) == 0)
-        UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+    if ((*p_ueintx & 1<<rwal) == 0)    // r/w not allowed?
+        *p_ueintx &= ~(1<<rxouti | 1<<fifocon);    // clear out
 }
 
 inline void USBSD::_sdReadBlock(const uint32_t block)
@@ -406,7 +406,7 @@ inline void USBSD::_sdReadBlock(const uint32_t block)
 
     for (uint16_t byte = 0; byte < BLOCKSIZE; )
     {
-        if ((UEINTX & 1<<RWAL) == 0)    //read-write allowed?
+        if ((UEINTX & 1<<RWAL) == 0)    // r/w not allowed?
         {
             UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
 

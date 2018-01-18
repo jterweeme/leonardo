@@ -237,6 +237,21 @@ protected:
 
     inline void selectEndpoint(uint8_t addr) const { *p_uenum = addr & ENDPOINT_EPNUM_MASK; }
     inline uint8_t read8() const { return *p_uedatx; }
+
+    inline uint16_t read16le() const
+    {
+        union
+        {
+            uint16_t Value;
+            uint8_t  Bytes[2];
+        } Data;
+
+        Data.Bytes[0] = UEDATX;
+        Data.Bytes[1] = UEDATX;
+
+        return Data.Value;
+    }
+
     uint32_t read32() const;
     inline void write8(uint8_t dat) const { *p_uedatx = dat; }
     inline void write16(uint16_t dat) const { *p_uedatx = dat & 0xff; *p_uedatx = dat >> 8; }

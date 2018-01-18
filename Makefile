@@ -14,6 +14,7 @@ all: app_aditbox.elf \
     app_hellousb1.elf \
     app_mouse1.elf \
     app_ostream1.elf \
+    app_pi1.elf \
     app_potmeter1.elf \
     app_ps2kb2.elf \
     app_sdinfo1.elf \
@@ -31,6 +32,7 @@ all: app_aditbox.elf \
     app_usbmouse1.elf \
     app_usbsd2.elf \
     app_usbsound1.elf \
+    app_usbsound3.elf \
 	app_vga1.elf \
     app_vgacalc1.elf
 
@@ -40,6 +42,7 @@ app_calc2.elf: app_calc2.o calc.o cdc.o busby.o
 app_hellousb1.elf: app_hellousb1.o cdc.o busby.o misc.o
 app_mouse1.elf: app_mouse1.o ps2mouse.o cdc.o busby.o misc.o
 app_ostream1.elf: app_ostream1.o cdc.o busby.o misc.o
+app_pi1.elf: app_pi1.o cdc.o busby.o
 app_potmeter1.elf: app_potmeter1.o analog.o cdc.o busby.o
 app_ps2kb2.elf: app_ps2kb2.o cdc.o busby.o keyboard.o misc.o leonardo.o
 app_sdinfo1.elf: app_sdinfo1.o busby.o cdc.o zd2card.o leonardo.o
@@ -57,6 +60,7 @@ app_usbloop1.elf: app_usbloop1.o cdc.o busby.o misc.o
 app_usbmouse1.elf: app_usbmouse1.o usbmouse.o busby.o
 app_usbsd2.elf: app_usbsd2.o usbsd.o busby.o misc.o zd2card.o leonardo.o
 app_usbsound1.elf: app_usbsound1.o busby.o
+app_usbsound3.elf: app_usbsound3.o
 app_vga1.elf: app_vga1.o vga.o
 app_vgacalc1.elf: app_vgacalc1.o vga.o keyboard.o misc.o calc.o leonardo.o
 
@@ -67,6 +71,7 @@ app_calc2.o: app_calc2.cpp stream.h
 app_hellousb1.o: app_hellousb1.cpp
 app_mouse1.o: app_mouse1.cpp ps2mouse.h stream.h
 app_ostream1.o: app_ostream1.cpp stream.h
+app_pi1.o: app_pi1.cpp busby.h cdc.h
 app_potmeter1.o: app_potmeter1.cpp analog.h
 app_ps2kb2.o: app_ps2kb2.cpp
 app_sdinfo1.o: app_sdinfo1.cpp zd2card.h stream.h board.h leonardo.h
@@ -83,6 +88,7 @@ app_usbloop1.o: app_usbloop1.cpp
 app_usbmouse1.o: app_usbmouse1.cpp usbmouse.h
 app_usbsd2.o: app_usbsd2.cpp usbsd.h busby.h
 app_usbsound1.o: app_usbsound1.cpp busby.h
+app_usbsound3.o: app_usbsound3.cpp
 app_vga1.o: app_vga1.cpp vga.h screenFont.h
 app_vgacalc1.o: app_vgacalc1.cpp vga.h screenFont.h keyboard.h calc.h
 busby.o: busby.cpp busby.h

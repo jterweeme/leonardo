@@ -255,7 +255,7 @@ static const MyConf PROGMEM myConf
         0x02,
         0x02,
         16,
-        sizeof(int)
+        sizeof(myConf.freqs) / sizeof(SampleFreq)
     },
     {
         {0x40, 0x1f, 0x00}, // 8000
@@ -351,9 +351,15 @@ private:
     Endpoint _inpoint;
     uint32_t currentFreq = 48000;
 public:
+    void soundTask();
     USBSound();
     void procCtrlReq();
+    void sampleCallback();
 };
+
+static USBSound *g_usbSound;
+
+static bool StreamingAudioInterfaceSelected = false;
 
 void USBSound::procCtrlReq()
 {
@@ -362,60 +368,70 @@ void USBSound::procCtrlReq()
     for (uint8_t i = 0; i < sizeof(USBRequest); i++)
         *(RequestHeader++) = read8();
 
+    const uint8_t bmRequestType = _ctrlReq.bmRequestType;
+
+    switch (_ctrlReq.bRequest)
+    {
+    case REQ_SetInterface:
+        if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_INTERFACE))
+        {
+            *p_ueintx &= ~(1<<rxstpi);
+            clearStatusStage();
+            StreamingAudioInterfaceSelected = _ctrlReq.wValue != 0;
+        }
+        break;
+    case AUDIO_REQ_SetCurrent:
+        if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_ENDPOINT))
+        {
+            uint8_t epAddr = (uint8_t)_ctrlReq.wIndex;
+            uint8_t epCtrl = _ctrlReq.wValue >> 8;
+
+            if (epAddr == AUDIO_STREAM_EPADDR && epCtrl == AUDIO_EPCONTROL_SamplingFreq)
+            {
+                uint8_t sampleRate[3];
+                *p_ueintx &= ~(1<<rxstpi);
+                readControlStreamLE(sampleRate, sizeof(sampleRate));
+                *p_ueintx &= ~(1<<txini | 1<<fifocon);  // clear in
+
+                currentFreq = (uint32_t)sampleRate[2] << 16 | (uint32_t)sampleRate[1] << 8 |
+                    (uint32_t)sampleRate[0];
+
+                OCR0A = (F_CPU >> 3) / currentFreq - 1;
+            }
+        }
+        break;
+    case AUDIO_REQ_GetStatus:
+        if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE) ||
+            bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_ENDPOINT))
+        {
+            *p_ueintx &= ~(1<<rxstpi);
+            clearStatusStage();
+        }
+        break;
+    case AUDIO_REQ_GetCurrent:
+        if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_ENDPOINT))
+        {
+            uint8_t epAddr = (uint8_t)_ctrlReq.wIndex;
+            uint8_t epCtrl = _ctrlReq.wValue >> 8;
+
+            if (epAddr == AUDIO_STREAM_EPADDR && epCtrl == AUDIO_EPCONTROL_SamplingFreq)
+            {
+                uint8_t sampleRate[3];
+                sampleRate[2] = currentFreq >> 16;
+                sampleRate[1] = currentFreq >> 8;
+                sampleRate[0] = currentFreq & 0xff;
+                *p_ueintx &= ~(1<<rxstpi);  // clear setup
+                write_Control_Stream_LE(sampleRate, sizeof(sampleRate));
+                *p_ueintx &= ~(1<<rxouti | 1<<fifocon); // clear out
+            }
+        }
+        break;
+    }
+
     if (*p_ueintx & 1<<rxstpi)
     {
-        const uint8_t bmRequestType = _ctrlReq.bmRequestType;
-
         switch (_ctrlReq.bRequest)
         {
-        case AUDIO_REQ_GetStatus:
-            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE) ||
-                bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_ENDPOINT))
-            {
-                *p_ueintx &= ~(1<<rxstpi);
-                clearStatusStage();
-            }
-            break;
-#if 0
-        case AUDIO_REQ_SetCurrent:
-            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_ENDPOINT))
-            {
-                uint8_t epAddr = (uint8_t)_ctrlReq.wIndex;
-                uint8_t epCtrl = _ctrlReq.wValue >> 8;
-
-                if (epAddr == AUDIO_STREAM_EPADDR && epCtrl == AUDIO_EPCONTROL_SamplingFreq)
-                {
-                    uint8_t sampleRate[3];
-                    *p_ueintx &= ~(1<<rxstpi);
-                    readControlStreamLE(sampleRate, sizeof(sampleRate));
-                    *p_ueintx &= ~(1<<txini | 1<<fifocon);  // clear in
-
-                    currentFreq = (uint32_t)sampleRate[2] << 16 | (uint32_t)sampleRate[1] << 8 |
-                        (uint32_t)sampleRate[0];
-
-                    OCR0A = (F_CPU >> 3) / currentFreq - 1;
-                }
-            }
-            break;
-        case AUDIO_REQ_GetCurrent:
-            if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_ENDPOINT))
-            {
-                uint8_t epAddr = (uint8_t)_ctrlReq.wIndex;
-                uint8_t epCtrl = _ctrlReq.wValue >> 8;
-
-                if (epAddr == AUDIO_STREAM_EPADDR && epCtrl == AUDIO_EPCONTROL_SamplingFreq)
-                {
-                    uint8_t sampleRate[3];
-                    sampleRate[2] = currentFreq >> 16;
-                    sampleRate[1] = currentFreq >> 8;
-                    sampleRate[0] = currentFreq & 0xff;
-                    *p_ueintx &= ~(1<<rxstpi);  // clear setup
-                    writeControlStreamLE(sampleRate, sizeof(sampleRate));
-                    *p_ueintx &= ~(1<<rxouti | 1<<fifocon); // clear out
-                }
-            }
-            break;
-#endif
         case REQ_GetStatus:
             if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
                 (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT)))
@@ -573,14 +589,61 @@ USBSound::USBSound() : _inpoint(AUDIO_STREAM_EPADDR, 256, EP_TYPE_ISOCHRONOUS, 2
     *p_usbcon |= 1<<otgpade;
 }
 
+ISR(TIMER0_COMPA_vect)
+{
+    g_usbSound->sampleCallback();
+}
+
+void USBSound::sampleCallback()
+{
+    uint8_t prevEp = getCurrentEndpoint();
+    _inpoint.select();
+
+    if ((*p_ueintx & 1<<rxouti) && StreamingAudioInterfaceSelected)  // out received?
+    {
+        int8_t left = (int16_t)read16le() >> 8;
+        int8_t right = (int16_t)read16le() >> 8;
+        
+        if ((*p_ueintx & 1<<rwal) == 0) // r/w not allowed?
+            *p_ueintx &= ~(1<<rxouti | 1<<fifocon); // clear out
+
+        OCR3A = left ^ 1<<7;
+        OCR3B = right ^ 1<<7;
+    }
+
+    selectEndpoint(prevEp);
+}
+
+void USBSound::soundTask()
+{
+    if (state == DEVICE_STATE_Unattached)
+        return;
+
+    uint8_t prevEp = getCurrentEndpoint();
+    _control.select();
+    
+    if (*p_ueintx & 1<<rxstpi)  // setup received?
+        procCtrlReq();
+
+    selectEndpoint(prevEp);
+}
+
 int main()
 {
+    *p_timsk0 = 1<<ocie0a;
+    *p_tccr0a = 1<<wgm01;
+    *p_tccr0b = 1<<cs01;
+    *p_tccr3a = 1<<wgm30 | 1<<com3a1 | 1<<com3a0 | 1<<com3b1 | 1<<com3b0;
+    *p_tccr3b = 1<<wgm32 | 1<<cs30;
     USBSound usbSound;
+    g_usbSound = &usbSound;
     sei();
 
     while (true)
-        ;
-    
+    {
+        usbSound.soundTask();
+    }
+
     return 0;
 }
 

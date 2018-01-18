@@ -92,9 +92,11 @@ uint8_t USB::waitUntilReady() const
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_READYWAIT_DeviceDisconnected;
-        else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
+
+        if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
             return ENDPOINT_READYWAIT_BusSuspended;
-        else if (UECONX & 1<<STALLRQ)
+
+        if (UECONX & 1<<STALLRQ)
             return ENDPOINT_READYWAIT_EndpointStalled;
 
         uint16_t CurrentFrameNumber = UDFNUM;
@@ -158,7 +160,7 @@ bool USB::configureEndpoint(uint8_t addr, uint8_t Type, uint16_t Size, uint8_t b
         }
 
         if ((UECFG1XTemp & 1<<alloc) == 0)
-          continue;
+            continue;
 
         *p_ueconx &= ~(1<<epen);
         *p_uecfg1x &= ~(1<<alloc);
@@ -167,8 +169,8 @@ bool USB::configureEndpoint(uint8_t addr, uint8_t Type, uint16_t Size, uint8_t b
         *p_uecfg1x = UECFG1XTemp;
         *p_ueienx = UEIENXTemp;
 
-       if ((UESTA0X & 1<<CFGOK) == 0)
-          return false;
+        if ((UESTA0X & 1<<CFGOK) == 0)
+            return false;
     }
 
     selectEndpoint(Number);
@@ -250,10 +252,10 @@ uint8_t USB::write_Control_Stream_LE(const void* const buffer, uint16_t len)
         if (*p_ueintx & 1<<rxstpi)
             return ENDPOINT_RWCSTREAM_HostAborted;
 
-        if (*p_ueintx & 1<<rxouti)
+        if (*p_ueintx & 1<<rxouti)  // out received?
             break;
 
-        if (*p_ueintx & 1<<txini)
+        if (*p_ueintx & 1<<txini)   // in ready?
         {
             uint16_t bytesInEp = bytesInEndpoint();
 
@@ -300,37 +302,41 @@ uint8_t USB::write_Control_PStream_LE(const void* const Buffer, uint16_t length)
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_RWCSTREAM_DeviceDisconnected;
-        else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
+
+        if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
             return ENDPOINT_RWCSTREAM_BusSuspended;
-        else if (UEINTX & 1<<RXSTPI)
+
+        if (*p_ueintx & 1<<rxstpi)
             return ENDPOINT_RWCSTREAM_HostAborted;
-        else if (UEINTX & 1<<RXOUTI)
+
+        if (UEINTX & 1<<RXOUTI)
             break;
 
         if (*p_ueintx & 1<<txini)
         {
-            uint16_t BytesInEndpoint = bytesInEndpoint();
+            uint16_t bytesInEp = bytesInEndpoint();
 
-            while (length && BytesInEndpoint < _control.size)
+            while (length && bytesInEp < _control.size)
             {
                 write8(pgm_read_byte(DataStream));
                 DataStream++;
                 length--;
-                BytesInEndpoint++;
+                bytesInEp++;
             }
 
-            LastPacketFull = BytesInEndpoint == _control.size;
+            LastPacketFull = bytesInEp == _control.size;
             *p_ueintx &= ~(1<<txini | 1<<fifocon); // endpoint clear in
         }
     }
 
-    while ((UEINTX & 1<<RXOUTI) == 0)
+    while ((*p_ueintx & 1<<rxouti) == 0)
     {
         uint8_t USB_DeviceState_LCL = state;
 
         if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
             return ENDPOINT_RWCSTREAM_DeviceDisconnected;
-        else if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
+
+        if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
             return ENDPOINT_RWCSTREAM_BusSuspended;
     }
 
@@ -498,8 +504,8 @@ void USB::gen()
     {
         PLLCSR = USB_PLL_PSC;
         PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
-        while (!(PLLCSR & 1<<PLOCK));   // PLL is ready?
-        USBCON &= ~(1<<FRZCLK);
+        while ((PLLCSR & 1<<PLOCK) == 0);   // PLL is ready?
+        *p_usbcon &= ~(1<<frzclk);
         *p_udint &= ~(1<<WAKEUPI);
         *p_udien &= ~(1<<WAKEUPI);
         *p_udien |= 1<<SUSPE;
@@ -523,10 +529,9 @@ void USB::gen()
     }
 }
 
-// NOG NIET AF!!!
 uint8_t USB::readControlStreamLE(void * const buf, uint16_t len)
 {
-    //uint8_t *dataStream = (uint8_t *)buf; // + TEMPLATE_BUFFER_OFFSET(Length);
+    uint8_t *dataStream = (uint8_t *)buf;
     
     if (!len)
         *p_ueintx &= ~(1<<rxouti | 1<<fifocon); // clear out
@@ -548,13 +553,27 @@ uint8_t USB::readControlStreamLE(void * const buf, uint16_t len)
         {
             while (len && bytesInEndpoint())
             {
+                *dataStream = read8();
+                dataStream++;
+                len--;
             }
 
             *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
         }
     }
 
-    return 0;
+    while (*p_ueintx & 1<<txini)    // in ready?
+    {
+        uint8_t usbDeviceState_LCL = state;
+
+        if (usbDeviceState_LCL == DEVICE_STATE_Unattached)
+            return ENDPOINT_RWCSTREAM_DeviceDisconnected;
+
+        if (usbDeviceState_LCL == DEVICE_STATE_Suspended)
+            return ENDPOINT_RWCSTREAM_BusSuspended;
+    }
+
+    return ENDPOINT_RWCSTREAM_NoError;
 }
 
 uint8_t USB::writeStream(const void * const buf, uint16_t len, uint16_t * const bytes)
