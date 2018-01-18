@@ -1,5 +1,3 @@
-//#define LUFA 1
-
 #ifndef F_CPU
 #define F_CPU 16000000
 #endif
@@ -9,20 +7,12 @@
 #include <avr/power.h>
 #include <avr/interrupt.h>
 #include <avr/boot.h>
-
-#ifdef LUFA
-#include <LUFA/Drivers/USB/USB.h>
-#endif
-
 #include <avr/pgmspace.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include "busby.h"
 
-#ifndef LUFA
 static uint8_t USB_DeviceState = 0;
 #define INTERNAL_SERIAL_LENGTH_BITS 80
 #define INTERNAL_SERIAL_START_ADDRESS 0x0e
-#endif
 
 #ifndef ATTR_PACKED
 #define ATTR_PACKED __attribute__ ((packed))
@@ -95,49 +85,15 @@ static uint8_t USB_DeviceState = 0;
 #define AUDYO_REQ_GetMemory     0x85
 #define AUDYO_REQ_GetStatus     0xFF
 
-#define DTIPE_Device                    0x01
-#define DTIPE_Configuration             0x02
-#define DTIPE_String                    0x03
-#define DTIPE_Interface                 0x04
-#define DTIPE_Endpoint                  0x05
-#define DTIPE_DeviceQualifier           0x06
-#define DTIPE_Other                     0x07
-#define DTIPE_InterfacePower            0x08
-#define DTIPE_InterfaceAssociation      0x0B
-#define DTIPE_CSInterface               0x24
-#define DTIPE_CSEndpoint                0x25
-
 #define KONTROL_REQTYPE_DIRECTION  0x80
 #define KONTROL_REQTYPE_TYPE       0x60
 #define KONTROL_REQTYPE_RECIPIENT  0x1F
-#define REKDIR_HOSTTODEVICE        (0 << 7)
-#define REKDIR_DEVICETOHOST        (1 << 7)
-#define REKTYPE_STANDARD           (0 << 5)
-#define REKTYPE_CLASS              (1 << 5)
-#define REKTYPE_VENDOR             (2 << 5)
-#define REKREC_DEVICE              (0 << 0)
-#define REKREC_INTERFACE           (1 << 0)
-#define REKREC_ENDPOINT            (2 << 0)
-#define REKREC_OTHER               (3 << 0)
-
 #define DEVIZE_STATE_Unattached 0
 #define DEVIZE_STATE_Powered    1
 #define DEVIZE_STATE_Default    2
 #define DEVIZE_STATE_Addressed  3
 #define DEVIZE_STATE_Configured 4
 #define DEVIZE_STATE_Suspended  5
-
-#define REK_GetStatus           0
-#define REK_ClearFeature        1
-#define REK_SetFeature          3
-#define REK_SetAddress          5
-#define REK_GetDescriptor       6
-#define REK_SetDescriptor       7
-#define REK_GetConfiguration    8
-#define REK_SetConfiguration    9
-#define REK_GetInterface        10
-#define REK_SetInterface        11
-#define REK_SynchFrame          12
 
 #define ENDPOYNT_RWSTREAM_NoError            0
 #define ENDPOYNT_RWSTREAM_EndpointStalled    1
@@ -158,28 +114,13 @@ static uint8_t USB_DeviceState = 0;
 #define AUDYO_CSCP_MIDIStreamingSubclass          0x03
 #define AUDYO_CSCP_StreamingProtocol              0x00
 
-#define UZB_STRING_DESCRIPTOR_ARRAY(...)  { .Header = {.Size = sizeof(UZB_Descriptor_Header_t) + sizeof((uint16_t){__VA_ARGS__}), .Type = DTIPE_String}, .UnicodeString = {__VA_ARGS__} }
-
-#define UZB_STRING_DESCRIPTOR(String)     { .Header = {.Size = sizeof(UZB_Descriptor_Header_t) + (sizeof(String) - 2), .Type = DTIPE_String}, .UnicodeString = String }
-
-typedef struct
-{
-    uint8_t  bmRequestType;
-    uint8_t  bRequest;
-    uint16_t wValue;
-    uint16_t wIndex;
-    uint16_t wLength;
-} ATTR_PACKED UZB_Request_Header_t;
-
-#ifndef LUFA
-static UZB_Request_Header_t USB_ControlRequest;
+static USBRequest USB_ControlRequest;
 
 #define USB_Device_ControlEndpointSize 8
 static uint8_t USB_Device_ConfigurationNumber = 0;
 
 static bool USB_Device_RemoteWakeupEnabled;
 static bool USB_Device_CurrentlySelfPowered;
-#endif
 
 #define    AUDYO_DSUBTYPE_CSInterface_Header         0x01
 #define    AUDYO_DSUBTYPE_CSInterface_InputTerminal  0x02
@@ -198,24 +139,8 @@ typedef struct
 
 typedef struct
 {
-    UZB_Descriptor_Header_t Header;
-    uint16_t USBSpecification;
-    uint8_t  Class;
-    uint8_t  SubClass;
-    uint8_t  Protocol;
-    uint8_t  Endpoint0Size;
-    uint16_t VendorID;
-    uint16_t ProductID;
-    uint16_t ReleaseNumber;
-    uint8_t  ManufacturerStrIndex;
-    uint8_t  ProductStrIndex;
-    uint8_t  SerialNumStrIndex;
-    uint8_t  NumberOfConfigurations;
-} ATTR_PACKED UZB_Descriptor_Device_t;
-
-typedef struct
-{
-    UZB_Descriptor_Header_t Header;
+    uint8_t size;
+    uint8_t type;
     uint8_t  EndpointAddress;
     uint8_t  Attributes;
     uint16_t EndpointSize;
@@ -256,12 +181,12 @@ typedef struct
     uint8_t                 InterfaceNumber;
 } ATTR_PACKED UZB_Audio_Descriptor_Interface_AC_t;
 
-typedef struct
+struct SampleFreq
 {
     uint8_t Byte1;
     uint8_t Byte2;
     uint8_t Byte3;
-} ATTR_PACKED UZB_Audio_SampleFreq_t;
+} ATTR_PACKED;
 
 typedef struct
 {
@@ -282,18 +207,6 @@ typedef struct
 typedef struct
 {
     UZB_Descriptor_Header_t Header;
-    uint8_t InterfaceNumber;
-    uint8_t AlternateSetting;
-    uint8_t TotalEndpoints; /**< Total number of endpoints in the interface. */
-    uint8_t Class; /**< Interface class ID. */
-    uint8_t SubClass; /**< Interface subclass ID. */
-    uint8_t Protocol; /**< Interface protocol ID. */
-    uint8_t InterfaceStrIndex;
-} ATTR_PACKED UZB_Descriptor_Interface_t;
-
-typedef struct
-{
-    UZB_Descriptor_Header_t Header;
     uint16_t TotalConfigurationSize;
     uint8_t  TotalInterfaces;
     uint8_t  ConfigurationNumber;
@@ -305,10 +218,10 @@ typedef struct
 typedef struct
 {
     UZB_Descriptor_Header_t Header;
-    uint8_t                 Subtype;
-    uint8_t                 TerminalLink;
-    uint8_t                 FrameDelay;
-    uint16_t                AudioFormat;
+    uint8_t Subtype;
+    uint8_t TerminalLink;
+    uint8_t FrameDelay;
+    uint16_t AudioFormat;
 } ATTR_PACKED UZB_Audio_Descriptor_Interface_AS_t;
 
 template <size_t S> struct UZB_Descriptor_String_t
@@ -318,29 +231,30 @@ template <size_t S> struct UZB_Descriptor_String_t
     wchar_t  UnicodeString[S];
 } ATTR_PACKED;
 
-typedef struct
+struct AudioFormat
 {
-    UZB_Descriptor_Header_t Header;
-    uint8_t                 Subtype;
-    uint8_t                 FormatType;
-    uint8_t                 Channels;
-    uint8_t                 SubFrameSize;
-    uint8_t                 BitResolution;
-    uint8_t                 TotalDiscreteSampleRates;
-} ATTR_PACKED UZB_Audio_Descriptor_Format_t;
+    uint8_t size;
+    uint8_t type;
+    uint8_t Subtype;
+    uint8_t FormatType;
+    uint8_t Channels;
+    uint8_t SubFrameSize;
+    uint8_t BitResolution;
+    uint8_t TotalDiscreteSampleRates;
+} ATTR_PACKED;
 
 typedef struct
 {
     UZB_Descriptor_Configuration_Header_t     Config;
-    UZB_Descriptor_Interface_t                Audio_ControlInterface;
+    DescIface                Audio_ControlInterface;
     UZB_Audio_Descriptor_Interface_AC_t       Audio_ControlInterface_SPC;
     UZB_Audio_Descriptor_InputTerminal_t      Audio_InputTerminal;
     UZB_Audio_Descriptor_OutputTerminal_t     Audio_OutputTerminal;
-    UZB_Descriptor_Interface_t                Audio_StreamInterface_Alt0;
-    UZB_Descriptor_Interface_t                Audio_StreamInterface_Alt1;
+    DescIface                Audio_StreamInterface_Alt0;
+    DescIface                Audio_StreamInterface_Alt1;
     UZB_Audio_Descriptor_Interface_AS_t       Audio_StreamInterface_SPC;
-    UZB_Audio_Descriptor_Format_t             Audio_AudioFormat;
-    UZB_Audio_SampleFreq_t                    Audio_AudioFormatSampleRates[5];
+    AudioFormat Audio_AudioFormat;
+    SampleFreq                    Audio_AudioFormatSampleRates[5];
     UZB_Audio_Descriptor_StreamEndpoint_Std_t Audio_StreamEndpoint;
     UZB_Audio_Descriptor_StreamEndpoint_Spc_t Audio_StreamEndpoint_SPC;
 } USB_Descriptor_Configuration_t;
@@ -420,22 +334,13 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 
 #define LEDMASK_USB_ERROR        (LEDS_LED1 | LEDS_LED3)
 
-void EVENT_USB_Device_Connect(void);
-void EVENT_USB_Device_Disconnect(void);
-void EVENT_USB_Device_ConfigurationChanged(void);
-void EVENT_USB_Device_ControlRequest(void);
-
 static bool StreamingAudioInterfaceSelected = false;
 static uint32_t CurrentAudioSampleFrequency = 48000;
 
-
-
-const UZB_Descriptor_Device_t PROGMEM DeviceDescriptor =
+static const DescDev PROGMEM DeviceDescriptor =
 {
-    {
-        sizeof(UZB_Descriptor_Device_t),
-        DTIPE_Device
-    },
+    sizeof(DescDev),
+    DTYPE_Device,
     0x0110,
     0,
     0,
@@ -450,12 +355,12 @@ const UZB_Descriptor_Device_t PROGMEM DeviceDescriptor =
     FIXED_NUM_CONFIGURATIONS
 };
 
-const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
+static const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 {
     {
         {
             sizeof(UZB_Descriptor_Configuration_Header_t),
-            DTIPE_Configuration
+            DTYPE_Configuration
         },
 
         sizeof(USB_Descriptor_Configuration_t),
@@ -466,11 +371,8 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
         UZB_CONFIG_POWER_MA(100)
     },
     {
-        {
-            sizeof(UZB_Descriptor_Interface_t),
-            DTIPE_Interface
-        },
-
+        sizeof(DescIface),
+        DTYPE_Interface,
         INTERFACE_ID_AudioControl,
         0,
         0,
@@ -482,7 +384,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
     {
         {
             sizeof(UZB_Audio_Descriptor_Interface_AC_t),
-            DTIPE_CSInterface
+            DTYPE_CSInterface
         },
         AUDYO_DSUBTYPE_CSInterface_Header,
         0x0100,
@@ -496,7 +398,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
     {
         {
             sizeof(UZB_Audio_Descriptor_InputTerminal_t),
-            DTIPE_CSInterface
+            DTYPE_CSInterface
         },
         AUDYO_DSUBTYPE_CSInterface_InputTerminal,
         0x01,
@@ -510,7 +412,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
     {
         {
             sizeof(UZB_Audio_Descriptor_OutputTerminal_t),
-            DTIPE_CSInterface
+            DTYPE_CSInterface
         },
         AUDYO_DSUBTYPE_CSInterface_OutputTerminal,
         0x02,
@@ -521,11 +423,8 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
         },
 
     {
-        {
-            sizeof(UZB_Descriptor_Interface_t),
-            DTIPE_Interface
-        },
-
+        sizeof(DescIface),
+        DTYPE_Interface,
         INTERFACE_ID_AudioStream,
         0,
         0,
@@ -535,11 +434,8 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
         0
     },
     {
-        {
-            sizeof(UZB_Descriptor_Interface_t),
-            DTIPE_Interface
-        },
-
+        sizeof(DescIface),
+        DTYPE_Interface,
         INTERFACE_ID_AudioStream,
         1,
         1,
@@ -551,7 +447,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
     {
         {
             sizeof(UZB_Audio_Descriptor_Interface_AS_t),
-            DTIPE_CSInterface
+            DTYPE_CSInterface
         },
         AUDYO_DSUBTYPE_CSInterface_General,
         0x01,
@@ -559,17 +455,14 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
         0x0001
     },
     {
-            {
-                sizeof(UZB_Audio_Descriptor_Format_t) +
-                             sizeof(ConfigurationDescriptor.Audio_AudioFormatSampleRates),
-                DTIPE_CSInterface
-            },
-            AUDYO_DSUBTYPE_CSInterface_FormatType,
-            0x01,
-            0x02,
-            0x02,
-            16,
-            (sizeof(ConfigurationDescriptor.Audio_AudioFormatSampleRates) / sizeof(UZB_Audio_SampleFreq_t)),
+        sizeof(AudioFormat) + sizeof(ConfigurationDescriptor.Audio_AudioFormatSampleRates),
+        DTYPE_CSInterface,
+        AUDYO_DSUBTYPE_CSInterface_FormatType,
+        0x01,
+        0x02,
+        0x02,
+        16,
+        sizeof(ConfigurationDescriptor.Audio_AudioFormatSampleRates) / sizeof(SampleFreq),
         },
 
     {
@@ -581,11 +474,8 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
     },
     {
         {
-            {
-                sizeof(UZB_Audio_Descriptor_StreamEndpoint_Std_t),
-                DTIPE_Endpoint
-            },
-
+            sizeof(UZB_Audio_Descriptor_StreamEndpoint_Std_t),
+            DTYPE_Endpoint,
             AUDIO_STREAM_EPADDR,
             EP_TIPE_ISOCHRONOUS | ENDPOYNT_ATTR_SYNC | ENDPOYNT_USAGE_DATA,
             AUDIO_STREAM_EPSIZE,
@@ -598,7 +488,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
     {
         {
             sizeof(UZB_Audio_Descriptor_StreamEndpoint_Spc_t),
-            DTIPE_CSEndpoint
+            DTYPE_CSEndpoint
         },
         AUDYO_DSUBTYPE_CSEndpoint_General,
         AUDYO_EP_ACCEPTS_SMALL_PACKETS | AUDYO_EP_SAMPLE_FREQ_CONTROL,
@@ -607,28 +497,26 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
     }
 };
 
-#define LANGYGE_ID_ENG 0x0409
-
 static constexpr size_t UZB_STRING_LEN(size_t uniChars) { return 2 + (uniChars << 1); }
 
 static const UZB_Descriptor_String_t<2> PROGMEM LanguageString =
 {
     UZB_STRING_LEN(1),
-    DTIPE_String,
+    DTYPE_String,
     (wchar_t)0x0409
 };
 
 static const UZB_Descriptor_String_t<12> PROGMEM ManufacturerString =
 {
     UZB_STRING_LEN(11),
-    DTIPE_String,
+    DTYPE_String,
     L"Dean Camera"
 };
 
 static const UZB_Descriptor_String_t<20> PROGMEM ProductString =
 {
     UZB_STRING_LEN(19),
-    DTIPE_String,
+    DTYPE_String,
     L"LUFA Audio Out Demo"
 };
 
@@ -644,15 +532,15 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 
     switch (DescriptorType)
     {
-        case DTIPE_Device:
+        case DTYPE_Device:
             Address = &DeviceDescriptor;
-            Size    = sizeof(UZB_Descriptor_Device_t);
+            Size = sizeof(DescDev);
             break;
-        case DTIPE_Configuration:
+        case DTYPE_Configuration:
             Address = &ConfigurationDescriptor;
             Size    = sizeof(USB_Descriptor_Configuration_t);
             break;
-        case DTIPE_String:
+        case DTYPE_String:
             switch (DescriptorNumber)
             {
                 case STRING_ID_Language:
@@ -695,9 +583,8 @@ void EVENT_USB_Device_Connect(void)
 #endif
 
 #if (defined(AUDIO_OUT_MONO) || defined(AUDIO_OUT_STEREO))
-	TCCR3A = ((1 << WGM30) | (1 << COM3A1) | (1 << COM3A0)
-	                       | (1 << COM3B1) | (1 << COM3B0)); // Set on match, clear on TOP
-	TCCR3B = ((1 << WGM32) | (1 << CS30));  // Fast 8-Bit PWM, F_CPU speed
+	TCCR3A = ((1<<WGM30) | (1 << COM3A1) | 1<<COM3A0 | 1<<COM3B1 | (1<<COM3B0));
+	TCCR3B = ((1<<WGM32) | (1<<CS30));  // Fast 8-Bit PWM, F_CPU speed
 #endif
 }
 
@@ -840,7 +727,7 @@ static uint8_t Endpoynt_Read_Control_Stream_LE(void* const Buffer, uint16_t Leng
 {
     uint8_t* DataStream = ((uint8_t*)Buffer);
 
-    if (!(Length))
+    if (!Length)
         Endpoynt_ClearOUT();
 
     while (Length)
@@ -909,20 +796,20 @@ static uint8_t Endpoynt_Write_Control_Stream_LE(const void * const buf, uint16_t
         if (Endpoynt_IsOUTReceived())
             break;
 
-        if (Endpoynt_IsINReady())
+        if (*p_ueintx & 1<<txini)
         {
-            uint16_t BytesInEndpoint = Endpoynt_BytesInEndpoint();
+            uint16_t bytesInEp = Endpoynt_BytesInEndpoint();
 
-            while (Length && (BytesInEndpoint < USB_Device_ControlEndpointSize))
+            while (Length && bytesInEp < USB_Device_ControlEndpointSize)
             {
                 Endpoynt_Write_8(*DataStream);
-                DataStream += 1;
+                DataStream++;
                 Length--;
-                BytesInEndpoint++;
+                bytesInEp++;
             }
 
-            LastPacketFull = (BytesInEndpoint == USB_Device_ControlEndpointSize);
-            Endpoynt_ClearIN();
+            LastPacketFull = bytesInEp == USB_Device_ControlEndpointSize;
+            *p_ueintx &= ~(1<<txini | 1<<fifocon);  // endpoint clear in
         }
     }
 
@@ -969,17 +856,16 @@ static bool Endpoynt_ConfigureEndpoint_Prv(const uint8_t Number,
         }
 
         if (!(UECFG1XTemp & (1 << ALLOC)))
-          continue;
+            continue;
 
         Endpoynt_DisableEndpoint();
-        UECFG1X &= ~(1 << ALLOC);
-
+        UECFG1X &= ~(1<<ALLOC);
         Endpoynt_EnableEndpoint();
         UECFG0X = UECFG0XTemp;
         UECFG1X = UECFG1XTemp;
         UEIENX  = UEIENXTemp;
 
-        if (!(Endpoynt_IsConfigured()))
+        if ((Endpoynt_IsConfigured()) == 0)
           return false;
     }
 
@@ -1010,7 +896,7 @@ static inline bool Endpoynt_ConfigureEndpoint(const uint8_t Address,
     uint8_t Number = (Address & ENDPOYNT_EPNUM_MASK);
 
     if (Number >= ENDPOYNT_TOTAL_ENDPOINTS)
-      return false;
+        return false;
 
     return Endpoynt_ConfigureEndpoint_Prv(Number,
                    ((Type << EPTYPE0) | ((Address & ENDPOYNT_DIR_IN) ? (1 << EPDIR) : 0)),
@@ -1019,7 +905,7 @@ static inline bool Endpoynt_ConfigureEndpoint(const uint8_t Address,
 
 static void Endpoynt_ClearStatusStage(void)
 {
-    if (USB_ControlRequest.bmRequestType & REKDIR_DEVICETOHOST)
+    if (USB_ControlRequest.bmRequestType & REQDIR_DEVICETOHOST)
     {
         while ((Endpoynt_IsOUTReceived()) == 0)
         {
@@ -1041,7 +927,7 @@ static void Endpoynt_ClearStatusStage(void)
     }
 }
 
-void EVENT_USB_Device_ConfigurationChanged(void)
+static void EVENT_USB_Device_ConfigurationChanged(void)
 {
 	bool ConfigSuccess = true;
 
@@ -1049,89 +935,6 @@ void EVENT_USB_Device_ConfigurationChanged(void)
         EP_TIPE_ISOCHRONOUS, AUDIO_STREAM_EPSIZE, 2);
 
 	LEDs_SetAllLEDs(ConfigSuccess ? LEDMASK_USB_READY : LEDMASK_USB_ERROR);
-}
-
-void EVENT_USB_Device_ControlRequest(void)
-{
-	switch (USB_ControlRequest.bRequest)
-	{
-		case REK_SetInterface:
-			if (USB_ControlRequest.bmRequestType == (REKDIR_HOSTTODEVICE |
-                REKTYPE_STANDARD | REKREC_INTERFACE))
-			{
-				Endpoynt_ClearSETUP();
-				Endpoynt_ClearStatusStage();
-				StreamingAudioInterfaceSelected = ((USB_ControlRequest.wValue) != 0);
-			}
-
-			break;
-		case AUDYO_REQ_GetStatus:
-			if ((USB_ControlRequest.bmRequestType == (REKDIR_HOSTTODEVICE |
-                    REKTYPE_CLASS | REKREC_INTERFACE)) ||
-			    (USB_ControlRequest.bmRequestType == (REKDIR_HOSTTODEVICE |
-                    REKTYPE_CLASS | REKREC_ENDPOINT)))
-			{
-				Endpoynt_ClearSETUP();
-				Endpoynt_ClearStatusStage();
-			}
-
-			break;
-		case AUDYO_REQ_SetCurrent:
-			if (USB_ControlRequest.bmRequestType == (REKDIR_HOSTTODEVICE |
-                REKTYPE_CLASS | REKREC_ENDPOINT))
-			{
-				uint8_t EndpointAddress = (uint8_t)USB_ControlRequest.wIndex;
-				uint8_t EndpointControl = (USB_ControlRequest.wValue >> 8);
-
-				if ((EndpointAddress == AUDIO_STREAM_EPADDR) &&
-                    (EndpointControl == AUDYO_EPCONTROL_SamplingFreq))
-				{
-					uint8_t SampleRate[3];
-
-					Endpoynt_ClearSETUP();
-					Endpoynt_Read_Control_Stream_LE(SampleRate, sizeof(SampleRate));
-					Endpoynt_ClearIN();
-
-					CurrentAudioSampleFrequency = (((uint32_t)SampleRate[2] << 16) | ((uint32_t)SampleRate[1] << 8) | (uint32_t)SampleRate[0]);
-
-					OCR0A = ((F_CPU / 8 / CurrentAudioSampleFrequency) - 1);
-				}
-			}
-
-			break;
-		case AUDYO_REQ_GetCurrent:
-			if (USB_ControlRequest.bmRequestType == (REKDIR_DEVICETOHOST | REKTYPE_CLASS |
-                REKREC_ENDPOINT))
-			{
-				uint8_t EndpointAddress = (uint8_t)USB_ControlRequest.wIndex;
-				uint8_t EndpointControl = (USB_ControlRequest.wValue >> 8);
-
-				if ((EndpointAddress == AUDYO_STREAM_EPADDR) &&
-                    (EndpointControl == AUDYO_EPCONTROL_SamplingFreq))
-				{
-					uint8_t SampleRate[3];
-					SampleRate[2] = (CurrentAudioSampleFrequency >> 16);
-					SampleRate[1] = (CurrentAudioSampleFrequency >> 8);
-					SampleRate[0] = (CurrentAudioSampleFrequency &  0xFF);
-					Endpoynt_ClearSETUP();
-					Endpoynt_Write_Control_Stream_LE(SampleRate, sizeof(SampleRate));
-					Endpoynt_ClearOUT();
-				}
-			}
-
-			break;
-	}
-}
-
-static void UZB_Device_SetAddress(void)
-{
-    uint8_t DeviceAddress = (USB_ControlRequest.wValue & 0x7F);
-    UZB_Device_SetDeviceAddress(DeviceAddress);
-    Endpoynt_ClearSETUP();
-    Endpoynt_ClearStatusStage();
-    while ((Endpoynt_IsINReady()) == 0);
-    UZB_Device_EnableDeviceAddress(DeviceAddress);
-    USB_DeviceState = (DeviceAddress) ? DEVIZE_STATE_Addressed : DEVIZE_STATE_Default;
 }
 
 static void UZB_Device_GetConfiguration(void)
@@ -1155,7 +958,7 @@ static inline bool Endpoynt_IsEnabled(void)
 
 static inline bool UZB_Device_IsAddressSet(void)
 {
-    return (UDADDR & (1 << ADDEN));
+    return UDADDR & 1<<ADDEN;
 }
 
 static inline void Endpoynt_ResetDataToggle(void)
@@ -1184,18 +987,16 @@ static void UZB_Device_ClearSetFeature(void)
 {
     switch (USB_ControlRequest.bmRequestType & KONTROL_REQTYPE_RECIPIENT)
     {
-        #if !defined(NO_DEVICE_REMOTE_WAKEUP)
-        case REKREC_DEVICE:
+        case REQREC_DEVICE:
         {
             if ((uint8_t)USB_ControlRequest.wValue == FEATURE_SEL_DeviceRemoteWakeup)
-              USB_Device_RemoteWakeupEnabled = (USB_ControlRequest.bRequest == REK_SetFeature);
+              USB_Device_RemoteWakeupEnabled = (USB_ControlRequest.bRequest == REQ_SetFeature);
             else
               return;
             
             break;
         }
-        #endif
-        case REKREC_ENDPOINT:
+        case REQREC_ENDPOINT:
         {
             if ((uint8_t)USB_ControlRequest.wValue == FEATURE_SEL_EndpointHalt)
             {
@@ -1208,7 +1009,7 @@ static void UZB_Device_ClearSetFeature(void)
 
                 if (Endpoynt_IsEnabled())
                 {
-                    if (USB_ControlRequest.bRequest == REK_SetFeature)
+                    if (USB_ControlRequest.bRequest == REQ_SetFeature)
                     {   
                         Endpoynt_StallTransaction();
                     }
@@ -1238,7 +1039,7 @@ static void UZB_Device_GetStatus(void)
 
     switch (USB_ControlRequest.bmRequestType)
     {
-        case (REKDIR_DEVICETOHOST | REKTYPE_STANDARD | REKREC_DEVICE):
+        case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
         {
             if (USB_Device_CurrentlySelfPowered)
                 CurrentStatus |= VEATURE_SELFPOWERED_ENABLED;
@@ -1248,7 +1049,7 @@ static void UZB_Device_GetStatus(void)
 
             break;
         }
-        case (REKDIR_DEVICETOHOST | REKTYPE_STANDARD | REKREC_ENDPOINT):
+        case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
         {
             uint8_t EndpointIndex = ((uint8_t)USB_ControlRequest.wIndex & ENDPOYNT_EPNUM_MASK);
 
@@ -1332,24 +1133,6 @@ static inline void UZB_Device_GetSerialString(uint16_t* const UnicodeString)
     SetGlobalInterruptMask(CurrentGlobalInt);
 }
 
-#if 0
-static void UZB_Device_GetInternalSerialDescriptor(void)
-{
-    struct
-    {
-        UZB_Descriptor_Header_t Header;
-        uint16_t                UnicodeString[INTERNAL_SERIAL_LENGTH_BITS / 4];
-    } SignatureDescriptor;
-
-    SignatureDescriptor.Header.Type = DTIPE_String;
-    SignatureDescriptor.Header.Size = UZB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
-    UZB_Device_GetSerialString(SignatureDescriptor.UnicodeString);
-    Endpoynt_ClearSETUP();
-    Endpoynt_Write_Control_Stream_LE(&SignatureDescriptor, sizeof(SignatureDescriptor));
-    Endpoynt_ClearOUT();
-}
-#endif
-
 uint8_t Endpoynt_Write_Control_PStream_LE(const void* const Buffer, uint16_t Length)
 {
     uint8_t* DataStream     = ((uint8_t*)Buffer);
@@ -1393,14 +1176,14 @@ uint8_t Endpoynt_Write_Control_PStream_LE(const void* const Buffer, uint16_t Len
         }
     }
 
-    while (!(Endpoynt_IsOUTReceived()))
+    while ((Endpoynt_IsOUTReceived()) == 0)
     {
-        uint8_t USB_DeviceState_LCL = USB_DeviceState;
-
-        if (USB_DeviceState_LCL == DEVIZE_STATE_Unattached)
+        if (USB_DeviceState == DEVIZE_STATE_Unattached)
             return ENDPOYNT_RWCSTREAM_DeviceDisconnected;
-        if (USB_DeviceState_LCL == DEVIZE_STATE_Suspended)
+
+        if (USB_DeviceState == DEVIZE_STATE_Suspended)
             return ENDPOYNT_RWCSTREAM_BusSuspended;
+
         if (Endpoynt_IsSETUPReceived())
             return ENDPOYNT_RWCSTREAM_HostAborted;
     }
@@ -1412,14 +1195,6 @@ static void UZB_Device_GetDescriptor(void)
 {
     const void* DescriptorPointer;
     uint16_t    DescriptorSize;
-
-    #if !defined(NO_INTERNAL_SERIAL) && (USE_INTERNAL_SERIAL != NO_DESCRIPTOR)
-    if (USB_ControlRequest.wValue == ((DTYPE_String << 8) | USE_INTERNAL_SERIAL))
-    {
-        UZB_Device_GetInternalSerialDescriptor();
-        return;
-    }
-    #endif
 
     if ((DescriptorSize = CALLBACK_USB_GetDescriptor(USB_ControlRequest.wValue,
             USB_ControlRequest.wIndex, &DescriptorPointer)) == 0)
@@ -1436,68 +1211,133 @@ void UZB_Device_ProcessControlRequest(void)
 {
     uint8_t* RequestHeader = (uint8_t*)&USB_ControlRequest;
 
-    for (uint8_t RequestHeaderByte = 0; RequestHeaderByte < sizeof(UZB_Request_Header_t); RequestHeaderByte++)
-      *(RequestHeader++) = Endpoynt_Read_8();
+    for (uint8_t i = 0; i < sizeof(USBRequest); i++)
+        *(RequestHeader++) = Endpoynt_Read_8();
 
-    EVENT_USB_Device_ControlRequest();
+    uint8_t bmRequestType = USB_ControlRequest.bmRequestType;
+
+    switch (USB_ControlRequest.bRequest)
+    {
+    case REQ_SetInterface:
+        if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_INTERFACE))
+        {
+            *p_ueintx &= ~(1<<rxstpi);
+            Endpoynt_ClearStatusStage();
+            StreamingAudioInterfaceSelected = ((USB_ControlRequest.wValue) != 0);
+        }
+        break;
+    case AUDYO_REQ_GetStatus:
+        if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE) ||
+		    bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_ENDPOINT))
+        {
+            *p_ueintx &= ~(1<<rxstpi);
+            Endpoynt_ClearStatusStage();
+        }
+        break;
+    case AUDYO_REQ_SetCurrent:
+        if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_ENDPOINT))
+        {
+            uint8_t EndpointAddress = (uint8_t)USB_ControlRequest.wIndex;
+            uint8_t EndpointControl = (USB_ControlRequest.wValue >> 8);
+
+            if ((EndpointAddress == AUDIO_STREAM_EPADDR) &&
+                    (EndpointControl == AUDYO_EPCONTROL_SamplingFreq))
+            {
+                uint8_t SampleRate[3];
+                Endpoynt_ClearSETUP();
+                Endpoynt_Read_Control_Stream_LE(SampleRate, sizeof(SampleRate));
+                Endpoynt_ClearIN();
+
+                CurrentAudioSampleFrequency = (((uint32_t)SampleRate[2] << 16) |
+                        ((uint32_t)SampleRate[1] << 8) | (uint32_t)SampleRate[0]);
+
+                OCR0A = (F_CPU >> 3) / CurrentAudioSampleFrequency - 1;
+            }
+        }
+        break;
+    case AUDYO_REQ_GetCurrent:
+        if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_ENDPOINT))
+        {
+            uint8_t EndpointAddress = (uint8_t)USB_ControlRequest.wIndex;
+            uint8_t EndpointControl = (USB_ControlRequest.wValue >> 8);
+
+            if ((EndpointAddress == AUDYO_STREAM_EPADDR) &&
+                    (EndpointControl == AUDYO_EPCONTROL_SamplingFreq))
+            {
+					uint8_t SampleRate[3];
+					SampleRate[2] = (CurrentAudioSampleFrequency >> 16);
+					SampleRate[1] = (CurrentAudioSampleFrequency >> 8);
+					SampleRate[0] = (CurrentAudioSampleFrequency &  0xFF);
+					Endpoynt_ClearSETUP();
+					Endpoynt_Write_Control_Stream_LE(SampleRate, sizeof(SampleRate));
+					Endpoynt_ClearOUT();
+            }
+        }
+
+        break;
+	}
 
     if (Endpoynt_IsSETUPReceived())
     {
-        uint8_t bmRequestType = USB_ControlRequest.bmRequestType;
-
         switch (USB_ControlRequest.bRequest)
         {
-            case REK_GetStatus:
-                if ((bmRequestType == (REKDIR_DEVICETOHOST | REKTYPE_STANDARD | REKREC_DEVICE)) ||
-                    (bmRequestType == (REKDIR_DEVICETOHOST | REKTYPE_STANDARD | REKREC_ENDPOINT)))
-                {
-                    UZB_Device_GetStatus();
-                }
+        case REQ_GetStatus:
+            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
+                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT)))
+            {
+                UZB_Device_GetStatus();
+            }
 
-                break;
-            case REK_ClearFeature:
-            case REK_SetFeature:
-                if ((bmRequestType == (REKDIR_HOSTTODEVICE | REKTYPE_STANDARD | REKREC_DEVICE)) ||
-                    (bmRequestType == (REKDIR_HOSTTODEVICE | REKTYPE_STANDARD | REKREC_ENDPOINT)))
-                {
-                    UZB_Device_ClearSetFeature();
-                }
+            break;
+        case REQ_ClearFeature:
+        case REQ_SetFeature:
+            if ((bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE)) ||
+                (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_ENDPOINT)))
+            {
+                UZB_Device_ClearSetFeature();
+            }
 
-                break;
-            case REK_SetAddress:
-                if (bmRequestType == (REKDIR_HOSTTODEVICE | REKTYPE_STANDARD | REKREC_DEVICE))
-                {
-                    UZB_Device_SetAddress();
-                }
-                break;
-            case REK_GetDescriptor:
-                if ((bmRequestType == (REKDIR_DEVICETOHOST | REKTYPE_STANDARD | REKREC_DEVICE)) ||
-                    (bmRequestType == (REKDIR_DEVICETOHOST | REKTYPE_STANDARD | REKREC_INTERFACE)))
-                {
-                    UZB_Device_GetDescriptor();
-                }
+            break;
+        case REQ_SetAddress:
+            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
+            {
+                uint8_t DeviceAddress = (USB_ControlRequest.wValue & 0x7F);
+                UZB_Device_SetDeviceAddress(DeviceAddress);
+                Endpoynt_ClearSETUP();
+                Endpoynt_ClearStatusStage();
+                while ((Endpoynt_IsINReady()) == 0);
+                UZB_Device_EnableDeviceAddress(DeviceAddress);
+                USB_DeviceState = DeviceAddress ? DEVIZE_STATE_Addressed : DEVIZE_STATE_Default;
+            }
+            break;
+        case REQ_GetDescriptor:
+            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
+                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_INTERFACE)))
+            {
+                UZB_Device_GetDescriptor();
+            }
 
-                break;
-            case REK_GetConfiguration:
-                if (bmRequestType == (REKDIR_DEVICETOHOST | REKTYPE_STANDARD | REKREC_DEVICE))
-                  UZB_Device_GetConfiguration();
+            break;
+        case REQ_GetConfiguration:
+            if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
+                UZB_Device_GetConfiguration();
 
-                break;
-            case REK_SetConfiguration:
-                if (bmRequestType == (REKDIR_HOSTTODEVICE | REKTYPE_STANDARD | REKREC_DEVICE))
-                  UZB_Device_SetConfiguration();
+            break;
+        case REQ_SetConfiguration:
+            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
+                UZB_Device_SetConfiguration();
 
-                break;
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
     }
 
-    if (Endpoynt_IsSETUPReceived())
+    if (*p_ueintx & 1<<rxstpi)      // setup received?
     {
-        Endpoynt_ClearSETUP();
-        Endpoynt_StallTransaction();
+        *p_ueintx &= ~(1<<rxstpi);  // clear setup
+        *p_ueconx |= 1<<stallrq;    // stall transaction
     }
 }
 
@@ -1618,11 +1458,7 @@ ISR(USB_COM_vect, ISR_BLOCK)
     Endpoynt_SelectEndpoint(0);
     UEIENX &= ~(1<<RXSTPE);
     sei();
-#ifdef LUFA
-    USB_Device_ProcessControlRequest();
-#else
     UZB_Device_ProcessControlRequest();
-#endif
     Endpoynt_SelectEndpoint(0);
     UEIENX |= 1<<RXSTPE;
     Endpoynt_SelectEndpoint(PrevSelectedEndpoint);
@@ -1634,7 +1470,6 @@ int main(void)
     USBCON &= ~(1<<OTGPADE);
     UHWCON |= 1<<UVREGE;
     PLLFRQ = 1<<PDIV2;
-    //USB_IsInitialized = true;
     USBCON &= ~(1<<VBUSTE);
     UDIEN = 0;
     USBINT = 0;
@@ -1660,7 +1495,6 @@ int main(void)
 
 	for (;;)
 	{
-		//USB_USBTask();
 	}
 }
 

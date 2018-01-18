@@ -481,12 +481,16 @@ void USB::gen()
         {
             *p_pllcsr = USB_PLL_PSC;
             *p_pllcsr = USB_PLL_PSC | 1<<PLLE;
-            while ((PLLCSR & 1<<PLOCK) == 0);
+
+            while ((*p_pllcsr & 1<<plock) == 0)
+                ;
+
             state = DEVICE_STATE_Powered;
+            connect();
         }
         else
         {
-            PLLCSR = 0;
+            *p_pllcsr = 0;
             state = DEVICE_STATE_Unattached;
         }
     }
@@ -500,7 +504,7 @@ void USB::gen()
         state = DEVICE_STATE_Suspended;
     }
 
-    if (*p_udint & 1<<WAKEUPI && *p_udien & 1<<WAKEUPE)
+    if (*p_udint & 1<<wakeupi && *p_udien & 1<<wakeupe)
     {
         PLLCSR = USB_PLL_PSC;
         PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on

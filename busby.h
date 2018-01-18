@@ -264,6 +264,7 @@ protected:
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     bool configureEndpoint(Endpoint &ep);
     virtual void procCtrlReq() { }
+    virtual void connect() { }
 
     inline void setDevAddr(uint8_t addr) const
     { *p_udaddr = (*p_udaddr & 1<<adden) | (addr & 0x7f); }

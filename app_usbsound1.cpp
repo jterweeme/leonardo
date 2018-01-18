@@ -351,7 +351,7 @@ private:
     Endpoint _inpoint;
     uint32_t currentFreq = 48000;
 public:
-    void soundTask();
+    void connect();
     USBSound();
     void procCtrlReq();
     void sampleCallback();
@@ -589,6 +589,21 @@ USBSound::USBSound() : _inpoint(AUDIO_STREAM_EPADDR, 256, EP_TYPE_ISOCHRONOUS, 2
     *p_usbcon |= 1<<otgpade;
 }
 
+void USBSound::connect()
+{
+    *p_ddrc |= 1<<7;
+    *p_ddrd |= 1<<5;
+    *p_portc |= 1<<7;
+    *p_portd |= 1<<5;
+    *p_timsk0 = 1<<ocie0a;
+    *p_ocr0a = (F_CPU >> 3) / currentFreq - 1;
+    *p_tccr0a = 1<<wgm01;
+    *p_tccr0b = 1<<cs01;
+    *p_ddrc |= 1<<6 | 1<<5;
+    *p_tccr3a = 1<<wgm30 | 1<<com3a1 | 1<<com3a0 | 1<<com3b1 | 1<<com3b0;
+    *p_tccr3b = 1<<wgm32 | 1<<cs30;
+}
+
 ISR(TIMER0_COMPA_vect)
 {
     g_usbSound->sampleCallback();
@@ -614,34 +629,14 @@ void USBSound::sampleCallback()
     selectEndpoint(prevEp);
 }
 
-void USBSound::soundTask()
-{
-    if (state == DEVICE_STATE_Unattached)
-        return;
-
-    uint8_t prevEp = getCurrentEndpoint();
-    _control.select();
-    
-    if (*p_ueintx & 1<<rxstpi)  // setup received?
-        procCtrlReq();
-
-    selectEndpoint(prevEp);
-}
-
 int main()
 {
-    *p_timsk0 = 1<<ocie0a;
-    *p_tccr0a = 1<<wgm01;
-    *p_tccr0b = 1<<cs01;
-    *p_tccr3a = 1<<wgm30 | 1<<com3a1 | 1<<com3a0 | 1<<com3b1 | 1<<com3b0;
-    *p_tccr3b = 1<<wgm32 | 1<<cs30;
     USBSound usbSound;
     g_usbSound = &usbSound;
     sei();
 
     while (true)
     {
-        usbSound.soundTask();
     }
 
     return 0;
