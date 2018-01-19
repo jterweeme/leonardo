@@ -1,42 +1,16 @@
-#include "busby.h"
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+#include "busby.h"
+#include "usbsound.h"
 
 #ifndef F_CPU
 #define F_CPU 16000000
 #endif
 
 static constexpr uint8_t
-    AUDIO_CSCP_AudioClass = 0x01,
-    AUDIO_CSCP_AudioStreamingSubclass = 0x02,
-    AUDIO_CSCP_ControlSubclass = 0x01,
-    AUDIO_CSCP_ControlProtocol = 0x00,
-    AUDIO_CSCP_StreamingProtocol = 0x00,
-    AUDIO_DSUBTYPE_CSEndpoint_General = 0x01,
-    AUDIO_DSUBTYPE_CSInterface_FormatType = 0x02,
-    AUDIO_DSUBTYPE_CSInterface_General = 0x01,
-    AUDIO_DSUBTYPE_CSInterface_Header = 0x01,
-    AUDIO_DSUBTYPE_CSInterface_InputTerminal = 0x02,
-    AUDIO_DSUBTYPE_CSInterface_OutputTerminal = 0x03,
-    AUDIO_CHANNEL_LEFT_FRONT = 1<<0,
-    AUDIO_CHANNEL_RIGHT_FRONT = 1<<1,
-    AUDIO_EPCONTROL_SamplingFreq = 0x01,
-    AUDIO_EP_ACCEPTS_SMALL_PACKETS = 0<<7,
-    AUDIO_EP_SAMPLE_FREQ_CONTROL = 1<<0,
-    AUDIO_REQ_GetStatus = 0xff,
-    AUDIO_REQ_SetCurrent = 0x01,
-    AUDIO_REQ_GetCurrent = 0x81,
-    AUDIO_STREAM_EPADDR = ENDPOINT_DIR_OUT | 1,
-    INTERFACE_ID_AudioControl = 0,
-    INTERFACE_ID_AudioStream = 1,
     STRING_ID_Language = 0,
     STRING_ID_Manufacturer = 1,
     STRING_ID_Product = 2;
-
-static constexpr uint16_t
-    AUDIO_STREAM_EPSIZE = 256,
-    AUDIO_TERMINAL_STREAMING = 0x0101,
-    AUDIO_TERMINAL_OUT_SPEAKER = 0x0301;
 
 static const DescDev PROGMEM devDesc =
 {
@@ -56,97 +30,6 @@ static const DescDev PROGMEM devDesc =
     1
 };
 
-struct DescAudioIface
-{
-    uint8_t size;
-    uint8_t type;
-    uint8_t Subtype;
-    uint16_t ACSpecification;
-    uint16_t TotalLength;
-    uint8_t InCollection;
-    uint8_t InterfaceNumber;
-}
-__attribute__ ((packed));
-
-struct DescAudioInTerminal
-{
-    uint8_t size;
-    uint8_t type;
-    uint8_t subtype;
-    uint8_t terminalID;
-    uint16_t terminalType;
-    uint8_t associatedOutputTerminal;
-    uint8_t totalChannels;
-    uint16_t channelConfig;
-    uint8_t channelStrIndex;
-    uint8_t terminalStrIndex;
-}
-__attribute__ ((packed));
-
-struct DescAudioOutTerminal
-{
-    uint8_t size;
-    uint8_t type;
-    uint8_t subtype;
-    uint8_t terminalID;
-    uint16_t terminalType;
-    uint8_t associatedInputTerminal;
-    uint8_t sourceID;
-    uint8_t terminalStrIndex;
-}
-__attribute__ ((packed));
-
-struct DescAudioIfaceAS
-{
-    uint8_t size;
-    uint8_t type;
-    uint8_t subtype;
-    uint8_t terminalLink;
-    uint8_t frameDelay;
-    uint16_t audioFormat;
-}
-__attribute__ ((packed));
-
-struct DescAudioFormat
-{
-    uint8_t size;
-    uint8_t type;
-    uint8_t subtype;
-    uint8_t formatType;
-    uint8_t channels;
-    uint8_t subFrameSize;
-    uint8_t bitResolution;
-    uint8_t totalDiscreteSampleRates;
-}
-__attribute__ ((packed));
-
-struct SampleFreq
-{
-    uint8_t byte1;
-    uint8_t byte2;
-    uint8_t byte3;
-}
-__attribute__ ((packed));
-
-struct AudioEndpoint
-{
-    DescEndpoint endpoint;
-    uint8_t refresh;
-    uint8_t syncEndpointNumber;
-}
-__attribute__ ((packed));
-
-struct AudioEndpointSpc
-{
-    uint8_t size;
-    uint8_t type;
-    uint8_t subtype;
-    uint8_t attributes;
-    uint8_t lockDelayUnits;
-    uint16_t lockDelay;
-}
-__attribute__ ((packed));
-
 struct MyConf
 {
     DescConf config;
@@ -157,7 +40,7 @@ struct MyConf
     DescIface stream0;
     DescIface stream1;
     DescAudioIfaceAS ifaceSpc;
-    DescAudioFormat format;
+    AudioFormat format;
     SampleFreq freqs[5];
     AudioEndpoint stream;
     AudioEndpointSpc endpointSpc;
@@ -248,7 +131,7 @@ static const MyConf PROGMEM myConf
         0x0001
     },
     {
-        sizeof(DescAudioFormat) + sizeof(myConf.freqs),
+        sizeof(AudioFormat) + sizeof(myConf.freqs),
         DTYPE_CSInterface,
         AUDIO_DSUBTYPE_CSInterface_FormatType,
         0x01,

@@ -1,6 +1,6 @@
-#ifndef _BUSBY_H_
-#define _BUSBY_H_
-#include <avr/io.h>
+#ifndef _BUSBY3_H_
+#define _BUSBY3_H_
+#include <avr/interrupt.h>
 #include <stddef.h>
 #include "leonardo.h"
 
@@ -110,6 +110,9 @@ static constexpr uint8_t
     USB_MODE_Host   = 2,
     USB_MODE_UID    = 3;
 
+static constexpr uint8_t USB_CONFIG_POWER_MA(uint8_t mA) { return mA >> 1; }
+
+
 struct USBRequest
 {
     uint8_t bmRequestType;
@@ -119,17 +122,6 @@ struct USBRequest
     uint16_t wLength;
 }
 __attribute__ ((packed));
-
-#define GCC_MEMORY_BARRIER()                  __asm__ __volatile__("" ::: "memory");
-
-static constexpr uint8_t USB_CONFIG_POWER_MA(uint8_t mA) { return mA >> 1; }
-
-struct SigDesc
-{
-    uint8_t size;
-    uint8_t type;
-    uint16_t unicodeString[INTERNAL_SERIAL_LENGTH_BITS / 4];
-};
 
 struct DescDev
 {
@@ -195,6 +187,7 @@ template <size_t S> struct DescString
     wchar_t UnicodeString[S];
 };
 
+
 struct Endpoint
 {
     const uint8_t addr;
@@ -209,34 +202,37 @@ struct Endpoint
         addr(addr2), size(size2), type(type2), banks(banks2) { }
 };
 
+static inline bool Endpoynt_IsOUTReceived(void)
+{
+    return ((UEINTX & (1 << RXOUTI)) ? true : false);
+}
+
+
+
+static inline uint8_t Endpoynt_GetEndpointDirection(void)
+{
+    return (UECFG0X & (1 << EPDIR)) ? ENDPOINT_DIR_IN : ENDPOINT_DIR_OUT;
+}
+
+static inline uint16_t Endpoynt_BytesInEndpoint(void)
+{
+    return (((uint16_t)UEBCHX << 8) | UEBCLX);
+}
+
+
+
+static inline void setDevAddr(const uint8_t Address)
+{
+    UDADDR = (UDADDR & (1 << ADDEN)) | (Address & 0x7F);
+}
+
+
 class USB
 {
-private:
-    uint8_t getEndpointDirection() const;
-    uint8_t Endpoint_BytesToEPSizeMask(uint16_t bytes) const;
-protected:
-    USBRequest _ctrlReq;
+public:
     volatile uint8_t state;
-    uint8_t USB_Device_ConfigurationNumber;
-    bool USB_Device_CurrentlySelfPowered;
-    bool USB_Device_RemoteWakeupEnabled;
-    Endpoint _control;
-    uint8_t readControlStreamLE(void * const buf, uint16_t len);
-    uint8_t write_Control_Stream_LE(const void * const buf, uint16_t len);
-    uint8_t write_Control_PStream_LE(const void * const buf, uint16_t len);
-    uint8_t writeStream(const void * const buf, uint16_t len, uint16_t * const bytes);
-    uint8_t writeStream2(const void * const buf, uint16_t len, uint16_t * const bytes);
-    uint8_t readStream(void * const buf, uint16_t len, uint16_t * const bytes);
-    uint8_t nullStream(uint16_t len, uint16_t * const bytesProcessed);
-    uint8_t waitUntilReady() const;
 
-    inline uint8_t getCurrentEndpoint() const
-    { return (*p_uenum & ENDPOINT_EPNUM_MASK) | getEndpointDirection(); }
-
-    inline void selectEndpoint(uint8_t addr) const { *p_uenum = addr & ENDPOINT_EPNUM_MASK; }
-    inline uint8_t read8() const { return *p_uedatx; }
-
-    inline uint16_t read16le() const
+    inline uint16_t read16le()
     {
         union
         {
@@ -250,28 +246,44 @@ protected:
         return Data.Value;
     }
 
-    uint32_t read32() const;
-    inline void write8(uint8_t dat) const { *p_uedatx = dat; }
-    inline void write16(uint16_t dat) const { *p_uedatx = dat & 0xff; *p_uedatx = dat >> 8; }
-    inline void write16le(uint16_t dat) const { *p_uedatx = dat & 0xff; *p_uedatx = dat >> 8; }
-    void write32(uint32_t dat) const;
-    void write32be(uint32_t dat) const;
-    inline uint16_t bytesInEndpoint() const { return ((uint16_t)UEBCHX<<8) | UEBCLX; }
+    uint8_t USB_Device_ConfigurationNumber = 0;
+    bool USB_Device_RemoteWakeupEnabled;
+    bool USB_Device_CurrentlySelfPowered;
+    Endpoint _control;
+    USBRequest _ctrlReq;
+    inline void write8(uint8_t dat) { *p_uedatx = dat; }
+
+    inline void selectEndpoint(const uint8_t Address)
+    { UENUM = (Address & ENDPOINT_EPNUM_MASK); }
+
+    inline void write16le(uint16_t dat)
+    { *p_uedatx = dat & 0xff; *p_uedatx = dat >> 8; }
+
+    uint8_t write_Control_PStream_LE(const void* const Buffer, uint16_t Length);
+    uint8_t readControlStreamLE(void* const Buffer, uint16_t Length);
+    uint8_t write_Control_Stream_LE(const void * const buf, uint16_t Length);
     void Device_ClearSetFeature();
-    void Device_GetSerialString(uint16_t *unicodeString);
-    void clearStatusStage() const;
-    bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
-    bool configureEndpoint(Endpoint &ep);
+    void clearStatusStage();
+    void UZB_Device_SetConfiguration();
+    static USB *instance;
+
+    bool configureEndpoint(const uint8_t Address, const uint8_t type,
+        const uint16_t size, const uint8_t banks);
+
+    bool Endpoynt_ConfigureEndpoint_Prv(const uint8_t Number,
+                                    const uint8_t UECFG0XData,
+                                    const uint8_t UECFG1XData);
+
+
+    inline uint8_t getCurrentEndpoint()
+    { return ((UENUM & ENDPOINT_EPNUM_MASK) | Endpoynt_GetEndpointDirection()); }
+
+    USB();
+    void com();
+    void gen();
     virtual void procCtrlReq() { }
     virtual void connect() { }
-
-    inline void setDevAddr(uint8_t addr) const
-    { *p_udaddr = (*p_udaddr & 1<<adden) | (addr & 0x7f); }
-public:
-    static USB *instance;
-    USB();
-    void gen();
-    void com();
+    inline uint8_t read8() { return UEDATX; }
 };
 
 #endif

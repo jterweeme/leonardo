@@ -249,7 +249,7 @@ uint8_t USB::write_Control_Stream_LE(const void* const buffer, uint16_t len)
         if (usbDeviceState_LCL == DEVICE_STATE_Suspended)
             return ENDPOINT_RWCSTREAM_BusSuspended;
 
-        if (*p_ueintx & 1<<rxstpi)
+        if (*p_ueintx & 1<<rxstpi)  // setup received?
             return ENDPOINT_RWCSTREAM_HostAborted;
 
         if (*p_ueintx & 1<<rxouti)  // out received?
@@ -306,7 +306,7 @@ uint8_t USB::write_Control_PStream_LE(const void* const Buffer, uint16_t length)
         if (USB_DeviceState_LCL == DEVICE_STATE_Suspended)
             return ENDPOINT_RWCSTREAM_BusSuspended;
 
-        if (*p_ueintx & 1<<rxstpi)
+        if (*p_ueintx & 1<<rxstpi)  // setup received?
             return ENDPOINT_RWCSTREAM_HostAborted;
 
         if (UEINTX & 1<<RXOUTI)
@@ -510,9 +510,9 @@ void USB::gen()
         PLLCSR = USB_PLL_PSC | 1<<PLLE;   // PLL on
         while ((PLLCSR & 1<<PLOCK) == 0);   // PLL is ready?
         *p_usbcon &= ~(1<<frzclk);
-        *p_udint &= ~(1<<WAKEUPI);
-        *p_udien &= ~(1<<WAKEUPI);
-        *p_udien |= 1<<SUSPE;
+        *p_udint &= ~(1<<wakeupi);
+        *p_udien &= ~(1<<wakeupe);
+        *p_udien |= 1<<suspe;
 
         if (USB_Device_ConfigurationNumber)
             state = DEVICE_STATE_Configured;
@@ -553,7 +553,7 @@ uint8_t USB::readControlStreamLE(void * const buf, uint16_t len)
         if (*p_ueintx & 1<<rxstpi)  // setup received?
             return ENDPOINT_RWCSTREAM_HostAborted;
         
-        if ((*p_ueintx & 1<<rxouti) == 0)   // is out received?
+        if (*p_ueintx & 1<<rxouti)   // is out received?
         {
             while (len && bytesInEndpoint())
             {
@@ -566,7 +566,7 @@ uint8_t USB::readControlStreamLE(void * const buf, uint16_t len)
         }
     }
 
-    while (*p_ueintx & 1<<txini)    // in ready?
+    while ((*p_ueintx & 1<<txini) == 0)    // in ready?
     {
         uint8_t usbDeviceState_LCL = state;
 
