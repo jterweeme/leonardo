@@ -255,9 +255,9 @@ void USBJoy::procCtrlReq()
                     return;
                 }
 
-                UEINTX &= ~(1<<RXSTPI);
-                write16(CurrentStatus);
-                UEINTX &= ~(1<<TXINI | 1<<FIFOCON); // clear in
+                *p_ueintx &= ~(1<<rxstpi);
+                write16le(CurrentStatus);
+                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
                 clearStatusStage();
             }
 

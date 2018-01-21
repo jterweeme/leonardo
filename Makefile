@@ -32,7 +32,6 @@ all: app_aditbox.elf \
     app_usbmouse1.elf \
     app_usbsd2.elf \
     app_usbsound1.elf \
-    app_usbsound3.elf \
 	app_vga1.elf \
     app_vgacalc1.elf
 
@@ -60,7 +59,6 @@ app_usbloop1.elf: app_usbloop1.o cdc.o busby.o misc.o
 app_usbmouse1.elf: app_usbmouse1.o usbmouse.o busby.o
 app_usbsd2.elf: app_usbsd2.o usbsd.o busby.o misc.o zd2card.o leonardo.o
 app_usbsound1.elf: app_usbsound1.o busby.o
-app_usbsound3.elf: app_usbsound3.o busby.o
 app_vga1.elf: app_vga1.o vga.o
 app_vgacalc1.elf: app_vgacalc1.o vga.o keyboard.o misc.o calc.o leonardo.o
 
@@ -88,11 +86,9 @@ app_usbloop1.o: app_usbloop1.cpp
 app_usbmouse1.o: app_usbmouse1.cpp usbmouse.h
 app_usbsd2.o: app_usbsd2.cpp usbsd.h busby.h leonardo.h
 app_usbsound1.o: app_usbsound1.cpp busby.h leonardo.h
-app_usbsound3.o: app_usbsound3.cpp busby.h leonardo.h
 app_vga1.o: app_vga1.cpp vga.h screenFont.h
 app_vgacalc1.o: app_vgacalc1.cpp vga.h screenFont.h keyboard.h calc.h
 busby.o: busby.cpp busby.h
-busby3.o: busby3.cpp busby3.h
 widget.o: widget.cpp widget.h
 calc.o: calc.cpp calc.h
 cdc.o: cdc.cpp cdc.h busby.h

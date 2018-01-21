@@ -53,9 +53,6 @@ static constexpr uint8_t
     ENDPOINT_RWSTREAM_Timeout            = 4,
     ENDPOINT_RWSTREAM_IncompleteTransfer = 5,
     USB_DEVICE_OPT_FULLSPEED = 0<<0,
-    USE_INTERNAL_SERIAL = 0xDC,
-    INTERNAL_SERIAL_LENGTH_BITS = 80,
-    INTERNAL_SERIAL_START_ADDRESS = 0x0e,
     REQ_GetStatus = 0,
     REQ_ClearFeature = 1,
     REQ_SetFeature = 3,
@@ -105,6 +102,12 @@ static constexpr uint8_t
     DEVICE_STATE_Addressed = 3,
     DEVICE_STATE_Configured = 4,
     DEVICE_STATE_Suspended = 5,
+    USE_INTERNAL_SERIAL = 0xDC,
+    INTERNAL_SERIAL_LENGTH_BITS = 80,
+    INTERNAL_SERIAL_START_ADDRESS = 0x0e,
+    UZE_INTERNAL_SERIAL = 0xdc,
+    INTERNAL_ZERIAL_START_ADDRESS = 0x0e,
+    INTERNAL_ZERIAL_LENGTH_BITS = 80,
     USB_MODE_None   = 0,
     USB_MODE_Device = 1,
     USB_MODE_Host   = 2,
@@ -224,32 +227,12 @@ protected:
     uint8_t readControlStreamLE(void * const buf, uint16_t len);
     uint8_t write_Control_Stream_LE(const void * const buf, uint16_t len);
     uint8_t write_Control_PStream_LE(const void * const buf, uint16_t len);
-    uint8_t writeStream(const void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t writeStream2(const void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t readStream(void * const buf, uint16_t len, uint16_t * const bytes);
     uint8_t nullStream(uint16_t len, uint16_t * const bytesProcessed);
     uint8_t waitUntilReady() const;
-
-    inline uint8_t getCurrentEndpoint() const
-    { return (*p_uenum & ENDPOINT_EPNUM_MASK) | getEndpointDirection(); }
-
     inline void selectEndpoint(uint8_t addr) const { *p_uenum = addr & ENDPOINT_EPNUM_MASK; }
     inline uint8_t read8() const { return *p_uedatx; }
-
-    inline uint16_t read16le() const
-    {
-        union
-        {
-            uint16_t Value;
-            uint8_t  Bytes[2];
-        } Data;
-
-        Data.Bytes[0] = UEDATX;
-        Data.Bytes[1] = UEDATX;
-
-        return Data.Value;
-    }
-
     uint32_t read32() const;
     inline void write8(uint8_t dat) const { *p_uedatx = dat; }
     inline void write16(uint16_t dat) const { *p_uedatx = dat & 0xff; *p_uedatx = dat >> 8; }
@@ -262,11 +245,25 @@ protected:
     void clearStatusStage() const;
     bool configureEndpoint(uint8_t addr, uint8_t type, uint16_t size, uint8_t banks);
     bool configureEndpoint(Endpoint &ep);
-    virtual void procCtrlReq() { }
+    virtual uint16_t getDesc(uint16_t, uint16_t, const void ** const) { return 0; }
+    virtual void procCtrlReq();
     virtual void connect() { }
+    virtual void configure() { }
+    virtual void customCtrl() { }
 
     inline void setDevAddr(uint8_t addr) const
     { *p_udaddr = (*p_udaddr & 1<<adden) | (addr & 0x7f); }
+
+    inline uint16_t read16le() const
+    {
+        union { uint16_t Value; uint8_t Bytes[2]; } Data;
+        Data.Bytes[0] = UEDATX;
+        Data.Bytes[1] = UEDATX;
+        return Data.Value;
+    }
+
+    inline uint8_t getCurrentEndpoint() const
+    { return (*p_uenum & ENDPOINT_EPNUM_MASK) | getEndpointDirection(); }
 public:
     static USB *instance;
     USB();

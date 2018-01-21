@@ -50,10 +50,13 @@ private:
     void _sdWriteBlocks(uint32_t start, uint16_t n);
     bool SCSI_Command_ReadWrite_10(const bool IsDataRead);
 public:
+    void customCtrl();
+    uint16_t getDesc(uint16_t wValue, uint16_t wIndex, const void **const descAddr);
+    void configure();
     void ReturnCommandStatus();
     void MassStorage_Task();
     bool decodeSCSICmd();
-    void procCtrlReq();
+    //void procCtrlReq();
     USBSD();
 };
 

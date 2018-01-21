@@ -190,7 +190,23 @@ static const DescString<11> PROGMEM productString =
     L"Audio Demo"
 };
 
-static uint16_t getDescriptor(uint16_t wValue, uint16_t wIndex, const void **const descAddr)
+
+
+class USBSound : public USB
+{
+private:
+    Endpoint _inpoint;
+    uint32_t currentFreq = 48000;
+public:
+    void customCtrl();
+    void connect();
+    void configure();
+    void sampleCallback();
+    uint16_t getDesc(uint16_t wValue, uint16_t wIndex, const void **const descAddr);
+    USBSound();
+};
+
+uint16_t USBSound::getDesc(uint16_t wValue, uint16_t wIndex, const void **const descAddr)
 {
     const void *addr = NULL;
     uint16_t size = 0;
@@ -228,29 +244,12 @@ static uint16_t getDescriptor(uint16_t wValue, uint16_t wIndex, const void **con
     return size;
 }
 
-class USBSound : public USB
-{
-private:
-    Endpoint _inpoint;
-    uint32_t currentFreq = 48000;
-public:
-    void connect();
-    USBSound();
-    void procCtrlReq();
-    void sampleCallback();
-};
-
 static USBSound *g_usbSound;
 
 static bool StreamingAudioInterfaceSelected = false;
 
-void USBSound::procCtrlReq()
+void USBSound::customCtrl()
 {
-    uint8_t* RequestHeader = (uint8_t*)&_ctrlReq;
-
-    for (uint8_t i = 0; i < sizeof(USBRequest); i++)
-        *(RequestHeader++) = read8();
-
     const uint8_t bmRequestType = _ctrlReq.bmRequestType;
 
     switch (_ctrlReq.bRequest)
@@ -279,7 +278,7 @@ void USBSound::procCtrlReq()
                 currentFreq = (uint32_t)sampleRate[2] << 16 | (uint32_t)sampleRate[1] << 8 |
                     (uint32_t)sampleRate[0];
 
-                OCR0A = (F_CPU >> 3) / currentFreq - 1;
+                *p_ocr0a = (F_CPU >> 3) / currentFreq - 1;
             }
         }
         break;
@@ -310,139 +309,12 @@ void USBSound::procCtrlReq()
         }
         break;
     }
+}
 
-    if (*p_ueintx & 1<<rxstpi)
-    {
-        switch (_ctrlReq.bRequest)
-        {
-        case REQ_GetStatus:
-            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
-                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT)))
-            {
-                uint8_t currentStatus = 0;
-
-                switch (bmRequestType)
-                {
-                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
-                {
-                    if (USB_Device_CurrentlySelfPowered)
-                        currentStatus |= FEATURE_SELFPOWERED_ENABLED;
-
-                    if (USB_Device_RemoteWakeupEnabled)
-                        currentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
-                }
-                    break;
-                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
-                {
-                    uint8_t endpointIndex = ((uint8_t)_ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
-
-                    if (endpointIndex >= ENDPOINT_TOTAL_ENDPOINTS)
-                        return;
-
-                    selectEndpoint(endpointIndex);
-                    currentStatus = *p_ueconx & 1<<stallrq;
-                    _control.select();
-                }
-                    break;
-                default:
-                    return;
-                }
-
-                *p_ueintx &= ~(1<<rxstpi); // clear setup
-                write16(currentStatus);
-                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
-                clearStatusStage();
-            }
-
-            break;
-        case REQ_ClearFeature:
-        case REQ_SetFeature:
-            if ((bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE)) ||
-                (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_ENDPOINT)))
-            {
-                Device_ClearSetFeature();
-            }
-
-            break;
-        case REQ_SetAddress:
-            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
-            {
-                uint8_t DeviceAddress = _ctrlReq.wValue & 0x7F;
-                setDevAddr(DeviceAddress);
-                *p_ueintx &= ~(1<<rxstpi); // clear setup
-                clearStatusStage();
-                while ((*p_ueintx & 1<<txini) == 0);   // in ready?
-                *p_udaddr |= 1<<adden; // enable dev addr
-                state = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
-            }
-            break;
-        case REQ_GetDescriptor:
-            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
-                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_INTERFACE)))
-            {
-                const void *descPtr;
-                uint16_t descSize;
-
-                if (_ctrlReq.wValue == (DTYPE_String << 8 | USE_INTERNAL_SERIAL))
-                {
-                    SigDesc sigDesc;
-                    sigDesc.type = DTYPE_String;
-                    sigDesc.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
-                    Device_GetSerialString(sigDesc.unicodeString);
-                    *p_ueintx &= ~(1<<rxstpi);
-                    write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
-                    *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
-                    return;
-                }
-
-                if ((descSize = getDescriptor(_ctrlReq.wValue, _ctrlReq.wIndex, &descPtr)) == 0)
-                    return;
-
-                *p_ueintx &= ~(1<<rxstpi);     // clear setup
-                write_Control_PStream_LE(descPtr, descSize);
-                *p_ueintx &= ~(1<<rxouti | 1<<fifocon);    // clear out
-            }
-
-            break;
-        case REQ_GetConfiguration:
-            if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
-            {
-                *p_ueintx &= ~(1<<rxstpi);     // clear setup
-                write8(USB_Device_ConfigurationNumber);
-                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
-                clearStatusStage();
-            }
-            break;
-        case REQ_SetConfiguration:
-            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
-            {
-                if ((uint8_t)_ctrlReq.wValue > FIXED_NUM_CONFIGURATIONS)
-                    return;
-
-                *p_ueintx &= ~(1<<rxstpi);
-                USB_Device_ConfigurationNumber = (uint8_t)_ctrlReq.wValue;
-                clearStatusStage();
-
-                if (USB_Device_ConfigurationNumber)
-                    state = DEVICE_STATE_Configured;
-                else
-                    state = *p_udaddr & 1<<adden ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
-
-                configureEndpoint(_inpoint);
-                //configureEndpoint(_outpoint);
-                *p_udien |= 1<<sofe;
-            }
-            break;
-        default:
-            break;
-        }
-    }
-
-    if (*p_ueintx & 1<<rxstpi)      // setup received?
-    {
-        *p_ueintx &= ~(1<<rxstpi);  // clear setup
-        *p_ueconx |= 1<<stallrq;    // stall transaction
-    }
+void USBSound::configure()
+{
+    configureEndpoint(_inpoint);
+    *p_udien |= 1<<sofe;
 }
 
 USBSound::USBSound() : _inpoint(AUDIO_STREAM_EPADDR, 256, EP_TYPE_ISOCHRONOUS, 2)

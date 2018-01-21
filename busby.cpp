@@ -7,6 +7,8 @@ Adapted from LUFA code by Dean Camera
 #include <avr/boot.h>
 #include <avr/pgmspace.h>
 
+extern "C" void __cxa_pure_virtual() { while (1); }
+
 USB *USB::instance;
 
 uint8_t USB::getEndpointDirection() const
@@ -580,48 +582,139 @@ uint8_t USB::readControlStreamLE(void * const buf, uint16_t len)
     return ENDPOINT_RWCSTREAM_NoError;
 }
 
-uint8_t USB::writeStream(const void * const buf, uint16_t len, uint16_t * const bytes)
+void USB::procCtrlReq()
 {
-    uint8_t *dataStream = (uint8_t *)buf;
-    uint16_t bytesInTransfer = 0;
-    uint8_t errorCode = waitUntilReady();
+    uint8_t *RequestHeader = (uint8_t*)&_ctrlReq;
 
-    if (errorCode)
-        return errorCode;
+    for (uint8_t i = 0; i < sizeof(USBRequest); i++)
+        RequestHeader[i] = read8();
 
-    if (bytes != NULL)
+    customCtrl();
+
+    if (*p_ueintx & 1<<rxstpi)  // setup received?
     {
-        len -= *bytes;
-        dataStream += *bytes;
-    }
+        const uint8_t bmRequestType = _ctrlReq.bmRequestType;
 
-    while (len)
-    {
-        if ((UEINTX & 1<<rwal) == 0)    // read-write allowed?
+        switch (_ctrlReq.bRequest)
         {
-            UEINTX &= ~(1<<txini | 1<<fifocon); // endpoint clear in
-            
-            if (bytes != NULL)
+        case REQ_GetStatus:
+            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
+                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT)))
             {
-                *bytes += bytesInTransfer;
-                return ENDPOINT_RWSTREAM_IncompleteTransfer;
+                uint8_t currentStatus = 0;
+
+                switch (bmRequestType)
+                {
+                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
+                    if (USB_Device_CurrentlySelfPowered)
+                        currentStatus |= FEATURE_SELFPOWERED_ENABLED;
+
+                    if (USB_Device_RemoteWakeupEnabled)
+                        currentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
+  
+                    break;
+                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
+                    selectEndpoint((uint8_t)_ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
+                    currentStatus = *p_ueconx & 1<<stallrq;
+                    _control.select();
+                    break;
+                default:
+                    return;
+                }
+
+                *p_ueintx &= ~(1<<rxstpi); // clear setup
+                write16le(currentStatus);
+                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
+                clearStatusStage();
             }
 
-            errorCode = waitUntilReady();
+            break;
+        case REQ_ClearFeature:
+        case REQ_SetFeature:
+            if ((bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE)) ||
+                (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_ENDPOINT)))
+            {
+                Device_ClearSetFeature();
+            }
 
-            if (errorCode)
-                return errorCode;
-        }
-        else
-        {
-            write8(*dataStream);
-            *dataStream += 1;
-            len--;
-            bytesInTransfer++;
+            break;
+        case REQ_SetAddress:
+            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
+            {
+                uint8_t DeviceAddress = _ctrlReq.wValue & 0x7F;
+                setDevAddr(DeviceAddress);
+                *p_ueintx &= ~(1<<rxstpi); // clear setup
+                clearStatusStage();
+                while ((*p_ueintx & 1<<txini) == 0);   // in ready?
+                *p_udaddr |= 1<<adden; // enable dev addr
+                state = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
+            }
+            break;
+        case REQ_GetDescriptor:
+            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
+                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_INTERFACE)))
+            {
+                const void *descPtr;
+                uint16_t descSize;
+
+                if (_ctrlReq.wValue == (DTYPE_String << 8 | USE_INTERNAL_SERIAL))
+                {
+                    SigDesc sigDesc;
+                    sigDesc.type = DTYPE_String;
+                    sigDesc.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
+                    Device_GetSerialString(sigDesc.unicodeString);
+                    *p_ueintx &= ~(1<<rxstpi);
+                    write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
+                    *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
+                    return;
+                }
+
+                if ((descSize = getDesc(_ctrlReq.wValue, _ctrlReq.wIndex, &descPtr)) == 0)
+                    return;
+
+                *p_ueintx &= ~(1<<rxstpi);     // clear setup
+                write_Control_PStream_LE(descPtr, descSize);
+                *p_ueintx &= ~(1<<rxouti | 1<<fifocon);    // clear out
+            }
+
+            break;
+        case REQ_GetConfiguration:
+            if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
+            {
+                *p_ueintx &= ~(1<<rxstpi);     // clear setup
+                write8(USB_Device_ConfigurationNumber);
+                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
+                clearStatusStage();
+            }
+            break;
+        case REQ_SetConfiguration:
+            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
+            {
+                if ((uint8_t)_ctrlReq.wValue > FIXED_NUM_CONFIGURATIONS)
+                    return;
+
+                *p_ueintx &= ~(1<<rxstpi);
+                USB_Device_ConfigurationNumber = (uint8_t)_ctrlReq.wValue;
+                clearStatusStage();
+
+                if (USB_Device_ConfigurationNumber)
+                    state = DEVICE_STATE_Configured;
+                else
+                    state = *p_udaddr & 1<<adden ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
+
+                configure();
+            }
+            break;
+        default:
+            break;
         }
     }
 
-    return ENDPOINT_RWSTREAM_NoError;
+    if (*p_ueintx & 1<<rxstpi)      // setup received?
+    {
+        *p_ueintx &= ~(1<<rxstpi);  // clear setup
+        *p_ueconx |= 1<<stallrq;    // stall transaction
+    }
 }
 
 uint8_t USB::writeStream2(const void * const buf, uint16_t len, uint16_t * const bytes)

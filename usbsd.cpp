@@ -8,7 +8,6 @@ Adapted from LUFA code by Dean Camera
 
 static constexpr uint8_t
     E2P_TYPE_BULK = 0x02,
-    UZE_INTERNAL_SERIAL = 0xdc,
     USB_CONFYG_ATTR_RESERVED = 0x80,
     MS_KOMMAND_DIR_DATA_IN = 1<<7,
     ZCZI_ASENSE_NO_ADDITIONAL_INFORMATION = 0x00,
@@ -43,8 +42,6 @@ static constexpr uint8_t
     MASS_STORAGE_IO_EPSIZE = 64,
     M2S_REQ_GetMaxLUN = 0xfe,
     M2S_REQ_MassStorageReset = 0xff,
-    INTERNAL_ZERIAL_START_ADDRESS = 0x0e,
-    INTERNAL_ZERIAL_LENGTH_BITS = 80,
     MASS_STORAGE_IN_EPADDR = (ENDPOINT_DIR_IN  | 3),
     MASS_STORAGE_OUT_EPADDR = (ENDPOINT_DIR_OUT | 4),
     TOTAL_LUNS = 1;
@@ -178,7 +175,7 @@ static const DescString<23> PROGMEM productString =
     L"LUFA Mass Storage Demo"
 };
 
-static uint16_t getDescriptor(uint16_t wValue, uint16_t wIndex, const void **const descAddr)
+uint16_t USBSD::getDesc(uint16_t wValue, uint16_t wIndex, const void **const descAddr)
 {
     const void *addr = NULL;
     uint16_t size = 0;
@@ -535,165 +532,42 @@ void USBSD::ReturnCommandStatus()
     *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
 }
 
-void USBSD::procCtrlReq()
+void USBSD::customCtrl()
 {
-    uint8_t* RequestHeader = (uint8_t*)&_ctrlReq;
+    if ((*p_ueintx & 1<<rxstpi) == 0)
+        return;
 
-    for (uint8_t i = 0; i < sizeof(USBRequest); i++)
-        *(RequestHeader++) = read8();
-
-    if (*p_ueintx & 1<<rxstpi)
+    if (_ctrlReq.wIndex != _control.addr)
+        return;
+    
+    switch (_ctrlReq.bRequest)
     {
-        const uint8_t bmRequestType = _ctrlReq.bmRequestType;
-
-        switch (_ctrlReq.bRequest)
+    case M2S_REQ_MassStorageReset:
+        if (_ctrlReq.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
         {
-        case M2S_REQ_MassStorageReset:
-            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
-            {
-                *p_ueintx &= ~(1<<rxstpi); // clear setup
-                clearStatusStage();
-                IsMassStoreReset = true;
-            }
-
-            break;
-        case M2S_REQ_GetMaxLUN:
-            if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
-            {
-                *p_ueintx &= ~(1<<rxstpi); // clear setup
-                write8(TOTAL_LUNS - 1);
-                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
-                clearStatusStage();
-            }
-            break;
-        case REQ_GetStatus:
-            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
-                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT)))
-            {
-                uint8_t currentStatus = 0;
-
-                switch (bmRequestType)
-                {
-                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
-                {
-                    if (USB_Device_CurrentlySelfPowered)
-                        currentStatus |= FEATURE_SELFPOWERED_ENABLED;
-
-                    if (USB_Device_RemoteWakeupEnabled)
-                        currentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
-                }
-                    break;
-                case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
-                {
-                    uint8_t endpointIndex = ((uint8_t)_ctrlReq.wIndex & ENDPOINT_EPNUM_MASK);
-
-                    if (endpointIndex >= ENDPOINT_TOTAL_ENDPOINTS)
-                        return;
-
-                    selectEndpoint(endpointIndex);
-                    currentStatus = *p_ueconx & 1<<stallrq;
-                    _control.select();
-                }
-                    break;
-                default:
-                    return;
-                }
-
-                *p_ueintx &= ~(1<<rxstpi); // clear setup
-                write16(currentStatus);
-                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
-                clearStatusStage();
-            }
-
-            break;
-        case REQ_ClearFeature:
-        case REQ_SetFeature:
-            if ((bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE)) ||
-                (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_ENDPOINT)))
-            {
-                Device_ClearSetFeature();
-            }
-
-            break;
-        case REQ_SetAddress:
-            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
-            {
-                uint8_t DeviceAddress = _ctrlReq.wValue & 0x7F;
-                setDevAddr(DeviceAddress);
-                *p_ueintx &= ~(1<<rxstpi); // clear setup
-                clearStatusStage();
-                while ((*p_ueintx & 1<<txini) == 0);   // in ready?
-                *p_udaddr |= 1<<adden; // enable dev addr
-                state = DeviceAddress ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
-            }
-            break;
-        case REQ_GetDescriptor:
-            if ((bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE)) ||
-                (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_INTERFACE)))
-            {
-                const void *descPtr;
-                uint16_t descSize;
-
-                if (_ctrlReq.wValue == (DTYPE_String << 8 | UZE_INTERNAL_SERIAL))
-                {
-                    SigDesc sigDesc;
-                    sigDesc.type = DTYPE_String;
-                    sigDesc.size = USB_STRING_LEN(INTERNAL_ZERIAL_LENGTH_BITS / 4);
-                    Device_GetSerialString(sigDesc.unicodeString);
-                    *p_ueintx &= ~(1<<rxstpi);
-                    write_Control_Stream_LE(&sigDesc, sizeof(sigDesc));
-                    *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
-                    return;
-                }
-
-                if ((descSize = getDescriptor(_ctrlReq.wValue, _ctrlReq.wIndex, &descPtr)) == 0)
-                    return;
-
-                *p_ueintx &= ~(1<<rxstpi);     // clear setup
-                write_Control_PStream_LE(descPtr, descSize);
-                *p_ueintx &= ~(1<<rxouti | 1<<fifocon);    // clear out
-            }
-
-            break;
-        case REQ_GetConfiguration:
-            if (bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE))
-            {
-                *p_ueintx &= ~(1<<rxstpi);     // clear setup
-                write8(USB_Device_ConfigurationNumber);
-                *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
-                clearStatusStage();
-            }
-            break;
-        case REQ_SetConfiguration:
-            if (bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_STANDARD | REQREC_DEVICE))
-            {
-                if ((uint8_t)_ctrlReq.wValue > FIXED_NUM_CONFIGURATIONS)
-                    return;
-
-                *p_ueintx &= ~(1<<rxstpi);
-                USB_Device_ConfigurationNumber = (uint8_t)_ctrlReq.wValue;
-                clearStatusStage();
-
-                if (USB_Device_ConfigurationNumber)
-                    state = DEVICE_STATE_Configured;
-                else
-                    state = *p_udaddr & 1<<adden ? DEVICE_STATE_Configured : DEVICE_STATE_Powered;
-
-                configureEndpoint(_inpoint);
-                configureEndpoint(_outpoint);
-                *p_udien |= 1<<sofe;
-            }
-            break;
-        default:
-            break;
+            *p_ueintx &= ~(1<<rxstpi); // clear setup
+            clearStatusStage();
+            IsMassStoreReset = true;
         }
-    }
 
-    if (*p_ueintx & 1<<rxstpi)      // setup received?
-    {
-        *p_ueintx &= ~(1<<rxstpi);  // clear setup
-        *p_ueconx |= 1<<stallrq;    // stall transaction
+        break;
+    case M2S_REQ_GetMaxLUN:
+        if (_ctrlReq.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
+        {
+            *p_ueintx &= ~(1<<rxstpi); // clear setup
+            write8(TOTAL_LUNS - 1);
+            *p_ueintx &= ~(1<<txini | 1<<fifocon); // clear in
+            clearStatusStage();
+        }
+        break;
     }
+}
+
+void USBSD::configure()
+{
+    configureEndpoint(_inpoint);
+    configureEndpoint(_outpoint);
+    *p_udien |= 1<<sofe;
 }
 
 USBSD::USBSD() :
