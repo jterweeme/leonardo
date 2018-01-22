@@ -6,6 +6,9 @@
 #include <stdio.h>
 
 static constexpr uint8_t
+    STRING_ID_LANGUAGE = 0,
+    STRING_ID_MANUFACTURER = 1,
+    STRING_ID_PRODUCT = 2,
     CDC_CSCP_CDCClass = 0x02,
     CDC_CSCP_NoSpecificSubclass = 0x00,
     CDC_CSCP_ACMSubclass = 0x02,
@@ -46,16 +49,12 @@ static constexpr uint8_t
     CDC_TX_EPADDR = ENDPOINT_DIR_IN | 3,
     CDC_RX_EPADDR = ENDPOINT_DIR_OUT | 4,
     CDC_NOTIFICATION_EPSIZE = 8,
-    CDC_TXRX_EPSIZE = 16,
-    CDC_PARITY_None  = 0,
-    CDC_PARITY_Odd   = 1,
-    CDC_PARITY_Even  = 2,
-    CDC_PARITY_Mark  = 3;
+    CDC_TXRX_EPSIZE = 16;
 
 static const DescDev PROGMEM DeviceDescriptor =
 {
     sizeof(DescDev),
-    DTYPE_Device,
+    DTYPE_DEVICE,
     0x0110,
     CDC_CSCP_CDCClass,
     CDC_CSCP_NoSpecificSubclass,
@@ -116,7 +115,7 @@ static const MyConf PROGMEM myConf =
 {
     {
         sizeof(DescConf),
-        DTYPE_Configuration,
+        DTYPE_CONFIGURATION,
         sizeof(MyConf),
         2,
         1,
@@ -194,21 +193,21 @@ static const MyConf PROGMEM myConf =
 static const DescString<2> PROGMEM languageString =
 {
     USB_STRING_LEN(1),
-    DTYPE_String,
+    DTYPE_STRING,
     (wchar_t)0x0409
 };
 
 static const DescString<12> PROGMEM manufacturerString =
 {
     USB_STRING_LEN(11),
-    DTYPE_String,
+    DTYPE_STRING,
     L"Dean Camera"
 };
 
 static const DescString<23> PROGMEM productString =
 {
     USB_STRING_LEN(22),
-    DTYPE_String,
+    DTYPE_STRING,
     L"LUFA USB-RS232 Adapter"
 };
 
@@ -220,26 +219,26 @@ uint16_t CDC::getDesc(uint16_t wValue, uint16_t wIndex, const void ** const desc
 
     switch (wValue >> 8)
     {
-    case DTYPE_Device:
+    case DTYPE_DEVICE:
         addr = &DeviceDescriptor;
         size = sizeof(DescDev);
         break;
-    case DTYPE_Configuration:
+    case DTYPE_CONFIGURATION:
         addr = &myConf;
         size = sizeof(myConf);
         break;
-    case DTYPE_String:
+    case DTYPE_STRING:
         switch (descNumber)
         {
-        case 0x00:
+        case STRING_ID_LANGUAGE:
             addr = &languageString;
             size = pgm_read_byte(&languageString.size);
             break;
-        case 0x01:
+        case STRING_ID_MANUFACTURER:
             addr = &manufacturerString;
             size = pgm_read_byte(&manufacturerString.size);
             break;
-        case 0x02:
+        case STRING_ID_PRODUCT:
             addr = &productString;
             size = pgm_read_byte(&productString.size);
             break;
@@ -259,9 +258,9 @@ uint8_t CDC::sendByte(uint8_t Data)
 
     _inpoint.select();
 
-    if (!(UEINTX & 1<<RWAL))
+    if ((*p_ueintx & 1<<rwal) == 0)
     {
-        UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+        *p_ueintx &= ~(1<<txini | 1<<fifocon);
         uint8_t ErrorCode;
 
         if ((ErrorCode = waitUntilReady()) != ENDPOINT_READYWAIT_NoError)
@@ -283,8 +282,8 @@ uint8_t CDC::flush()
     if (!(bytesInEndpoint()))
         return ENDPOINT_READYWAIT_NoError;
 
-    bool bankFull = !(UEINTX & 1<<RWAL);
-    UEINTX &= ~(1<<TXINI | 1<<FIFOCON);
+    bool bankFull = !(*p_ueintx & 1<<rwal);
+    *p_ueintx &= ~(1<<txini | 1<<fifocon);
 
     if (bankFull)
     {
@@ -305,13 +304,13 @@ int16_t CDC::receive()
     int16_t ReceivedByte = -1;
     _outpoint.select();
 
-    if (UEINTX & 1<<RXOUTI) // is OUT received?
+    if (*p_ueintx & 1<<rxouti) // is OUT received?
     {
         if (bytesInEndpoint())
             ReceivedByte = read8();
 
         if (!(bytesInEndpoint()))
-            UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);
+            *p_ueintx &= ~(1<<rxouti | 1<<fifocon);
     }
 
     return ReceivedByte;
@@ -336,14 +335,14 @@ CDC::CDC() :
     USB_Device_ConfigurationNumber  = 0;
     USB_Device_RemoteWakeupEnabled  = false;
     USB_Device_CurrentlySelfPowered = false;
-    *p_udcon &= ~(1<<LSM);
-    *p_usbcon |= 1<<VBUSTE;    // enable VBUS transition interrupt
+    *p_udcon &= ~(1<<lsm);
+    *p_usbcon |= 1<<vbuste;    // enable VBUS transition interrupt
     configureEndpoint(_control.addr, _control.type, _control.size, 1);
-    *p_udint &= ~(1<<SUSPI);   // clear suspend interrupt flag
-    *p_udien |= 1<<SUSPE;      // enable SUSPI interrupt
-    *p_udien |= 1<<EORSTE;     // enable EORSTI interrupt
-    *p_udcon &= ~(1<<DETACH);  // reconnect device
-    *p_usbcon |= 1<<OTGPADE;   // otgpad on
+    *p_udint &= ~(1<<suspi);   // clear suspend interrupt flag
+    *p_udien |= 1<<suspe;      // enable SUSPI interrupt
+    *p_udien |= 1<<eorste;     // enable EORSTI interrupt
+    *p_udcon &= ~(1<<detach);  // reconnect device
+    *p_usbcon |= 1<<otgpade;   // otgpad on
     sei();
 
     if ((state != DEVICE_STATE_Configured) || !(_lineEncoding.BaudRateBPS))
@@ -360,7 +359,7 @@ CDC::CDC() :
     uint8_t prevEndpoint = getCurrentEndpoint();
     _control.select();
 
-    if (UEINTX & 1<<RXSTPI)
+    if (*p_ueintx & 1<<rxstpi)
         procCtrlReq();
 
     selectEndpoint(prevEndpoint);
@@ -379,8 +378,8 @@ void CDC::customCtrl()
     case CDC_REQ_GetLineEncoding:
         if (_ctrlReq.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
         {
-            UEINTX &= ~(1<<RXSTPI);
-            while (!(UEINTX & 1<<TXINI));
+            *p_ueintx &= ~(1<<RXSTPI);
+            while ((UEINTX & 1<<TXINI) == 0);
             write32(_lineEncoding.BaudRateBPS);
             write8(_lineEncoding.CharFormat);
             write8(_lineEncoding.ParityType);
@@ -394,7 +393,7 @@ void CDC::customCtrl()
         {
             UEINTX &= ~(1<<RXSTPI);
 
-            while (!(UEINTX & 1<<RXOUTI))
+            while ((UEINTX & 1<<RXOUTI) == 0)
                 if (state == DEVICE_STATE_Unattached)
                     return;
 

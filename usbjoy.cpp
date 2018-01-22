@@ -57,7 +57,7 @@ static const uint8_t PROGMEM joystickReport[] =
 static const DescDev PROGMEM devDesc =
 {
     sizeof(DescDev),
-    DTYPE_Device,
+    DTYPE_DEVICE,
     0x0110,
     0,
     0,
@@ -85,7 +85,7 @@ static const MyConf PROGMEM myConf
 {
     {
         sizeof(DescConf),
-        DTYPE_Configuration,
+        DTYPE_CONFIGURATION,
         sizeof(MyConf),
         1,  // 1 interface
         1,  // configuration 1
@@ -152,21 +152,21 @@ USBJoy::USBJoy() : _inpoint(ENDPOINT_DIR_IN | 1, 8, EP_TYPE_INTERRUPT, 1)
 static const DescString<2> PROGMEM languageString =
 {
     USB_STRING_LEN(1),
-    DTYPE_String,
+    DTYPE_STRING,
     (wchar_t)0x0409
 };
 
 static const DescString<12> PROGMEM manufacturerString =
 {
     USB_STRING_LEN(11),
-    DTYPE_String,
+    DTYPE_STRING,
     L"Dean Camera"
 };
 
 static const DescString<13> PROGMEM productString =
 {
     USB_STRING_LEN(12),
-    DTYPE_String,
+    DTYPE_STRING,
     L"USB Joystick"
 };
 
@@ -177,15 +177,15 @@ uint16_t USBJoy::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **des
 
     switch (wValue >> 8)
     {
-    case DTYPE_Device:
+    case DTYPE_DEVICE:
         addr = &devDesc;
         size = sizeof(DescDev);
         break;
-    case DTYPE_Configuration:
+    case DTYPE_CONFIGURATION:
         addr = &myConf;
         size = sizeof(MyConf);
         break;
-    case DTYPE_String:
+    case DTYPE_STRING:
         switch (wValue & 0xff)
         {
         case STRING_ID_Language:
@@ -290,10 +290,10 @@ void USBJoy::procCtrlReq()
                 const void *descPtr;
                 uint16_t descSize;
 
-                if (_ctrlReq.wValue == (DTYPE_String << 8 | USE_INTERNAL_SERIAL))
+                if (_ctrlReq.wValue == (DTYPE_STRING << 8 | USE_INTERNAL_SERIAL))
                 {
                     SigDesc sigDesc;
-                    sigDesc.type = DTYPE_String;
+                    sigDesc.type = DTYPE_STRING;
                     sigDesc.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.unicodeString);
                     UEINTX &= ~(1<<RXSTPI);

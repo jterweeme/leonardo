@@ -17,6 +17,7 @@ all: app_aditbox.elf \
     app_pi1.elf \
     app_potmeter1.elf \
     app_ps2kb2.elf \
+    app_rndis1.elf \
     app_sdinfo1.elf \
     app_sdod1.elf \
     app_sdod2.elf \
@@ -44,6 +45,7 @@ app_ostream1.elf: app_ostream1.o cdc.o busby.o misc.o
 app_pi1.elf: app_pi1.o cdc.o busby.o
 app_potmeter1.elf: app_potmeter1.o analog.o cdc.o busby.o
 app_ps2kb2.elf: app_ps2kb2.o cdc.o busby.o keyboard.o misc.o leonardo.o
+app_rndis1.elf: app_rndis1.o busby.o misc.o
 app_sdinfo1.elf: app_sdinfo1.o busby.o cdc.o zd2card.o leonardo.o
 app_sdod1.elf: app_sdod1.o zd2card.o cdc.o busby.o leonardo.o misc.o
 app_sdod2.elf: app_sdod2.o zd2card.o cdc.o busby.o leonardo.o misc.o
@@ -72,6 +74,7 @@ app_ostream1.o: app_ostream1.cpp stream.h
 app_pi1.o: app_pi1.cpp busby.h cdc.h
 app_potmeter1.o: app_potmeter1.cpp analog.h
 app_ps2kb2.o: app_ps2kb2.cpp
+app_rndis1.o: app_rndis1.cpp busby.h
 app_sdinfo1.o: app_sdinfo1.cpp zd2card.h stream.h board.h leonardo.h
 app_sdod1.o: app_sdod1.cpp zd2card.h
 app_sdod2.o: app_sdod2.cpp zd2card.h

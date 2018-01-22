@@ -15,7 +15,7 @@ static constexpr uint8_t
 static const DescDev PROGMEM devDesc =
 {
     sizeof(DescDev),
-    DTYPE_Device,
+    DTYPE_DEVICE,
     0x0110,
     0,
     0,
@@ -50,7 +50,7 @@ static const MyConf PROGMEM myConf
 {
     {
         sizeof(DescConf),
-        DTYPE_Configuration,
+        DTYPE_CONFIGURATION,
         sizeof(MyConf),
         2, // 2 interfaces
         1, // configuration 1
@@ -172,21 +172,21 @@ static const MyConf PROGMEM myConf
 static const DescString<2> PROGMEM languageString =
 {
     USB_STRING_LEN(1),
-    DTYPE_String,
+    DTYPE_STRING,
     (wchar_t)0x0409
 };
 
 static const DescString<12> PROGMEM manufacturerString =
 {
     USB_STRING_LEN(11),
-    DTYPE_String,
+    DTYPE_STRING,
     L"Dean Camera"
 };
 
 static const DescString<11> PROGMEM productString =
 {
     USB_STRING_LEN(10),
-    DTYPE_String,
+    DTYPE_STRING,
     L"Audio Demo"
 };
 
@@ -213,15 +213,15 @@ uint16_t USBSound::getDesc(uint16_t wValue, uint16_t wIndex, const void **const 
 
     switch (wValue >> 8)
     {
-    case DTYPE_Device:
+    case DTYPE_DEVICE:
         addr = &devDesc;
         size = sizeof(DescDev);
         break;
-    case DTYPE_Configuration:
+    case DTYPE_CONFIGURATION:
         addr = &myConf;
         size = sizeof(MyConf);
         break;
-    case DTYPE_String:
+    case DTYPE_STRING:
         switch (wValue & 0xff)
         {
         case STRING_ID_Language:

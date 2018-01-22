@@ -36,14 +36,14 @@ static constexpr uint8_t
     MS_CZCP_SCSITransparentSubclass = 0x06,
     MS_CZCP_MassStorageClass = 0x08,
     MS_CZCP_BulkOnlyTransportProtocol = 0x50,
-    STRING_ID_Language     = 0,
-    STRING_ID_Manufacturer = 1,
-    STRING_ID_Product      = 2,
+    STRING_ID_LANGUAGE = 0,
+    STRING_ID_MANUFACTURER = 1,
+    STRING_ID_PRODUCT = 2,
     MASS_STORAGE_IO_EPSIZE = 64,
     M2S_REQ_GetMaxLUN = 0xfe,
     M2S_REQ_MassStorageReset = 0xff,
-    MASS_STORAGE_IN_EPADDR = (ENDPOINT_DIR_IN  | 3),
-    MASS_STORAGE_OUT_EPADDR = (ENDPOINT_DIR_OUT | 4),
+    MASS_STORAGE_IN_EPADDR = ENDPOINT_DIR_IN | 3,
+    MASS_STORAGE_OUT_EPADDR = ENDPOINT_DIR_OUT | 4,
     TOTAL_LUNS = 1;
 
 struct ZCZI_Inquiry_Response_t
@@ -92,7 +92,7 @@ template <class T> const T& min(const T& a, const T& b) { return !(b < a) ? a : 
 static const DescDev PROGMEM DeviceDescriptor =
 {
     sizeof(DescDev),
-    DTYPE_Device,
+    DTYPE_DEVICE,
     0x0110,
     0,
     0,
@@ -101,8 +101,8 @@ static const DescDev PROGMEM DeviceDescriptor =
     0x03EB,
     0x2045,
     0x0001,
-    STRING_ID_Manufacturer,
-    STRING_ID_Product,
+    STRING_ID_MANUFACTURER,
+    STRING_ID_PRODUCT,
     UZE_INTERNAL_SERIAL,
     FIXED_NUM_CONFIGURATIONS
 };
@@ -117,7 +117,7 @@ static const MyConf PROGMEM myConf =
 {
     {
         sizeof(DescConf),
-        DTYPE_Configuration,
+        DTYPE_CONFIGURATION,
         sizeof(MyConf),
         1,
         1,
@@ -157,21 +157,21 @@ static const MyConf PROGMEM myConf =
 static const DescString<2> PROGMEM languageString =
 {
     USB_STRING_LEN(1),
-    DTYPE_String,
+    DTYPE_STRING,
     (wchar_t)0x0409
 };
 
 static const DescString<12> PROGMEM manufacturerString =
 {
     USB_STRING_LEN(11),
-    DTYPE_String,
+    DTYPE_STRING,
     L"Dean Camera"
 };
 
 static const DescString<23> PROGMEM productString =
 {
     USB_STRING_LEN(22),
-    DTYPE_String,
+    DTYPE_STRING,
     L"LUFA Mass Storage Demo"
 };
 
@@ -182,26 +182,26 @@ uint16_t USBSD::getDesc(uint16_t wValue, uint16_t wIndex, const void **const des
 
     switch (wValue >> 8)
     {
-    case DTYPE_Device:
+    case DTYPE_DEVICE:
         addr = &DeviceDescriptor;
         size = sizeof(DescDev);
         break;
-    case DTYPE_Configuration:
+    case DTYPE_CONFIGURATION:
         addr = &myConf;
         size = sizeof(MyConf);
         break;
-    case DTYPE_String:
+    case DTYPE_STRING:
         switch (wValue & 0xff)
         {
-        case STRING_ID_Language:
+        case STRING_ID_LANGUAGE:
             addr = &languageString;
             size = pgm_read_byte(&languageString.size);
             break;
-        case STRING_ID_Manufacturer:
+        case STRING_ID_MANUFACTURER:
             addr = &manufacturerString;
             size = pgm_read_byte(&manufacturerString.size);
             break;
-        case STRING_ID_Product:
+        case STRING_ID_PRODUCT:
             addr = &productString;
             size = pgm_read_byte(&productString.size);
             break;
@@ -286,7 +286,6 @@ bool USBSD::decodeSCSICmd()
         success = true;
         break;
     case ZCZI_CMD_SEND_DIAGNOSTIC:
-
         if ((cmdBlock.cmdData[1] & 1<<2) == 0)
         {
             senseData.vanalles = ZCZI_SENSE_KEY_ILLEGAL_REQUEST << 4;
@@ -486,9 +485,9 @@ bool USBSD::ReadInCommandBlock()
         cmdBlock.flags & 0x1F || cmdBlock.SCSICommandLength == 0 ||
 		(cmdBlock.SCSICommandLength > sizeof(cmdBlock.cmdData)))
 	{
-        *p_ueconx |= 1<<STALLRQ;
+        *p_ueconx |= 1<<stallrq;        // stall transaction
 		selectEndpoint(MASS_STORAGE_IN_EPADDR);
-        *p_ueconx |= 1<<STALLRQ;       // stall transaction
+        *p_ueconx |= 1<<stallrq;        // stall transaction
 		return false;
 	}
 
@@ -501,7 +500,7 @@ bool USBSD::ReadInCommandBlock()
 		    return false;
 	}
 
-    UEINTX &= ~(1<<RXOUTI | 1<<FIFOCON);    // clear out
+    *p_ueintx &= ~(1<<rxouti | 1<<fifocon);    // clear out
 	return true;
 }
 

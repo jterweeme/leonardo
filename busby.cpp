@@ -7,8 +7,6 @@ Adapted from LUFA code by Dean Camera
 #include <avr/boot.h>
 #include <avr/pgmspace.h>
 
-extern "C" void __cxa_pure_virtual() { while (1); }
-
 USB *USB::instance;
 
 uint8_t USB::getEndpointDirection() const
@@ -205,11 +203,11 @@ void USB::Device_ClearSetFeature()
 
             selectEndpoint(EndpointIndex);
 
-            if (UECONX & 1<<EPEN)
+            if (*p_ueconx & 1<<epen)
             {
                 if (_ctrlReq.bRequest == REQ_SetFeature)
                 {
-                    UECONX |= 1<<STALLRQ;
+                    *p_ueconx |= 1<<stallrq;
                 }
                 else
                 {
@@ -657,10 +655,10 @@ void USB::procCtrlReq()
                 const void *descPtr;
                 uint16_t descSize;
 
-                if (_ctrlReq.wValue == (DTYPE_String << 8 | USE_INTERNAL_SERIAL))
+                if (_ctrlReq.wValue == (DTYPE_STRING << 8 | USE_INTERNAL_SERIAL))
                 {
                     SigDesc sigDesc;
-                    sigDesc.type = DTYPE_String;
+                    sigDesc.type = DTYPE_STRING;
                     sigDesc.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.unicodeString);
                     *p_ueintx &= ~(1<<rxstpi);

@@ -24,7 +24,6 @@ private:
     LineEncoding _lineEncoding;
     void customCtrl();
     void configure();
-    //void procCtrlReq();
     uint16_t getDesc(uint16_t wValue, uint16_t wIndex, const void ** const descAddr);
 public:
     int16_t receive();

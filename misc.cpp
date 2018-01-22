@@ -180,7 +180,7 @@ void Serial::init() const
 
 void Serial::write(char c) const
 {
-    while (!(*p_ucsr1a & 1<<udre1))
+    while ((*p_ucsr1a & 1<<udre1) == 0)
         ;
 
     *p_udr1 = c;

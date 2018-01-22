@@ -7,14 +7,14 @@ static constexpr uint8_t
     MOUSE_EPADDR = ENDPOINT_DIR_IN | 1,
     MOUSE_EPSIZE = 8,
     INTERFACE_ID_Mouse = 0,
-    STRING_ID_Language = 0,
-    STRING_ID_Manufacturer = 1,
-    STRING_ID_Product = 2;
+    STRING_ID_LANGUAGE = 0,
+    STRING_ID_MANUFACTURER = 1,
+    STRING_ID_PRODUCT = 2;
 
 const DescDev PROGMEM DeviceDescriptor =
 {
     sizeof(DescDev),
-    DTYPE_Device,
+    DTYPE_DEVICE,
     0x0110,
     0,
     0,
@@ -23,8 +23,8 @@ const DescDev PROGMEM DeviceDescriptor =
     0x03EB,
     0x2041,
     0x0001,
-    STRING_ID_Manufacturer,
-    STRING_ID_Product,
+    STRING_ID_MANUFACTURER,
+    STRING_ID_PRODUCT,
     0,
     FIXED_NUM_CONFIGURATIONS
 };
@@ -101,7 +101,7 @@ const MyConf PROGMEM myConf =
 {
     {
         sizeof(MyConf),
-        DTYPE_Configuration,
+        DTYPE_CONFIGURATION,
         sizeof(MyConf),
         1,      // 1 interface
         1,      // configuration number = 1
@@ -142,21 +142,21 @@ const MyConf PROGMEM myConf =
 const DescString<2> PROGMEM languageString =
 {
     USB_STRING_LEN(1),
-    DTYPE_String,
+    DTYPE_STRING,
     (wchar_t)0x0409
 };
 
 const DescString<12> PROGMEM manufacturerString =
 {
     USB_STRING_LEN(11),
-    DTYPE_String,
+    DTYPE_STRING,
     L"Dean Camera"
 };
 
 const DescString<10> PROGMEM productString =
 {
     USB_STRING_LEN(9),
-    DTYPE_String,
+    DTYPE_STRING,
     L"USB Mouse"
 };
 
@@ -167,26 +167,26 @@ uint16_t USBMouse::getDescriptor(uint16_t wValue, uint8_t wIndex, const void **d
 
     switch (wValue >> 8)
     {
-    case DTYPE_Device:
+    case DTYPE_DEVICE:
         addr = &DeviceDescriptor;
         size = sizeof(DescDev);
         break;
-    case DTYPE_Configuration:
+    case DTYPE_CONFIGURATION:
         addr = &myConf;
         size = sizeof(MyConf);
         break;
-    case DTYPE_String:
+    case DTYPE_STRING:
         switch (wValue & 0xff)
         {
-        case STRING_ID_Language:
+        case STRING_ID_LANGUAGE:
             addr = &languageString;
             size = pgm_read_byte(&languageString.size);
             break;
-        case STRING_ID_Manufacturer:
+        case STRING_ID_MANUFACTURER:
             addr = &manufacturerString;
             size = pgm_read_byte(&manufacturerString.size);
             break;
-        case STRING_ID_Product:
+        case STRING_ID_PRODUCT:
             addr = &productString;
             size = pgm_read_byte(&productString.size);
             break;
@@ -305,10 +305,10 @@ void USBMouse::procCtrlReq()
                 const void *descPtr;
                 uint16_t descSize;
 
-                if (_ctrlReq.wValue == (DTYPE_String << 8 | USE_INTERNAL_SERIAL))
+                if (_ctrlReq.wValue == (DTYPE_STRING << 8 | USE_INTERNAL_SERIAL))
                 {
                     SigDesc sigDesc;
-                    sigDesc.type = DTYPE_String;
+                    sigDesc.type = DTYPE_STRING;
                     sigDesc.size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
                     Device_GetSerialString(sigDesc.unicodeString);
                     UEINTX &= ~(1<<RXSTPI);
